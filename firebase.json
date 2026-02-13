@@ -1,0 +1,32 @@
+{
+  "functions": {
+    "source": "functions",
+    "predeploy": []
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "storage": {
+    "rules": "storage.rules"
+  },
+  "flutter": {
+    "platforms": {
+      "ios": {
+        "default": {
+          "projectId": "vestiyer-da67f",
+          "appId": "1:40101973751:ios:d7fdb166a2ba21efca8df2",
+          "uploadDebugSymbols": false,
+          "fileOutput": "ios/Runner/GoogleService-Info.plist"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "vestiyer-da67f",
+          "configurations": {
+            "ios": "1:40101973751:ios:d7fdb166a2ba21efca8df2"
+          }
+        }
+      }
+    }
+  }
+}

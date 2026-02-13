@@ -1,0 +1,8 @@
+{
+  "name": "dolap-ai-seed",
+  "private": true,
+  "description": "Seed Firestore with test data. Run: npm install && TEST_UID=your-auth-uid node seed_firestore.js",
+  "dependencies": {
+    "firebase-admin": "^11.11.0"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "lib": ["esnext", "dom"],
+    "moduleResolution": "bundler",
+    "isolatedModules": true,
+    "target": "esnext",
+    "module": "esnext",
+    "noEmit": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true
+  },
+  "include": ["functions/**/*"],
+  "exclude": ["node_modules"]
+} 

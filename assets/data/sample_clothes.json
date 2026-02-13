@@ -1,0 +1,254 @@
+{
+  "clothes": [
+    {
+      "category": "Gömlek",
+      "description": "Premium kalitede pamuktan üretilmiş, klasik kesimli beyaz gömlek. Yüksek kaliteli dikiş işçiliği, özel tasarlanmış yaka ve manşet detayları ile profesyonel görünüm sunar. Günlük ofis kullanımından özel davetlere kadar her türlü ortama uygun, şık ve zamansız bir parça.",
+      "color": "Beyaz",
+      "material": "Pamuk",
+      "style": "Klasik",
+      "season": "Tüm Sezon",
+      "image_url": "https://images.unsplash.com/photo-1596755094514-f87e34085b2c",
+      "brand": "Zara"
+    },
+    {
+      "category": "Pantolon",
+      "description": "Slim fit kesimli, premium denim kumaştan üretilmiş lacivert jean. Vücudu saran modern kesimi, elastik yapısı ile hareket kolaylığı sağlar. Kaliteli fermuar ve düğme detayları, dayanıklı dikiş işçiliği ile uzun ömürlü kullanım sunar. Günlük kullanımdan akşam yemeğine kadar her türlü kombinasyona uyum sağlar.",
+      "color": "Lacivert",
+      "material": "Denim",
+      "style": "Casual",
+      "season": "Tüm Sezon",
+      "image_url": "https://images.unsplash.com/photo-1541099649105-f69ad21f3246",
+      "brand": "Levi's"
+    },
+    {
+      "category": "Tişört",
+      "description": "Yüksek gramajlı, %100 pamuktan üretilmiş basic beyaz t-shirt. Yumuşak dokusu ve nefes alabilen yapısı ile yaz aylarında maksimum konfor sağlar. Özel yıkama işlemi ile yumuşaklığını koruyan, solmayan ve deforme olmayan kaliteli bir parça. Günlük kullanım için ideal, her türlü kombinasyona uyum sağlayan temel bir gardırop parçası.",
+      "color": "Beyaz",
+      "material": "Pamuk",
+      "style": "Casual",
+      "season": "Yaz",
+      "image_url": "https://images.unsplash.com/photo-1583743814966-8936f5b7be1a",
+      "brand": "H&M"
+    },
+    {
+      "category": "Ceket",
+      "description": "Premium polyester kumaştan üretilmiş, klasik kesimli siyah blazer. Özel astar detayı, çift düğme cep ve iç cep detayları ile şık bir görünüm sunar. Yaka ve manşetlerde özel dikiş işçiliği, omuzlarda yumuşak padding ile profesyonel bir siluet oluşturur. İş toplantılarından özel davetlere kadar her türlü resmi ortama uygun, zamansız bir parça.",
+      "color": "Siyah",
+      "material": "Polyester",
+      "style": "Klasik",
+      "season": "Sonbahar/İlkbahar",
+      "image_url": "https://images.unsplash.com/photo-1591047139829-d91aecb6caea",
+      "brand": "Mango"
+    },
+    {
+      "category": "Kazak",
+      "description": "Premium yün kumaştan üretilmiş, V yaka detaylı triko kazak. Yumuşak dokusu ve ısı yalıtım özelliği ile kış aylarında maksimum konfor sağlar. Özel örme tekniği ile üretilmiş, deforme olmayan ve uzun ömürlü bir parça. Günlük kullanımdan özel davetlere kadar her türlü kombinasyona uyum sağlayan, şık ve klasik bir kış parçası.",
+      "color": "Lacivert",
+      "material": "Yün",
+      "style": "Klasik",
+      "season": "Kış",
+      "image_url": "https://images.unsplash.com/photo-1576871337632-b9aef4c17ab9",
+      "brand": "Massimo Dutti"
+    },
+    {
+      "category": "Pantolon",
+      "description": "Premium pamuk kumaştan üretilmiş, klasik kesimli bej chino pantolon. Yumuşak dokusu ve nefes alabilen yapısı ile tüm gün konfor sağlar. Kaliteli fermuar ve düğme detayları, özel cep tasarımları ile pratik kullanım sunar. Günlük ofis kullanımından casual görünümlere kadar her türlü kombinasyona uyum sağlayan, zamansız bir parça.",
+      "color": "Bej",
+      "material": "Pamuk",
+      "style": "Klasik",
+      "season": "Tüm Sezon",
+      "image_url": "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80",
+      "brand": "Tommy Hilfiger"
+    },
+    {
+      "category": "Gömlek",
+      "description": "Premium pamuk kumaştan üretilmiş, Oxford dokulu açık mavi gömlek. Özel dokuma tekniği ile üretilmiş, dayanıklı ve nefes alabilen yapısı ile uzun ömürlü kullanım sunar. Klasik yaka ve manşet detayları, kaliteli dikiş işçiliği ile profesyonel bir görünüm sağlar. Günlük ofis kullanımından özel davetlere kadar her türlü ortama uygun, şık bir parça.",
+      "color": "Açık Mavi",
+      "material": "Pamuk",
+      "style": "Klasik",
+      "season": "Tüm Sezon",
+      "image_url": "https://images.unsplash.com/photo-1598961942613-ba897716405b",
+      "brand": "Brooks Brothers"
+    },
+    {
+      "category": "Ceket",
+      "description": "Premium deri kumaştan üretilmiş, klasik kesimli kahverengi deri ceket. Yumuşak ve esnek yapısı ile maksimum konfor sağlar. Kaliteli fermuar ve düğme detayları, özel astar işçiliği ile uzun ömürlü kullanım sunar. Günlük kullanımdan özel davetlere kadar her türlü kombinasyona uyum sağlayan, zamansız bir parça.",
+      "color": "Kahverengi",
+      "material": "Deri",
+      "style": "Casual",
+      "season": "Sonbahar",
+      "image_url": "https://images.unsplash.com/photo-1551028719-00167b16eac5",
+      "brand": "Mango"
+    },
+    {
+      "category": "Tişört",
+      "description": "Premium pamuk kumaştan üretilmiş, polo yaka detaylı lacivert t-shirt. Yumuşak dokusu ve nefes alabilen yapısı ile yaz aylarında maksimum konfor sağlar. Özel yıkama işlemi ile yumuşaklığını koruyan, solmayan ve deforme olmayan kaliteli bir parça. Günlük kullanımdan casual görünümlere kadar her türlü kombinasyona uyum sağlayan, şık bir yaz parçası.",
+      "color": "Lacivert",
+      "material": "Pamuk",
+      "style": "Klasik",
+      "season": "Yaz",
+      "image_url": "https://images.unsplash.com/photo-1571945153237-4929e783af4a",
+      "brand": "Lacoste"
+    },
+    {
+      "category": "Pantolon",
+      "description": "Premium keten kumaştan üretilmiş, casual kesimli haki kargo pantolon. Nefes alabilen yapısı ve hafif dokusu ile yaz aylarında maksimum konfor sağlar. Çoklu cep detayları, kaliteli fermuar ve düğme işçiliği ile pratik kullanım sunar. Günlük kullanımdan outdoor aktivitelere kadar her türlü kombinasyona uyum sağlayan, fonksiyonel bir yaz parçası.",
+      "color": "Haki",
+      "material": "Keten",
+      "style": "Casual",
+      "season": "Yaz",
+      "image_url": "https://images.unsplash.com/photo-1517438476312-10d79c077509",
+      "brand": "Bershka"
+    },
+    {
+      "category": "Gömlek",
+      "description": "Premium pamuk kumaştan üretilmiş, kareli desenli kırmızı gömlek. Özel dokuma tekniği ile üretilmiş, dayanıklı ve nefes alabilen yapısı ile uzun ömürlü kullanım sunar. Klasik yaka ve manşet detayları, kaliteli dikiş işçiliği ile casual bir görünüm sağlar. Günlük kullanımdan casual görünümlere kadar her türlü kombinasyona uyum sağlayan, şık bir parça.",
+      "color": "Kırmızı",
+      "material": "Pamuk",
+      "style": "Casual",
+      "season": "Sonbahar",
+      "image_url": "https://images.unsplash.com/photo-1589310243389-96a5483213a8",
+      "brand": "Levi's"
+    },
+    {
+      "category": "Ceket",
+      "description": "Premium polyester kumaştan üretilmiş, spor kesimli gri ceket. Hafif ve nefes alabilen yapısı ile ilkbahar aylarında maksimum konfor sağlar. Çoklu cep detayları, kaliteli fermuar ve düğme işçiliği ile pratik kullanım sunar. Günlük kullanımdan spor aktivitelere kadar her türlü kombinasyona uyum sağlayan, fonksiyonel bir parça.",
+      "color": "Gri",
+      "material": "Polyester",
+      "style": "Spor",
+      "season": "İlkbahar",
+      "image_url": "https://images.unsplash.com/photo-1591047139829-d91aecb6caea",
+      "brand": "Nike"
+    },
+    {
+      "category": "Kazak",
+      "description": "Premium yün kumaştan üretilmiş, desenli bej kazak. Yumuşak dokusu ve ısı yalıtım özelliği ile kış aylarında maksimum konfor sağlar. Özel örme tekniği ile üretilmiş, deforme olmayan ve uzun ömürlü bir parça. Günlük kullanımdan casual görünümlere kadar her türlü kombinasyona uyum sağlayan, şık bir kış parçası.",
+      "color": "Bej",
+      "material": "Yün",
+      "style": "Casual",
+      "season": "Kış",
+      "image_url": "https://images.unsplash.com/photo-1576871337632-b9aef4c17ab9",
+      "brand": "Zara"
+    },
+    {
+      "category": "Tişört",
+      "description": "Premium pamuk kumaştan üretilmiş, baskılı gri t-shirt. Yumuşak dokusu ve nefes alabilen yapısı ile yaz aylarında maksimum konfor sağlar. Özel yıkama işlemi ile yumuşaklığını koruyan, solmayan ve deforme olmayan kaliteli bir parça. Günlük kullanımdan casual görünümlere kadar her türlü kombinasyona uyum sağlayan, şık bir yaz parçası.",
+      "color": "Gri",
+      "material": "Pamuk",
+      "style": "Casual",
+      "season": "Yaz",
+      "image_url": "https://images.unsplash.com/photo-1503341455253-b2e723bb3dbb",
+      "brand": "Pull&Bear"
+    },
+    {
+      "category": "Pantolon",
+      "description": "Premium denim kumaştan üretilmiş, yüksek bel detaylı açık mavi jean. Vücudu saran modern kesimi, elastik yapısı ile hareket kolaylığı sağlar. Kaliteli fermuar ve düğme detayları, dayanıklı dikiş işçiliği ile uzun ömürlü kullanım sunar. Günlük kullanımdan casual görünümlere kadar her türlü kombinasyona uyum sağlayan, şık bir parça.",
+      "color": "Açık Mavi",
+      "material": "Denim",
+      "style": "Casual",
+      "season": "Tüm Sezon",
+      "image_url": "https://images.unsplash.com/photo-1541099649105-f69ad21f3246",
+      "brand": "Levi's"
+    },
+    {
+      "category": "Gömlek",
+      "description": "Premium keten kumaştan üretilmiş, casual kesimli bej gömlek. Nefes alabilen yapısı ve hafif dokusu ile yaz aylarında maksimum konfor sağlar. Klasik yaka ve manşet detayları, kaliteli dikiş işçiliği ile casual bir görünüm sağlar. Günlük kullanımdan casual görünümlere kadar her türlü kombinasyona uyum sağlayan, şık bir yaz parçası.",
+      "color": "Bej",
+      "material": "Keten",
+      "style": "Casual",
+      "season": "Yaz",
+      "image_url": "https://images.unsplash.com/photo-1596755094514-f87e34085b2c",
+      "brand": "Mango"
+    },
+    {
+      "category": "Ceket",
+      "description": "Premium polyester kumaştan üretilmiş, bomber kesimli haki ceket. Hafif ve nefes alabilen yapısı ile sonbahar aylarında maksimum konfor sağlar. Çoklu cep detayları, kaliteli fermuar ve düğme işçiliği ile pratik kullanım sunar. Günlük kullanımdan casual görünümlere kadar her türlü kombinasyona uyum sağlayan, fonksiyonel bir parça.",
+      "color": "Haki",
+      "material": "Polyester",
+      "style": "Casual",
+      "season": "Sonbahar",
+      "image_url": "https://images.unsplash.com/photo-1591047139829-d91aecb6caea",
+      "brand": "Alpha Industries"
+    },
+    {
+      "category": "Kazak",
+      "description": "Premium pamuk kumaştan üretilmiş, crop kesimli pembe kazak. Yumuşak dokusu ve hafif yapısı ile ilkbahar aylarında maksimum konfor sağlar. Özel örme tekniği ile üretilmiş, deforme olmayan ve uzun ömürlü bir parça. Günlük kullanımdan casual görünümlere kadar her türlü kombinasyona uyum sağlayan, şık bir ilkbahar parçası.",
+      "color": "Pembe",
+      "material": "Pamuk",
+      "style": "Casual",
+      "season": "İlkbahar",
+      "image_url": "https://images.unsplash.com/photo-1576871337632-b9aef4c17ab9",
+      "brand": "Pull&Bear"
+    },
+    {
+      "category": "Tişört",
+      "description": "Premium pamuk kumaştan üretilmiş, uzun kollu gri t-shirt. Yumuşak dokusu ve nefes alabilen yapısı ile sonbahar aylarında maksimum konfor sağlar. Özel yıkama işlemi ile yumuşaklığını koruyan, solmayan ve deforme olmayan kaliteli bir parça. Günlük kullanımdan casual görünümlere kadar her türlü kombinasyona uyum sağlayan, şık bir sonbahar parçası.",
+      "color": "Gri",
+      "material": "Pamuk",
+      "style": "Casual",
+      "season": "Sonbahar",
+      "image_url": "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab",
+      "brand": "H&M"
+    },
+    {
+      "category": "Pantolon",
+      "description": "Premium polyester kumaştan üretilmiş, bol paça kesimli siyah pantolon. Yumuşak dokusu ve esnek yapısı ile maksimum konfor sağlar. Kaliteli fermuar ve düğme detayları, özel cep tasarımları ile pratik kullanım sunar. Günlük kullanımdan casual görünümlere kadar her türlü kombinasyona uyum sağlayan, şık bir parça.",
+      "color": "Siyah",
+      "material": "Polyester",
+      "style": "Klasik",
+      "season": "Tüm Sezon",
+      "image_url": "https://images.unsplash.com/photo-1473966968600-fa801b869a1a",
+      "brand": "Zara"
+    },
+    {
+      "category": "Gömlek",
+      "description": "Premium pamuk kumaştan üretilmiş, desenli çok renkli gömlek. Özel dokuma tekniği ile üretilmiş, dayanıklı ve nefes alabilen yapısı ile uzun ömürlü kullanım sunar. Klasik yaka ve manşet detayları, kaliteli dikiş işçiliği ile casual bir görünüm sağlar. Günlük kullanımdan casual görünümlere kadar her türlü kombinasyona uyum sağlayan, şık bir yaz parçası.",
+      "color": "Çok Renkli",
+      "material": "Pamuk",
+      "style": "Casual",
+      "season": "Yaz",
+      "image_url": "https://images.unsplash.com/photo-1596755094514-f87e34085b2c",
+      "brand": "Bershka"
+    },
+    {
+      "category": "Ceket",
+      "description": "Premium denim kumaştan üretilmiş, kot kesimli mavi ceket. Yumuşak ve esnek yapısı ile maksimum konfor sağlar. Kaliteli fermuar ve düğme detayları, özel astar işçiliği ile uzun ömürlü kullanım sunar. Günlük kullanımdan casual görünümlere kadar her türlü kombinasyona uyum sağlayan, şık bir ilkbahar parçası.",
+      "color": "Mavi",
+      "material": "Denim",
+      "style": "Casual",
+      "season": "İlkbahar",
+      "image_url": "https://images.unsplash.com/photo-1551028719-00167b16eac5",
+      "brand": "Levi's"
+    },
+    {
+      "category": "Kazak",
+      "description": "Premium pamuk kumaştan üretilmiş, kapüşonlu bordo kazak. Yumuşak dokusu ve ısı yalıtım özelliği ile kış aylarında maksimum konfor sağlar. Özel örme tekniği ile üretilmiş, deforme olmayan ve uzun ömürlü bir parça. Günlük kullanımdan spor aktivitelere kadar her türlü kombinasyona uyum sağlayan, fonksiyonel bir kış parçası.",
+      "color": "Bordo",
+      "material": "Pamuk",
+      "style": "Spor",
+      "season": "Kış",
+      "image_url": "https://images.unsplash.com/photo-1578587018452-892bacefd3f2",
+      "brand": "Nike"
+    },
+    {
+      "category": "Tişört",
+      "description": "Premium pamuk kumaştan üretilmiş, kolsuz siyah t-shirt. Yumuşak dokusu ve nefes alabilen yapısı ile yaz aylarında maksimum konfor sağlar. Özel yıkama işlemi ile yumuşaklığını koruyan, solmayan ve deforme olmayan kaliteli bir parça. Günlük kullanımdan spor aktivitelere kadar her türlü kombinasyona uyum sağlayan, fonksiyonel bir yaz parçası.",
+      "color": "Siyah",
+      "material": "Pamuk",
+      "style": "Spor",
+      "season": "Yaz",
+      "image_url": "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab",
+      "brand": "Under Armour"
+    },
+    {
+      "category": "Pantolon",
+      "description": "Premium pamuk kumaştan üretilmiş, eşofman kesimli gri pantolon. Yumuşak dokusu ve esnek yapısı ile maksimum konfor sağlar. Kaliteli lastik bel detayı, özel cep tasarımları ile pratik kullanım sunar. Günlük kullanımdan spor aktivitelere kadar her türlü kombinasyona uyum sağlayan, fonksiyonel bir parça.",
+      "color": "Gri",
+      "material": "Pamuk",
+      "style": "Spor",
+      "season": "Tüm Sezon",
+      "image_url": "https://images.unsplash.com/photo-1473966968600-fa801b869a1a",
+      "brand": "Adidas"
+    }
+  ]
+} 
