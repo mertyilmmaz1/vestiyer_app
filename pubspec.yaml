@@ -50,6 +50,8 @@ dependencies:
   # Storage & Preferences
   shared_preferences: ^2.5.3
   path_provider: ^2.1.2
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
   
   # Permissions
   permission_handler: ^11.3.0
@@ -61,9 +63,9 @@ dependencies:
   # UI Components
   carousel_slider: ^5.0.0
   
-  # Payments (keep for future premium features)
-  in_app_purchase: ^3.1.13
-  
+  # RevenueCat for in-app subscriptions
+  purchases_flutter: ^8.4.0
+
   # Firebase
   firebase_core: ^3.12.1
   firebase_auth: ^5.3.4

@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:vestiyer_nodejs/core/product/constants/firestore_collections.dart';
 import '../models/clothing.dart';
 import '../models/combination.dart';
+import '../models/outfit_log.dart';
 import '../models/user.dart' as app_user;
 import 'firestore_service_base.dart';
 
@@ -301,6 +303,113 @@ class FirestoreService extends FirestoreServiceBase {
         .collection('combinations')
         .doc(combinationId)
         .delete();
+  }
+
+  // ---------- Outfit logs (giyim geçmişi) ----------
+
+  @override
+  Future<OutfitLog?> addOutfitLog(
+      String userId, Map<String, dynamic> data) async {
+    final wornAt = data['wornAt'] is DateTime
+        ? (data['wornAt'] as DateTime)
+        : DateTime.now();
+    final logData = {
+      'combinationId': data['combinationId'] as String,
+      'wornAt': Timestamp.fromDate(wornAt),
+      if (data['note'] != null) 'note': data['note'] as String?,
+      if (data['combinationName'] != null)
+        'combinationName': data['combinationName'] as String?,
+      if (data['occasion'] != null) 'occasion': data['occasion'] as String?,
+    };
+    final ref = await _firestore
+        .collection('users')
+        .doc(userId)
+        .collection(FirestoreCollections.outfitLogs)
+        .add(logData);
+    final doc = await ref.get();
+    if (doc.data() == null) return null;
+    final out = Map<String, dynamic>.from(doc.data()!);
+    out['_id'] = doc.id;
+    out['userId'] = userId;
+    _convertTimestamps(out, ['wornAt']);
+    final log = OutfitLog.fromJson(out);
+    // Update combination: increment timesWorn, set lastWorn
+    final combinationId = data['combinationId'] as String?;
+    if (combinationId != null && combinationId.isNotEmpty) {
+      await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('combinations')
+          .doc(combinationId)
+          .update({
+        'timesWorn': FieldValue.increment(1),
+        'lastWorn': Timestamp.fromDate(wornAt),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    }
+    return log;
+  }
+
+  @override
+  Future<List<OutfitLog>> getOutfitLogs(
+    String userId, {
+    DateTime? from,
+    DateTime? to,
+    int limit = 100,
+  }) async {
+    Query<Map<String, dynamic>> q = _firestore
+        .collection('users')
+        .doc(userId)
+        .collection(FirestoreCollections.outfitLogs)
+        .orderBy('wornAt', descending: true)
+        .limit(limit);
+    if (from != null) {
+      q = q.where('wornAt', isGreaterThanOrEqualTo: Timestamp.fromDate(from));
+    }
+    if (to != null) {
+      q = q.where('wornAt', isLessThanOrEqualTo: Timestamp.fromDate(to));
+    }
+    final snapshot = await q.get();
+    final list = <OutfitLog>[];
+    for (final doc in snapshot.docs) {
+      final data = Map<String, dynamic>.from(doc.data());
+      data['_id'] = doc.id;
+      data['userId'] = userId;
+      _convertTimestamps(data, ['wornAt']);
+      list.add(OutfitLog.fromJson(data));
+    }
+    return list;
+  }
+
+  // ---------- Wardrobe analysis ----------
+
+  static const String _wardrobeAnalysisDocId = 'current';
+
+  @override
+  Future<void> setWardrobeAnalysis(
+      String userId, Map<String, dynamic> data) async {
+    final payload = Map<String, dynamic>.from(data);
+    payload['updatedAt'] = FieldValue.serverTimestamp();
+    await _firestore
+        .collection(FirestoreCollections.users)
+        .doc(userId)
+        .collection(FirestoreCollections.wardrobeAnalysis)
+        .doc(_wardrobeAnalysisDocId)
+        .set(payload, SetOptions(merge: true));
+  }
+
+  @override
+  Future<Map<String, dynamic>?> getWardrobeAnalysis(String userId) async {
+    final doc = await _firestore
+        .collection(FirestoreCollections.users)
+        .doc(userId)
+        .collection(FirestoreCollections.wardrobeAnalysis)
+        .doc(_wardrobeAnalysisDocId)
+        .get();
+    if (!doc.exists || doc.data() == null) return null;
+    final data = Map<String, dynamic>.from(doc.data()!);
+    _convertTimestamps(data, ['updatedAt']);
+    return data;
   }
 
   void _convertTimestamps(

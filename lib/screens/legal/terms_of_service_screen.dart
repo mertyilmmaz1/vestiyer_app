@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:vestiyer_nodejs/core/product/theme/app_colors.dart';
+import '../../widgets/vestiyer_page_header.dart';
 
 class TermsOfServiceScreen extends StatelessWidget {
   const TermsOfServiceScreen({super.key});
@@ -6,18 +8,19 @@ class TermsOfServiceScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF121212),
-      appBar: AppBar(
-        title: const Text(
-          'Kullanım Şartları',
-          style: TextStyle(color: Colors.white),
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const VestiyerPageHeader(
+              title: 'Kullanım Şartları',
+              showBackButton: true,
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -83,10 +86,14 @@ class TermsOfServiceScreen extends StatelessWidget {
             Text(
               'Son Güncelleme: ${DateTime.now().day}.${DateTime.now().month}.${DateTime.now().year}',
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.5),
+                color: AppColors.textPrimary.withValues(alpha: 0.5),
                 fontSize: 12,
               ),
             ),
+          ],
+        ),
+      ),
+              ),
           ],
         ),
       ),
@@ -95,28 +102,39 @@ class TermsOfServiceScreen extends StatelessWidget {
 
   Widget _buildSection(String title, String content) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppColors.tertiary,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: AppColors.textPrimary.withValues(alpha: 0.1),
+            width: 1,
           ),
-          const SizedBox(height: 12),
-          Text(
-            content,
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.7),
-              fontSize: 16,
-              height: 1.5,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 12),
+            Text(
+              content,
+              style: TextStyle(
+                color: AppColors.textPrimary.withValues(alpha: 0.7),
+                fontSize: 16,
+                height: 1.5,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

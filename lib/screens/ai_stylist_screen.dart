@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:vestiyer_nodejs/core/product/theme/app_colors.dart';
 import 'package:provider/provider.dart';
 import '../providers/wardrobe_provider.dart';
 import '../providers/subscription_provider.dart';
@@ -6,10 +7,10 @@ import '../models/clothing.dart';
 import '../models/combination.dart';
 import '../services/cloud_functions_service.dart';
 import '../services/firestore_service_base.dart';
+import '../widgets/vestiyer_page_header.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'dart:async';
-import 'dart:math' as math;
 import 'clothing_detail_screen.dart';
 import '../widgets/paywall_widget.dart';
 import '../widgets/occasion_selection_dialog.dart';
@@ -22,13 +23,12 @@ class AIStylistScreen extends StatefulWidget {
 }
 
 class _AIStylistScreenState extends State<AIStylistScreen>
-    with TickerProviderStateMixin {
+{
   bool _isLoading = false;
   String _error = '';
   List<Combination> _combinations = [];
   final List<List<Clothing>> _outfitItems = [];
   int _currentOutfitIndex = 0;
-  late AnimationController _controller;
 
   final List<String> _loadingMessages = [
     'Stil analizi yapılıyor...',
@@ -47,16 +47,11 @@ class _AIStylistScreenState extends State<AIStylistScreen>
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      duration: const Duration(seconds: 30),
-      vsync: this,
-    )..repeat();
   }
 
   @override
   void dispose() {
     _messageTimer?.cancel();
-    _controller.dispose();
     super.dispose();
   }
 
@@ -184,57 +179,37 @@ class _AIStylistScreenState extends State<AIStylistScreen>
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-
     return Scaffold(
-      backgroundColor: const Color(0xFF121212),
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        title: const Text(
-          'AI Stilist',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.w700,
-            color: Colors.white,
-            letterSpacing: -0.5,
-          ),
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-        actions: [
-          if (_combinations.isNotEmpty)
-            IconButton(
-              icon: const Icon(Icons.refresh, color: Colors.white70),
-              onPressed: _generateOutfitSuggestion,
-              tooltip: 'Yeni Kombinler Oluştur',
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            VestiyerPageHeader(
+              title: 'AI Stilist',
+              subtitle: 'Yapay zeka ile kombinler',
+              showBackButton: true,
+              onBack: () => Navigator.maybePop(context),
+              actions: [
+                if (_combinations.isNotEmpty)
+                  IconButton(
+                    icon: Icon(Icons.refresh, color: AppColors.textPrimary.withValues(alpha: 0.7)),
+                    onPressed: _generateOutfitSuggestion,
+                    tooltip: 'Yeni Kombinler Oluştur',
+                  ),
+              ],
             ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          // Animated background
-          AnimatedBuilder(
-            animation: _controller,
-            builder: (_, __) {
-              return CustomPaint(
-                size: Size(size.width, size.height),
-                painter: BackgroundPainter(_controller.value),
-              );
-            },
-          ),
-
-          // Content
-          SafeArea(
-            child: _isLoading
-                ? _buildLoadingScreen()
-                : _error.isNotEmpty
-                    ? _buildErrorScreen()
-                    : _combinations.isEmpty
-                        ? _buildInitialScreen()
-                        : _buildOutfitSuggestions(),
-          ),
-        ],
+            Expanded(
+              child: _isLoading
+                  ? _buildLoadingScreen()
+                  : _error.isNotEmpty
+                      ? _buildErrorScreen()
+                      : _combinations.isEmpty
+                          ? _buildInitialScreen()
+                          : _buildOutfitSuggestions(),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -248,10 +223,10 @@ class _AIStylistScreenState extends State<AIStylistScreen>
             width: 120,
             height: 120,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.05),
+              color: AppColors.textPrimary.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(60),
               border: Border.all(
-                color: Colors.white.withValues(alpha: 0.1),
+                color: AppColors.textPrimary.withValues(alpha: 0.1),
                 width: 1,
               ),
             ),
@@ -264,14 +239,14 @@ class _AIStylistScreenState extends State<AIStylistScreen>
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
                     valueColor: AlwaysStoppedAnimation<Color>(
-                      Colors.white.withValues(alpha: 0.7),
+                      AppColors.textPrimary.withValues(alpha: 0.7),
                     ),
                   ),
                 ),
                 Icon(
                   Icons.auto_awesome,
                   size: 40,
-                  color: Colors.white.withValues(alpha: 0.6),
+                  color: AppColors.textPrimary.withValues(alpha: 0.6),
                 ),
               ],
             ),
@@ -285,7 +260,7 @@ class _AIStylistScreenState extends State<AIStylistScreen>
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w500,
-                color: Colors.white.withValues(alpha: 0.8),
+                color: AppColors.textPrimary.withValues(alpha: 0.8),
               ),
               textAlign: TextAlign.center,
             ),
@@ -295,7 +270,7 @@ class _AIStylistScreenState extends State<AIStylistScreen>
             'Lütfen bekleyin...',
             style: TextStyle(
               fontSize: 14,
-              color: Colors.white.withValues(alpha: 0.6),
+              color: AppColors.textPrimary.withValues(alpha: 0.6),
             ),
           ),
         ],
@@ -313,7 +288,7 @@ class _AIStylistScreenState extends State<AIStylistScreen>
             Icon(
               Icons.error_outline,
               size: 80,
-              color: Colors.white.withValues(alpha: 0.3),
+              color: AppColors.textPrimary.withValues(alpha: 0.3),
             ),
             const SizedBox(height: 24),
             Text(
@@ -321,24 +296,24 @@ class _AIStylistScreenState extends State<AIStylistScreen>
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.w600,
-                color: Colors.white.withValues(alpha: 0.9),
+                color: AppColors.textPrimary.withValues(alpha: 0.9),
               ),
             ),
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.red.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
+                color: AppColors.error.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(24),
                 border: Border.all(
-                  color: Colors.red.withValues(alpha: 0.3),
+                  color: AppColors.error.withValues(alpha: 0.3),
                 ),
               ),
               child: Text(
                 _error,
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.white.withValues(alpha: 0.8),
+                  color: AppColors.textPrimary.withValues(alpha: 0.8),
                   height: 1.5,
                 ),
                 textAlign: TextAlign.center,
@@ -352,10 +327,10 @@ class _AIStylistScreenState extends State<AIStylistScreen>
                 });
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white.withValues(alpha: 0.1),
-                foregroundColor: Colors.white,
+                backgroundColor: AppColors.textPrimary.withValues(alpha: 0.1),
+                foregroundColor: AppColors.textPrimary,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(24),
                 ),
               ),
               child: const Text('Tekrar Dene'),
@@ -377,13 +352,17 @@ class _AIStylistScreenState extends State<AIStylistScreen>
               width: 120,
               height: 120,
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(60),
+                color: AppColors.tertiary,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: AppColors.textPrimary.withValues(alpha: 0.1),
+                  width: 1,
+                ),
               ),
               child: Icon(
                 Icons.auto_awesome_outlined,
                 size: 60,
-                color: Colors.white.withValues(alpha: 0.6),
+                color: AppColors.textPrimary.withValues(alpha: 0.6),
               ),
             ),
             const SizedBox(height: 32),
@@ -392,7 +371,7 @@ class _AIStylistScreenState extends State<AIStylistScreen>
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.w700,
-                color: Colors.white.withValues(alpha: 0.9),
+                color: AppColors.textPrimary.withValues(alpha: 0.9),
               ),
             ),
             const SizedBox(height: 16),
@@ -400,7 +379,7 @@ class _AIStylistScreenState extends State<AIStylistScreen>
               'Yapay zeka ile mükemmel kombinler oluşturun',
               style: TextStyle(
                 fontSize: 16,
-                color: Colors.white.withValues(alpha: 0.7),
+                color: AppColors.textPrimary.withValues(alpha: 0.7),
               ),
               textAlign: TextAlign.center,
             ),
@@ -411,12 +390,12 @@ class _AIStylistScreenState extends State<AIStylistScreen>
               child: ElevatedButton.icon(
                 onPressed: _generateOutfitSuggestion,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white.withValues(alpha: 0.1),
-                  foregroundColor: Colors.white,
+                  backgroundColor: AppColors.textPrimary.withValues(alpha: 0.1),
+                  foregroundColor: AppColors.textPrimary,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(24),
                     side: BorderSide(
-                      color: Colors.white.withValues(alpha: 0.2),
+                      color: AppColors.textPrimary.withValues(alpha: 0.2),
                     ),
                   ),
                 ),
@@ -451,14 +430,14 @@ class _AIStylistScreenState extends State<AIStylistScreen>
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.w700,
-                  color: Colors.white.withValues(alpha: 0.9),
+                  color: AppColors.textPrimary.withValues(alpha: 0.9),
                 ),
               ),
               Text(
                 '${_combinations.length} özel kombin oluşturuldu',
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.white.withValues(alpha: 0.6),
+                  color: AppColors.textPrimary.withValues(alpha: 0.6),
                 ),
               ),
             ],
@@ -474,91 +453,25 @@ class _AIStylistScreenState extends State<AIStylistScreen>
               return Container(
                 margin: const EdgeInsets.symmetric(horizontal: 8),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.05),
-                  borderRadius: BorderRadius.circular(20),
+                  color: AppColors.tertiary,
+                  borderRadius: BorderRadius.circular(24),
                   border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.1),
+                    color: AppColors.textPrimary.withValues(alpha: 0.1),
+                    width: 1,
                   ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            combination.name,
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            combination.description ?? '',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.white.withValues(alpha: 0.7),
-                              height: 1.4,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.blue.withValues(alpha: 0.2),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                  combination.occasion,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.blue.shade300,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.green.withValues(alpha: 0.2),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                  combination.season,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.green.shade300,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
                     Expanded(
                       child: GridView.builder(
-                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
                         gridDelegate:
                             const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 2,
                           crossAxisSpacing: 12,
                           mainAxisSpacing: 12,
-                          childAspectRatio: 0.8,
+                          childAspectRatio: 0.95,
                         ),
                         itemCount: outfitClothing.length,
                         itemBuilder: (context, itemIndex) {
@@ -576,13 +489,14 @@ class _AIStylistScreenState extends State<AIStylistScreen>
                             },
                             child: Container(
                               decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(24),
                                 border: Border.all(
-                                  color: Colors.white.withValues(alpha: 0.1),
+                                  color: AppColors.textPrimary.withValues(alpha: 0.1),
+                                  width: 1,
                                 ),
                               ),
                               child: ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(24),
                                 child: Column(
                                   children: [
                                     Expanded(
@@ -592,32 +506,32 @@ class _AIStylistScreenState extends State<AIStylistScreen>
                                         width: double.infinity,
                                         placeholder: (context, url) =>
                                             Container(
-                                          color: Colors.white.withValues(alpha: 0.05),
-                                          child: const Center(
+                                          color: AppColors.textPrimary.withValues(alpha: 0.05),
+                                          child: Center(
                                             child: CircularProgressIndicator(
-                                              color: Colors.white70,
+                                              color: AppColors.textPrimary.withValues(alpha: 0.7),
                                               strokeWidth: 2,
                                             ),
                                           ),
                                         ),
                                         errorWidget: (context, url, error) =>
                                             Container(
-                                          color: Colors.white.withValues(alpha: 0.05),
+                                          color: AppColors.textPrimary.withValues(alpha: 0.05),
                                           child: Icon(
                                             Icons.image_not_supported,
                                             color:
-                                                Colors.white.withValues(alpha: 0.3),
+                                                AppColors.textPrimary.withValues(alpha: 0.3),
                                           ),
                                         ),
                                       ),
                                     ),
                                     Container(
-                                      padding: const EdgeInsets.all(8),
+                                      padding: const EdgeInsets.all(6),
                                       child: Text(
                                         clothing.category,
                                         style: const TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.white,
+                                          fontSize: 11,
+                                          color: AppColors.textPrimary,
                                           fontWeight: FontWeight.w500,
                                         ),
                                         textAlign: TextAlign.center,
@@ -631,6 +545,78 @@ class _AIStylistScreenState extends State<AIStylistScreen>
                             ),
                           );
                         },
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            combination.name,
+                            style: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          if (combination.description != null &&
+                              combination.description!.isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              combination.description!,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: AppColors.textPrimary.withValues(alpha: 0.7),
+                                height: 1.3,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(24),
+                                ),
+                                child: Text(
+                                  combination.occasion,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.textPrimary.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(24),
+                                ),
+                                child: Text(
+                                  combination.season,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.textPrimary.withValues(alpha: 0.8),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -665,8 +651,8 @@ class _AIStylistScreenState extends State<AIStylistScreen>
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: _currentOutfitIndex == entry.key
-                        ? Colors.white
-                        : Colors.white.withValues(alpha: 0.3),
+                        ? AppColors.textPrimary
+                        : AppColors.textPrimary.withValues(alpha: 0.3),
                   ),
                 );
               }).toList(),
@@ -675,69 +661,4 @@ class _AIStylistScreenState extends State<AIStylistScreen>
       ],
     );
   }
-}
-
-class BackgroundPainter extends CustomPainter {
-  final double animationValue;
-
-  BackgroundPainter(this.animationValue);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint();
-
-    // Draw dark background
-    final backgroundGradient = const LinearGradient(
-      colors: [
-        Color(0xFF121212),
-        Color(0xFF1A1A1A),
-      ],
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-    ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
-
-    paint.shader = backgroundGradient;
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), paint);
-
-    // Draw animated gradient shapes
-    final shapePaint = Paint()..style = PaintingStyle.fill;
-
-    // First blob
-    shapePaint.color = Colors.white.withValues(alpha: 0.03);
-    final path1 = Path();
-    final centerX1 = size.width * 0.2 + math.sin(animationValue * math.pi) * 40;
-    final centerY1 =
-        size.height * 0.2 + math.cos(animationValue * math.pi) * 40;
-    final radius1 = size.width * 0.5;
-    path1.addOval(
-        Rect.fromCircle(center: Offset(centerX1, centerY1), radius: radius1));
-    canvas.drawPath(path1, shapePaint);
-
-    // Second blob
-    shapePaint.color = Colors.white.withValues(alpha: 0.02);
-    final path2 = Path();
-    final centerX2 =
-        size.width * 0.8 + math.cos(animationValue * 1.5 * math.pi) * 30;
-    final centerY2 =
-        size.height * 0.5 + math.sin(animationValue * 1.5 * math.pi) * 30;
-    final radius2 = size.width * 0.4;
-    path2.addOval(
-        Rect.fromCircle(center: Offset(centerX2, centerY2), radius: radius2));
-    canvas.drawPath(path2, shapePaint);
-
-    // Third blob
-    shapePaint.color = Colors.white.withValues(alpha: 0.01);
-    final path3 = Path();
-    final centerX3 =
-        size.width * 0.5 + math.sin(animationValue * 2 * math.pi + 2) * 20;
-    final centerY3 =
-        size.height * 0.8 + math.cos(animationValue * 2 * math.pi + 2) * 20;
-    final radius3 = size.width * 0.6;
-    path3.addOval(
-        Rect.fromCircle(center: Offset(centerX3, centerY3), radius: radius3));
-    canvas.drawPath(path3, shapePaint);
-  }
-
-  @override
-  bool shouldRepaint(BackgroundPainter oldDelegate) => true;
 }

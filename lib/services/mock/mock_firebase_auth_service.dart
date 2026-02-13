@@ -20,15 +20,13 @@ class MockFirebaseAuthService extends FirebaseAuthService {
   String? get currentUserId => mockSignedInNotifier.value ? mockUserId : null;
 
   @override
-  Future<UserCredential> signInWithEmailAndPassword(String email, String password) async {
+  Future<void> signInWithEmailAndPassword(String email, String password) async {
     mockSignedInNotifier.value = true;
-    throw UnimplementedError('Mock sign-in: use mockSignedInNotifier');
   }
 
   @override
-  Future<UserCredential> createUserWithEmailAndPassword(String email, String password) async {
+  Future<void> createUserWithEmailAndPassword(String email, String password) async {
     mockSignedInNotifier.value = true;
-    throw UnimplementedError('Mock sign-up: use mockSignedInNotifier');
   }
 
   @override

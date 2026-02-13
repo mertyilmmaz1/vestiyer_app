@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:vestiyer_nodejs/core/product/theme/app_colors.dart';
 import '../models/api_usage.dart';
+import '../widgets/vestiyer_page_header.dart';
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -60,30 +62,7 @@ class _ApiUsageScreenState extends State<ApiUsageScreen>
     final size = MediaQuery.of(context).size;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF121212),
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        title: const Text(
-          'API Kullanımı',
-          style: TextStyle(
-            fontSize: 26,
-            fontWeight: FontWeight.w700,
-            color: Colors.white,
-            letterSpacing: -0.5,
-          ),
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white70, size: 26),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.delete_sweep_outlined, size: 26),
-            onPressed: () => _showResetConfirmation(context),
-            tooltip: 'API Kullanımını Sıfırla',
-          ),
-          const SizedBox(width: 6),
-        ],
-      ),
+      backgroundColor: AppColors.background,
       body: Stack(
         children: [
           // Animated background
@@ -99,144 +78,146 @@ class _ApiUsageScreenState extends State<ApiUsageScreen>
 
           // Content
           SafeArea(
-            child: _isLoading
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 60,
-                          height: 60,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.05),
-                            borderRadius: BorderRadius.circular(30),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.1),
-                              width: 1,
-                            ),
-                          ),
-                          child: const Center(
-                            child: CircularProgressIndicator(
-                              valueColor:
-                                  AlwaysStoppedAnimation<Color>(Colors.white70),
-                              strokeWidth: 2,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Veriler yükleniyor...',
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.7),
-                            fontSize: 16,
-                          ),
-                        ),
-                      ],
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                VestiyerPageHeader(
+                  title: 'API Kullanımı',
+                  showBackButton: true,
+                  onBack: () => Navigator.maybePop(context),
+                  actions: [
+                    IconButton(
+                      icon: Icon(Icons.delete_sweep_outlined, size: 26, color: AppColors.textPrimary.withValues(alpha: 0.7)),
+                      onPressed: () => _showResetConfirmation(context),
+                      tooltip: 'API Kullanımını Sıfırla',
                     ),
-                  )
-                : Column(
-                    children: [
-                      Container(
-                        margin: const EdgeInsets.all(20),
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Colors.grey.shade800,
-                              Colors.grey.shade900,
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.1),
-                            width: 1,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.2),
-                              blurRadius: 20,
-                              offset: const Offset(0, 10),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          children: [
-                            Text(
-                              'Toplam Maliyet',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.white.withValues(alpha: 0.7),
-                                letterSpacing: 0.5,
+                  ],
+                ),
+                Expanded(
+                  child: _isLoading
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                width: 60,
+                                height: 60,
+                                decoration: BoxDecoration(
+                                  color: AppColors.textPrimary.withValues(alpha: 0.05),
+                                  borderRadius: BorderRadius.circular(30),
+                                  border: Border.all(
+                                    color: AppColors.textPrimary.withValues(alpha: 0.1),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Center(
+                                  child: CircularProgressIndicator(
+                                    valueColor:
+                                        AlwaysStoppedAnimation<Color>(AppColors.textPrimary.withValues(alpha: 0.7)),
+                                    strokeWidth: 2,
+                                  ),
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              '\$${_totalCost.toStringAsFixed(2)}',
-                              style: const TextStyle(
-                                fontSize: 36,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white,
-                                letterSpacing: -0.5,
-                              ),
-                            ),
-                            if (_exchangeRate > 0) ...[
-                              const SizedBox(height: 8),
+                              const SizedBox(height: 16),
                               Text(
-                                '₺${(_totalCost * _exchangeRate).toStringAsFixed(2)}',
+                                'Veriler yükleniyor...',
                                 style: TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.w500,
-                                  color: Colors.white.withValues(alpha: 0.7),
+                                  color: AppColors.textPrimary.withValues(alpha: 0.7),
+                                  fontSize: 16,
                                 ),
                               ),
                             ],
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                        child: ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          physics: const BouncingScrollPhysics(),
-                          itemCount: _usageHistory.length,
-                          itemBuilder: (context, index) {
-                            final usage = _usageHistory[index];
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 16),
+                          ),
+                        )
+                      : Column(
+                          children: [
+                            Container(
+                              margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                              padding: const EdgeInsets.all(24),
                               decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.05),
-                                borderRadius: BorderRadius.circular(20),
+                                color: AppColors.tertiary,
+                                borderRadius: BorderRadius.circular(24),
                                 border: Border.all(
-                                  color: Colors.white.withValues(alpha: 0.1),
+                                  color: AppColors.textPrimary.withValues(alpha: 0.1),
                                   width: 1,
                                 ),
                               ),
-                              child: ExpansionTile(
-                                collapsedIconColor: Colors.white70,
-                                iconColor: Colors.white,
-                                collapsedBackgroundColor: Colors.transparent,
-                                backgroundColor: Colors.transparent,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                title: Text(
-                                  'Model: ${usage.model}',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white,
-                                    fontSize: 16,
+                              child: Column(
+                                children: [
+                                  Text(
+                                    'Toplam Maliyet',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                      color: AppColors.textPrimary.withValues(alpha: 0.7),
+                                      letterSpacing: 0.5,
+                                    ),
                                   ),
-                                ),
-                                subtitle: Text(
-                                  DateFormat('dd/MM/yyyy HH:mm')
-                                      .format(usage.timestamp),
-                                  style: TextStyle(
-                                    color: Colors.white.withValues(alpha: 0.7),
-                                    fontSize: 12,
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    '\$${_totalCost.toStringAsFixed(2)}',
+                                    style: const TextStyle(
+                                      fontSize: 36,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.textPrimary,
+                                      letterSpacing: -0.5,
+                                    ),
                                   ),
-                                ),
+                                  if (_exchangeRate > 0) ...[
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      '₺${(_totalCost * _exchangeRate).toStringAsFixed(2)}',
+                                      style: TextStyle(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.w500,
+                                        color: AppColors.textPrimary.withValues(alpha: 0.7),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                            Expanded(
+                              child: ListView.builder(
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                physics: const BouncingScrollPhysics(),
+                                itemCount: _usageHistory.length,
+                                itemBuilder: (context, index) {
+                                  final usage = _usageHistory[index];
+                                  return Container(
+                                    margin: const EdgeInsets.only(bottom: 16),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.tertiary,
+                                      borderRadius: BorderRadius.circular(24),
+                                      border: Border.all(
+                                        color: AppColors.textPrimary.withValues(alpha: 0.1),
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: ExpansionTile(
+                                      collapsedIconColor: AppColors.textPrimary.withValues(alpha: 0.7),
+                                      iconColor: AppColors.textPrimary,
+                                      collapsedBackgroundColor: Colors.transparent,
+                                      backgroundColor: Colors.transparent,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(24),
+                                      ),
+                                      title: Text(
+                                        'Model: ${usage.model}',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.textPrimary,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                      subtitle: Text(
+                                        DateFormat('dd/MM/yyyy HH:mm')
+                                            .format(usage.timestamp),
+                                        style: TextStyle(
+                                          color: AppColors.textPrimary.withValues(alpha: 0.7),
+                                          fontSize: 12,
+                                        ),
+                                      ),
                                 children: [
                                   Padding(
                                     padding: const EdgeInsets.fromLTRB(
@@ -275,12 +256,15 @@ class _ApiUsageScreenState extends State<ApiUsageScreen>
                           },
                         ),
                       ),
-                      const SizedBox(height: 20),
-                    ],
-                  ),
+                    const SizedBox(height: 20),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
+    ),
     );
   }
 
@@ -288,10 +272,10 @@ class _ApiUsageScreenState extends State<ApiUsageScreen>
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.textPrimary.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.05),
+          color: AppColors.textPrimary.withValues(alpha: 0.1),
           width: 1,
         ),
       ),
@@ -301,14 +285,14 @@ class _ApiUsageScreenState extends State<ApiUsageScreen>
           Text(
             label,
             style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.7),
+              color: AppColors.textPrimary.withValues(alpha: 0.7),
               fontSize: 14,
             ),
           ),
           Text(
             value,
             style: const TextStyle(
-              color: Colors.white,
+              color: AppColors.textPrimary,
               fontSize: 14,
               fontWeight: FontWeight.w500,
             ),
@@ -322,20 +306,20 @@ class _ApiUsageScreenState extends State<ApiUsageScreen>
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1E1E),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: AppColors.tertiary,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: const Text(
           'API Kullanımını Sıfırla',
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w600,
-            color: Colors.white,
+            color: AppColors.textPrimary,
           ),
         ),
         content: Text(
           'API kullanım geçmişini sıfırlamak istediğinizden emin misiniz? Bu işlem geri alınamaz.',
           style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.7),
+            color: AppColors.textPrimary.withValues(alpha: 0.7),
             fontSize: 14,
             height: 1.5,
           ),
@@ -343,16 +327,16 @@ class _ApiUsageScreenState extends State<ApiUsageScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text(
+            child: Text(
               'İptal',
-              style: TextStyle(color: Colors.white70),
+              style: TextStyle(color: AppColors.textPrimary.withValues(alpha: 0.7)),
             ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             child: const Text(
               'Sıfırla',
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(color: AppColors.error),
             ),
           ),
         ],
@@ -373,10 +357,10 @@ class BackgroundPainter extends CustomPainter {
     final paint = Paint();
 
     // Draw dark background
-    final backgroundGradient = const LinearGradient(
+    final backgroundGradient = LinearGradient(
       colors: [
-        Color(0xFF121212),
-        Color(0xFF1A1A1A),
+        AppColors.background,
+        AppColors.tertiary,
       ],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
@@ -389,7 +373,7 @@ class BackgroundPainter extends CustomPainter {
     final shapePaint = Paint()..style = PaintingStyle.fill;
 
     // First blob
-    shapePaint.color = Colors.white.withValues(alpha: 0.03);
+    shapePaint.color = AppColors.textPrimary.withValues(alpha: 0.03);
     final path1 = Path();
     final centerX1 = size.width * 0.2 + math.sin(animationValue * math.pi) * 40;
     final centerY1 =
@@ -400,7 +384,7 @@ class BackgroundPainter extends CustomPainter {
     canvas.drawPath(path1, shapePaint);
 
     // Second blob
-    shapePaint.color = Colors.white.withValues(alpha: 0.02);
+    shapePaint.color = AppColors.textPrimary.withValues(alpha: 0.02);
     final path2 = Path();
     final centerX2 =
         size.width * 0.8 + math.cos(animationValue * 1.5 * math.pi) * 30;
@@ -412,7 +396,7 @@ class BackgroundPainter extends CustomPainter {
     canvas.drawPath(path2, shapePaint);
 
     // Third blob
-    shapePaint.color = Colors.white.withValues(alpha: 0.01);
+    shapePaint.color = AppColors.textPrimary.withValues(alpha: 0.01);
     final path3 = Path();
     final centerX3 =
         size.width * 0.5 + math.sin(animationValue * 2 * math.pi + 2) * 20;
@@ -425,7 +409,7 @@ class BackgroundPainter extends CustomPainter {
 
     // Draw subtle grid pattern
     final gridPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.03)
+      ..color = AppColors.textPrimary.withValues(alpha: 0.03)
       ..strokeWidth = 0.5
       ..style = PaintingStyle.stroke;
 

@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:vestiyer_nodejs/core/product/theme/app_colors.dart';
 import 'package:provider/provider.dart';
 import '../providers/wardrobe_provider.dart';
 import '../providers/subscription_provider.dart';
+import '../services/firestore_service_base.dart';
 import '../widgets/paywall_widget.dart';
+import '../widgets/vestiyer_page_header.dart';
 import 'dart:async';
 
 class WardrobeAnalysisScreen extends StatefulWidget {
@@ -128,10 +131,18 @@ class _WardrobeAnalysisScreenState extends State<WardrobeAnalysisScreen> {
       };
 
       if (mounted) {
+        final analysisData = _convertStatisticsToAnalysisData(statistics);
         setState(() {
-          _analysisData = _convertStatisticsToAnalysisData(statistics);
+          _analysisData = analysisData;
           _isLoading = false;
         });
+        final userId = wardrobeProvider.currentUserId;
+        if (userId != null) {
+          final firestore = context.read<FirestoreServiceBase>();
+          final toSave = Map<String, dynamic>.from(analysisData);
+          toSave['updatedAt'] = DateTime.now().toIso8601String();
+          await firestore.setWardrobeAnalysis(userId, toSave);
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -264,35 +275,37 @@ class _WardrobeAnalysisScreenState extends State<WardrobeAnalysisScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF121212),
-      appBar: AppBar(
-        title: const Text(
-          'Gardırop Analizi',
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-        actions: [
-          if (_analysisData != null)
-            IconButton(
-              icon: const Icon(Icons.refresh, color: Colors.white70),
-              onPressed: _startAnalysis,
-              tooltip: 'Yeni Analiz',
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            VestiyerPageHeader(
+              title: 'Gardırop Analizi',
+              subtitle: 'Stil önerileri',
+              showBackButton: true,
+              onBack: () => Navigator.maybePop(context),
+              actions: [
+                if (_analysisData != null)
+                  IconButton(
+                    icon: Icon(Icons.refresh, color: AppColors.textPrimary.withValues(alpha: 0.7)),
+                    onPressed: _startAnalysis,
+                    tooltip: 'Yeni Analiz',
+                  ),
+              ],
             ),
-        ],
+            Expanded(
+              child: _isLoading
+                  ? _buildLoadingScreen()
+                  : _hasError
+                      ? _buildErrorScreen()
+                      : _analysisData == null
+                          ? _buildIntroScreen()
+                          : _buildAnalysisResults(),
+            ),
+          ],
+        ),
       ),
-      body: _isLoading
-          ? _buildLoadingScreen()
-          : _hasError
-              ? _buildErrorScreen()
-              : _analysisData == null
-                  ? _buildIntroScreen()
-                  : _buildAnalysisResults(),
     );
   }
 
@@ -305,10 +318,10 @@ class _WardrobeAnalysisScreenState extends State<WardrobeAnalysisScreen> {
             width: 120,
             height: 120,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.05),
+              color: AppColors.textPrimary.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(60),
               border: Border.all(
-                color: Colors.white.withValues(alpha: 0.1),
+                color: AppColors.textPrimary.withValues(alpha: 0.1),
                 width: 1,
               ),
             ),
@@ -321,14 +334,14 @@ class _WardrobeAnalysisScreenState extends State<WardrobeAnalysisScreen> {
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
                     valueColor: AlwaysStoppedAnimation<Color>(
-                      Colors.white.withValues(alpha: 0.7),
+                      AppColors.textPrimary.withValues(alpha: 0.7),
                     ),
                   ),
                 ),
                 Icon(
                   Icons.analytics,
                   size: 40,
-                  color: Colors.white.withValues(alpha: 0.6),
+                  color: AppColors.textPrimary.withValues(alpha: 0.6),
                 ),
               ],
             ),
@@ -342,7 +355,7 @@ class _WardrobeAnalysisScreenState extends State<WardrobeAnalysisScreen> {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w500,
-                color: Colors.white.withValues(alpha: 0.8),
+                color: AppColors.textPrimary.withValues(alpha: 0.8),
               ),
               textAlign: TextAlign.center,
             ),
@@ -352,7 +365,7 @@ class _WardrobeAnalysisScreenState extends State<WardrobeAnalysisScreen> {
             'Bu işlem birkaç dakika sürebilir...',
             style: TextStyle(
               fontSize: 14,
-              color: Colors.white.withValues(alpha: 0.6),
+              color: AppColors.textPrimary.withValues(alpha: 0.6),
             ),
           ),
         ],
@@ -370,7 +383,7 @@ class _WardrobeAnalysisScreenState extends State<WardrobeAnalysisScreen> {
             Icon(
               Icons.error_outline,
               size: 80,
-              color: Colors.white.withValues(alpha: 0.3),
+              color: AppColors.textPrimary.withValues(alpha: 0.3),
             ),
             const SizedBox(height: 24),
             Text(
@@ -378,24 +391,24 @@ class _WardrobeAnalysisScreenState extends State<WardrobeAnalysisScreen> {
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.w600,
-                color: Colors.white.withValues(alpha: 0.9),
+                color: AppColors.textPrimary.withValues(alpha: 0.9),
               ),
             ),
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.red.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
+                color: AppColors.error.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(24),
                 border: Border.all(
-                  color: Colors.red.withValues(alpha: 0.3),
+                  color: AppColors.error.withValues(alpha: 0.3),
                 ),
               ),
               child: Text(
                 _errorMessage,
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.white.withValues(alpha: 0.8),
+                  color: AppColors.textPrimary.withValues(alpha: 0.8),
                   height: 1.5,
                 ),
                 textAlign: TextAlign.center,
@@ -405,10 +418,10 @@ class _WardrobeAnalysisScreenState extends State<WardrobeAnalysisScreen> {
             ElevatedButton(
               onPressed: _startAnalysis,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white.withValues(alpha: 0.1),
-                foregroundColor: Colors.white,
+                backgroundColor: AppColors.textPrimary.withValues(alpha: 0.1),
+                foregroundColor: AppColors.textPrimary,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(24),
                 ),
               ),
               child: const Text('Tekrar Dene'),
@@ -430,13 +443,17 @@ class _WardrobeAnalysisScreenState extends State<WardrobeAnalysisScreen> {
               width: 120,
               height: 120,
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(60),
+                color: AppColors.tertiary,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: AppColors.textPrimary.withValues(alpha: 0.1),
+                  width: 1,
+                ),
               ),
               child: Icon(
                 Icons.analytics_outlined,
                 size: 60,
-                color: Colors.white.withValues(alpha: 0.6),
+                color: AppColors.textPrimary.withValues(alpha: 0.6),
               ),
             ),
             const SizedBox(height: 32),
@@ -445,7 +462,7 @@ class _WardrobeAnalysisScreenState extends State<WardrobeAnalysisScreen> {
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.w700,
-                color: Colors.white.withValues(alpha: 0.9),
+                color: AppColors.textPrimary.withValues(alpha: 0.9),
               ),
             ),
             const SizedBox(height: 16),
@@ -453,7 +470,7 @@ class _WardrobeAnalysisScreenState extends State<WardrobeAnalysisScreen> {
               'Dolabınızı analiz ederek kişisel stil önerilerinizi keşfedin',
               style: TextStyle(
                 fontSize: 16,
-                color: Colors.white.withValues(alpha: 0.7),
+                color: AppColors.textPrimary.withValues(alpha: 0.7),
               ),
               textAlign: TextAlign.center,
             ),
@@ -464,12 +481,12 @@ class _WardrobeAnalysisScreenState extends State<WardrobeAnalysisScreen> {
               child: ElevatedButton.icon(
                 onPressed: _startAnalysis,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white.withValues(alpha: 0.1),
-                  foregroundColor: Colors.white,
+                  backgroundColor: AppColors.textPrimary.withValues(alpha: 0.1),
+                  foregroundColor: AppColors.textPrimary,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(24),
                     side: BorderSide(
-                      color: Colors.white.withValues(alpha: 0.2),
+                      color: AppColors.textPrimary.withValues(alpha: 0.2),
                     ),
                   ),
                 ),
@@ -496,7 +513,8 @@ class _WardrobeAnalysisScreenState extends State<WardrobeAnalysisScreen> {
     final seasonalAnalysis = _analysisData!['seasonal_analysis'] as String;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -505,7 +523,7 @@ class _WardrobeAnalysisScreenState extends State<WardrobeAnalysisScreen> {
             style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.w700,
-              color: Colors.white.withValues(alpha: 0.9),
+              color: AppColors.textPrimary.withValues(alpha: 0.9),
             ),
           ),
           const SizedBox(height: 24),
@@ -519,7 +537,7 @@ class _WardrobeAnalysisScreenState extends State<WardrobeAnalysisScreen> {
             'Stil Analizi',
             styleAnalysis,
             Icons.style_outlined,
-            Colors.purple,
+            AppColors.primary,
           ),
           const SizedBox(height: 16),
 
@@ -528,7 +546,7 @@ class _WardrobeAnalysisScreenState extends State<WardrobeAnalysisScreen> {
             'Mevsimsel Analiz',
             seasonalAnalysis,
             Icons.wb_sunny_outlined,
-            Colors.orange,
+            AppColors.primary,
           ),
           const SizedBox(height: 24),
 
@@ -543,10 +561,11 @@ class _WardrobeAnalysisScreenState extends State<WardrobeAnalysisScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(16),
+        color: AppColors.tertiary,
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.1),
+          color: AppColors.textPrimary.withValues(alpha: 0.1),
+          width: 1,
         ),
       ),
       child: Column(
@@ -557,7 +576,7 @@ class _WardrobeAnalysisScreenState extends State<WardrobeAnalysisScreen> {
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w600,
-              color: Colors.white,
+              color: AppColors.textPrimary,
             ),
           ),
           const SizedBox(height: 16),
@@ -585,7 +604,7 @@ class _WardrobeAnalysisScreenState extends State<WardrobeAnalysisScreen> {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: Colors.white,
+              color: AppColors.textPrimary,
             ),
           ),
           const SizedBox(height: 8),
@@ -600,13 +619,13 @@ class _WardrobeAnalysisScreenState extends State<WardrobeAnalysisScreen> {
                         Text(
                           _getCategoryName(entry.key),
                           style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.7),
+                            color: AppColors.textPrimary.withValues(alpha: 0.7),
                           ),
                         ),
                         Text(
                           '${entry.value}',
                           style: const TextStyle(
-                            color: Colors.white,
+                            color: AppColors.textPrimary,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -622,14 +641,18 @@ class _WardrobeAnalysisScreenState extends State<WardrobeAnalysisScreen> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.textPrimary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: AppColors.textPrimary.withValues(alpha: 0.1),
+          width: 1,
+        ),
       ),
       child: Column(
         children: [
           Icon(
             icon,
-            color: Colors.white.withValues(alpha: 0.7),
+            color: AppColors.textPrimary.withValues(alpha: 0.7),
             size: 24,
           ),
           const SizedBox(height: 8),
@@ -638,14 +661,14 @@ class _WardrobeAnalysisScreenState extends State<WardrobeAnalysisScreen> {
             style: const TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.w700,
-              color: Colors.white,
+              color: AppColors.textPrimary,
             ),
           ),
           Text(
             title,
             style: TextStyle(
               fontSize: 12,
-              color: Colors.white.withValues(alpha: 0.7),
+              color: AppColors.textPrimary.withValues(alpha: 0.7),
             ),
             textAlign: TextAlign.center,
           ),
@@ -659,10 +682,11 @@ class _WardrobeAnalysisScreenState extends State<WardrobeAnalysisScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(16),
+        color: AppColors.tertiary,
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.1),
+          color: AppColors.textPrimary.withValues(alpha: 0.1),
+          width: 1,
         ),
       ),
       child: Row(
@@ -672,7 +696,7 @@ class _WardrobeAnalysisScreenState extends State<WardrobeAnalysisScreen> {
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(24),
             ),
             child: Icon(
               icon,
@@ -690,7 +714,7 @@ class _WardrobeAnalysisScreenState extends State<WardrobeAnalysisScreen> {
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                    color: AppColors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -698,7 +722,7 @@ class _WardrobeAnalysisScreenState extends State<WardrobeAnalysisScreen> {
                   content,
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.white.withValues(alpha: 0.7),
+                    color: AppColors.textPrimary.withValues(alpha: 0.7),
                     height: 1.5,
                   ),
                 ),
@@ -714,10 +738,11 @@ class _WardrobeAnalysisScreenState extends State<WardrobeAnalysisScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(16),
+        color: AppColors.tertiary,
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.1),
+          color: AppColors.textPrimary.withValues(alpha: 0.1),
+          width: 1,
         ),
       ),
       child: Column(
@@ -728,12 +753,12 @@ class _WardrobeAnalysisScreenState extends State<WardrobeAnalysisScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.green.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(12),
+                  color: AppColors.primary.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(24),
                 ),
                 child: const Icon(
                   Icons.lightbulb_outline,
-                  color: Colors.green,
+                  color: AppColors.primary,
                   size: 20,
                 ),
               ),
@@ -743,7 +768,7 @@ class _WardrobeAnalysisScreenState extends State<WardrobeAnalysisScreen> {
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w600,
-                  color: Colors.white,
+                  color: AppColors.textPrimary,
                 ),
               ),
             ],
@@ -759,7 +784,7 @@ class _WardrobeAnalysisScreenState extends State<WardrobeAnalysisScreen> {
                       height: 6,
                       margin: const EdgeInsets.only(top: 6, right: 12),
                       decoration: BoxDecoration(
-                        color: Colors.green.withValues(alpha: 0.6),
+                        color: AppColors.primary,
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -768,7 +793,7 @@ class _WardrobeAnalysisScreenState extends State<WardrobeAnalysisScreen> {
                         recommendation,
                         style: TextStyle(
                           fontSize: 14,
-                          color: Colors.white.withValues(alpha: 0.7),
+                          color: AppColors.textPrimary.withValues(alpha: 0.7),
                           height: 1.5,
                         ),
                       ),

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:vestiyer_nodejs/core/product/theme/app_colors.dart';
 import '../models/clothing.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'dart:math' as math;
 
 class ClothingDetailScreen extends StatefulWidget {
   final Clothing item;
@@ -12,47 +12,13 @@ class ClothingDetailScreen extends StatefulWidget {
   State<ClothingDetailScreen> createState() => _ClothingDetailScreenState();
 }
 
-class _ClothingDetailScreenState extends State<ClothingDetailScreen>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(seconds: 30),
-      vsync: this,
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
+class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-
     return Scaffold(
-      backgroundColor: const Color(0xFF121212),
+      backgroundColor: AppColors.background,
       extendBodyBehindAppBar: true,
-      body: Stack(
-        children: [
-          // Animated background
-          AnimatedBuilder(
-            animation: _controller,
-            builder: (_, __) {
-              return CustomPaint(
-                size: Size(size.width, size.height),
-                painter: BackgroundPainter(_controller.value),
-              );
-            },
-          ),
-
-          // Content
-          CustomScrollView(
+      body: CustomScrollView(
             physics: const BouncingScrollPhysics(),
             slivers: [
               SliverAppBar(
@@ -64,10 +30,10 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen>
                   icon: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.black54,
-                      borderRadius: BorderRadius.circular(12),
+                      color: AppColors.tertiary,
+                      borderRadius: BorderRadius.circular(24),
                       border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.1),
+                        color: AppColors.textPrimary.withValues(alpha: 0.1),
                         width: 1,
                       ),
                       boxShadow: [
@@ -79,14 +45,14 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen>
                       ],
                     ),
                     child: const Icon(Icons.arrow_back,
-                        color: Colors.white, size: 20),
+                        color: AppColors.textPrimary, size: 20),
                   ),
                   onPressed: () => Navigator.pop(context),
                 ),
                 flexibleSpace: FlexibleSpaceBar(
                   background: Container(
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade900,
+                      color: AppColors.tertiary,
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withValues(alpha: 0.2),
@@ -101,19 +67,19 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen>
                         imageUrl: widget.item.imageUrl,
                         fit: BoxFit.cover,
                         placeholder: (context, url) => Container(
-                          color: Colors.grey.shade800,
+                          color: AppColors.tertiary,
                           child: const Center(
                             child: CircularProgressIndicator(
                               valueColor:
-                                  AlwaysStoppedAnimation<Color>(Colors.white70),
+                                  AlwaysStoppedAnimation<Color>(AppColors.textPrimary),
                             ),
                           ),
                         ),
                         errorWidget: (context, url, error) => Container(
-                          color: Colors.grey.shade800,
+                          color: AppColors.tertiary,
                           child: const Icon(
                             Icons.error_outline,
-                            color: Colors.white60,
+                            color: AppColors.textSecondary,
                             size: 40,
                           ),
                         ),
@@ -125,10 +91,24 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen>
               SliverToBoxAdapter(
                 child: Container(
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade900.withValues(alpha: 0.7),
+                    color: AppColors.tertiary,
                     borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(30),
-                      topRight: Radius.circular(30),
+                      topLeft: Radius.circular(24),
+                      topRight: Radius.circular(24),
+                    ),
+                    border: Border(
+                      top: BorderSide(
+                        color: AppColors.textPrimary.withValues(alpha: 0.1),
+                        width: 1,
+                      ),
+                      left: BorderSide(
+                        color: AppColors.textPrimary.withValues(alpha: 0.1),
+                        width: 1,
+                      ),
+                      right: BorderSide(
+                        color: AppColors.textPrimary.withValues(alpha: 0.1),
+                        width: 1,
+                      ),
                     ),
                     boxShadow: [
                       BoxShadow(
@@ -148,7 +128,7 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen>
                           style: const TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.w700,
-                            color: Colors.white,
+                            color: AppColors.textPrimary,
                             letterSpacing: -0.5,
                           ),
                         ),
@@ -157,7 +137,7 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen>
                           widget.item.category,
                           style: TextStyle(
                             fontSize: 16,
-                            color: Colors.white.withValues(alpha: 0.7),
+                            color: AppColors.textPrimary.withValues(alpha: 0.7),
                             height: 1.5,
                             letterSpacing: -0.2,
                           ),
@@ -250,8 +230,6 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen>
               ),
             ],
           ),
-        ],
-      ),
     );
   }
 
@@ -263,10 +241,10 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(16),
+        color: AppColors.tertiary,
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.1),
+          color: AppColors.textPrimary.withValues(alpha: 0.1),
           width: 1,
         ),
       ),
@@ -276,12 +254,12 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen>
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
+              color: AppColors.textPrimary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(24),
             ),
             child: Icon(
               icon,
-              color: Colors.white.withValues(alpha: 0.8),
+              color: AppColors.textPrimary.withValues(alpha: 0.8),
               size: 20,
             ),
           ),
@@ -295,7 +273,7 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen>
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: Colors.white.withValues(alpha: 0.6),
+                    color: AppColors.textPrimary.withValues(alpha: 0.6),
                     letterSpacing: 0.5,
                   ),
                 ),
@@ -305,7 +283,7 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen>
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
-                    color: Colors.white,
+                    color: AppColors.textPrimary,
                     height: 1.4,
                   ),
                 ),
@@ -325,10 +303,10 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(16),
+        color: AppColors.tertiary,
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.1),
+          color: AppColors.textPrimary.withValues(alpha: 0.1),
           width: 1,
         ),
       ),
@@ -340,12 +318,12 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen>
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
+                  color: AppColors.textPrimary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(24),
                 ),
                 child: Icon(
                   Icons.info_outline,
-                  color: Colors.white.withValues(alpha: 0.8),
+                  color: AppColors.textPrimary.withValues(alpha: 0.8),
                   size: 20,
                 ),
               ),
@@ -355,7 +333,7 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen>
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
-                  color: Colors.white,
+                  color: AppColors.textPrimary,
                 ),
               ),
             ],
@@ -373,7 +351,7 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen>
                             width: 4,
                             height: 4,
                             decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.6),
+                              color: AppColors.textPrimary.withValues(alpha: 0.6),
                               shape: BoxShape.circle,
                             ),
                           )
@@ -386,7 +364,7 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen>
                                 : line,
                             style: TextStyle(
                               fontSize: 14,
-                              color: Colors.white.withValues(alpha: 0.9),
+                              color: AppColors.textPrimary.withValues(alpha: 0.9),
                               height: 1.5,
                             ),
                           ),
@@ -407,10 +385,10 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(16),
+        color: AppColors.tertiary,
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.1),
+          color: AppColors.textPrimary.withValues(alpha: 0.1),
           width: 1,
         ),
       ),
@@ -422,12 +400,12 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen>
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(12),
+                  color: AppColors.primary.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(24),
                 ),
                 child: const Icon(
                   Icons.api_outlined,
-                  color: Colors.blue,
+                  color: AppColors.primary,
                   size: 20,
                 ),
               ),
@@ -437,7 +415,7 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen>
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
-                  color: Colors.white,
+                  color: AppColors.textPrimary,
                 ),
               ),
             ],
@@ -512,10 +490,11 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen>
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.03),
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.textPrimary.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.05),
+          color: AppColors.textPrimary.withValues(alpha: 0.1),
+          width: 1,
         ),
       ),
       child: Column(
@@ -526,14 +505,14 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen>
               Icon(
                 icon,
                 size: 16,
-                color: Colors.white.withValues(alpha: 0.6),
+                color: AppColors.textPrimary.withValues(alpha: 0.6),
               ),
               const SizedBox(width: 6),
               Text(
                 label,
                 style: TextStyle(
                   fontSize: 12,
-                  color: Colors.white.withValues(alpha: 0.6),
+                  color: AppColors.textPrimary.withValues(alpha: 0.6),
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -544,7 +523,7 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen>
             value,
             style: const TextStyle(
               fontSize: 14,
-              color: Colors.white,
+              color: AppColors.textPrimary,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -558,67 +537,3 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen>
   }
 }
 
-class BackgroundPainter extends CustomPainter {
-  final double animationValue;
-
-  BackgroundPainter(this.animationValue);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint();
-
-    // Draw dark background
-    final backgroundGradient = const LinearGradient(
-      colors: [
-        Color(0xFF121212),
-        Color(0xFF1A1A1A),
-      ],
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-    ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
-
-    paint.shader = backgroundGradient;
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), paint);
-
-    // Draw animated gradient shapes
-    final shapePaint = Paint()..style = PaintingStyle.fill;
-
-    // First blob
-    shapePaint.color = Colors.white.withValues(alpha: 0.03);
-    final path1 = Path();
-    final centerX1 = size.width * 0.2 + math.sin(animationValue * math.pi) * 40;
-    final centerY1 =
-        size.height * 0.2 + math.cos(animationValue * math.pi) * 40;
-    final radius1 = size.width * 0.5;
-    path1.addOval(
-        Rect.fromCircle(center: Offset(centerX1, centerY1), radius: radius1));
-    canvas.drawPath(path1, shapePaint);
-
-    // Second blob
-    shapePaint.color = Colors.white.withValues(alpha: 0.02);
-    final path2 = Path();
-    final centerX2 =
-        size.width * 0.8 + math.cos(animationValue * 1.5 * math.pi) * 30;
-    final centerY2 =
-        size.height * 0.5 + math.sin(animationValue * 1.5 * math.pi) * 30;
-    final radius2 = size.width * 0.4;
-    path2.addOval(
-        Rect.fromCircle(center: Offset(centerX2, centerY2), radius: radius2));
-    canvas.drawPath(path2, shapePaint);
-
-    // Third blob
-    shapePaint.color = Colors.white.withValues(alpha: 0.01);
-    final path3 = Path();
-    final centerX3 =
-        size.width * 0.5 + math.sin(animationValue * 2 * math.pi + 2) * 20;
-    final centerY3 =
-        size.height * 0.8 + math.cos(animationValue * 2 * math.pi + 2) * 20;
-    final radius3 = size.width * 0.6;
-    path3.addOval(
-        Rect.fromCircle(center: Offset(centerX3, centerY3), radius: radius3));
-    canvas.drawPath(path3, shapePaint);
-  }
-
-  @override
-  bool shouldRepaint(BackgroundPainter oldDelegate) => true;
-}

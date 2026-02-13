@@ -1,13 +1,23 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:vestiyer_nodejs/core/product/theme/app_colors.dart';
+import 'package:vestiyer_nodejs/core/product/widget/design/vestiyer_primary_button.dart';
+import 'package:vestiyer_nodejs/core/product/widget/design/vestiyer_text_field.dart';
 import '../providers/subscription_provider.dart';
 import '../providers/wardrobe_provider.dart';
+import '../services/firebase_auth_service.dart';
+import '../services/hive_cache_service.dart';
 import '../services/firestore_service_base.dart';
 import '../utils/mock_data_helper.dart';
+import '../widgets/vestiyer_page_header.dart';
+import 'login_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  const ProfileScreen({super.key, this.showBackButton = true});
+
+  /// When false (e.g. when used as bottom nav tab), back button is hidden.
+  final bool showBackButton;
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -38,6 +48,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  Future<void> _logout() async {
+    try {
+      final authService = context.read<FirebaseAuthService>();
+      final uid = authService.currentUserId;
+      final cache = context.read<HiveCacheService?>();
+      if (cache != null && uid != null) {
+        await cache.invalidateUser(uid);
+        await cache.invalidateClothing(uid);
+        await cache.invalidateCombinations(uid);
+      }
+      await authService.signOut();
+      if (!mounted) return;
+      context.read<WardrobeProvider>().setCurrentUserId(null);
+      context.read<SubscriptionProvider>().setCurrentUser(null);
+      if (mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Çıkış yapılırken hata oluştu: $e')),
+        );
+      }
+    }
+  }
+
   Future<void> _updateProfile() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -59,7 +98,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Profil güncelleme özelliği yakında eklenecek'),
-            backgroundColor: Colors.orange,
+            backgroundColor: AppColors.primary,
           ),
         );
         Navigator.pop(context);
@@ -89,27 +128,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF121212),
-      appBar: AppBar(
-        title: const Text(
-          'Profili Düzenle',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            VestiyerPageHeader(
+              title: 'Profil',
+              subtitle: 'Profili düzenle',
+              showBackButton: widget.showBackButton,
+              onBack: () => Navigator.maybePop(context),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24.0),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
               const SizedBox(height: 20),
               Consumer<SubscriptionProvider>(
                 builder: (context, subscriptionProvider, child) {
@@ -120,10 +157,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Container(
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.05),
-                          borderRadius: BorderRadius.circular(16),
+                          color: AppColors.tertiary,
+                          borderRadius: BorderRadius.circular(24),
                           border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.1),
+                            color: AppColors.textPrimary.withValues(alpha: 0.1),
                           ),
                         ),
                         child: Column(
@@ -135,12 +172,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   width: 60,
                                   height: 60,
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.1),
+                                    color: AppColors.textPrimary.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(30),
                                   ),
                                   child: Icon(
                                     Icons.person,
-                                    color: Colors.white.withValues(alpha: 0.8),
+                                    color: AppColors.textPrimary.withValues(alpha: 0.8),
                                     size: 30,
                                   ),
                                 ),
@@ -157,7 +194,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         style: const TextStyle(
                                           fontSize: 18,
                                           fontWeight: FontWeight.w600,
-                                          color: Colors.white,
+                                          color: AppColors.textPrimary,
                                         ),
                                       ),
                                       const SizedBox(height: 4),
@@ -165,7 +202,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         user?.email ?? '',
                                         style: TextStyle(
                                           fontSize: 14,
-                                          color: Colors.white.withValues(alpha: 0.7),
+                                          color: AppColors.textPrimary.withValues(alpha: 0.7),
                                         ),
                                       ),
                                       const SizedBox(height: 8),
@@ -176,8 +213,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         ),
                                         decoration: BoxDecoration(
                                           color: subscriptionProvider.isPremium
-                                              ? Colors.amber.withValues(alpha: 0.2)
-                                              : Colors.grey.withValues(alpha: 0.2),
+                                              ? AppColors.primary.withValues(alpha: 0.2)
+                                              : AppColors.textSecondary.withValues(alpha: 0.2),
                                           borderRadius:
                                               BorderRadius.circular(20),
                                         ),
@@ -190,8 +227,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             fontWeight: FontWeight.w600,
                                             color: subscriptionProvider
                                                     .isPremium
-                                                ? Colors.amber.shade300
-                                                : Colors.white.withValues(alpha: 0.8),
+                                                ? AppColors.primary
+                                                : AppColors.textPrimary.withValues(alpha: 0.8),
                                           ),
                                         ),
                                       ),
@@ -204,112 +241,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ),
                       const SizedBox(height: 32),
-                      TextFormField(
+                      VestiyerTextField(
                         controller: _firstNameController,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: InputDecoration(
-                          labelText: 'Ad',
-                          labelStyle: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.7),
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(
-                              color: Colors.white.withValues(alpha: 0.2),
-                            ),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(
-                              color: Colors.white.withValues(alpha: 0.2),
-                            ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(
-                              color: Colors.white,
-                            ),
-                          ),
-                          filled: true,
-                          fillColor: Colors.white.withValues(alpha: 0.05),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Lütfen adınızı girin';
-                          }
-                          return null;
-                        },
+                        label: 'Ad',
+                        validator: (v) =>
+                            (v == null || v.isEmpty) ? 'Lütfen adınızı girin' : null,
                       ),
                       const SizedBox(height: 16),
-                      TextFormField(
+                      VestiyerTextField(
                         controller: _lastNameController,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: InputDecoration(
-                          labelText: 'Soyad',
-                          labelStyle: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.7),
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(
-                              color: Colors.white.withValues(alpha: 0.2),
-                            ),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(
-                              color: Colors.white.withValues(alpha: 0.2),
-                            ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(
-                              color: Colors.white,
-                            ),
-                          ),
-                          filled: true,
-                          fillColor: Colors.white.withValues(alpha: 0.05),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Lütfen soyadınızı girin';
-                          }
-                          return null;
-                        },
+                        label: 'Soyad',
+                        validator: (v) =>
+                            (v == null || v.isEmpty) ? 'Lütfen soyadınızı girin' : null,
                       ),
                       const SizedBox(height: 32),
+                      VestiyerPrimaryButton(
+                        text: 'Profili Güncelle',
+                        isLoading: _isLoading,
+                        enabled: !_isLoading,
+                        onTap: _updateProfile,
+                      ),
+                      const SizedBox(height: 24),
                       SizedBox(
                         width: double.infinity,
-                        height: 50,
-                        child: ElevatedButton(
-                          onPressed: _isLoading ? null : _updateProfile,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white.withValues(alpha: 0.1),
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              side: BorderSide(
-                                color: Colors.white.withValues(alpha: 0.2),
-                              ),
-                            ),
+                        child: TextButton.icon(
+                          onPressed: _isLoading ? null : _logout,
+                          icon: Icon(Icons.logout_outlined, size: 20, color: AppColors.textPrimary.withValues(alpha: 0.7)),
+                          label: Text(
+                            'Çıkış Yap',
+                            style: TextStyle(color: AppColors.textPrimary.withValues(alpha: 0.7), fontSize: 15),
                           ),
-                          child: _isLoading
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    color: Colors.white,
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Text(
-                                  'Profili Güncelle',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
                         ),
                       ),
                       if (kDebugMode) ...[
@@ -320,8 +281,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           child: OutlinedButton(
                             onPressed: _isLoading ? null : _loadSampleData,
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.orange,
-                              side: const BorderSide(color: Colors.orange),
+                              foregroundColor: AppColors.primary,
+                              side: const BorderSide(color: AppColors.primary),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
@@ -336,6 +297,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ],
           ),
+        ),
+      ),
+            ),
+          ],
         ),
       ),
     );

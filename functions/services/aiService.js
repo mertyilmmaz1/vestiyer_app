@@ -195,7 +195,7 @@ Detaylar: ${adv.details || 'Belirtilmemiş'}
 
   const content = response.choices[0].message.content;
   const parsedOutfits = parseOutfits(content);
-  const combinations = parsedOutfits.map((outfit) => ({
+  const combinations = parsedOutfits.slice(0, 3).map((outfit) => ({
     name: getCombinationName(outfit.outfit_number),
     items: outfit.items,
     occasion: mapUsageToOccasion(outfit.details.kullanim),

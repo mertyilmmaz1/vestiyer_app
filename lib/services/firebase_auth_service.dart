@@ -11,20 +11,20 @@ class FirebaseAuthService {
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
   /// Sign in with email and password.
-  Future<UserCredential> signInWithEmailAndPassword(
+  Future<void> signInWithEmailAndPassword(
     String email,
     String password,
   ) async {
-    return _auth.signInWithEmailAndPassword(email: email, password: password);
+    await _auth.signInWithEmailAndPassword(email: email, password: password);
   }
 
   /// Create account with email, password, and display name.
   /// Caller should then create/update Firestore user profile with firstName, lastName.
-  Future<UserCredential> createUserWithEmailAndPassword(
+  Future<void> createUserWithEmailAndPassword(
     String email,
     String password,
   ) async {
-    return _auth.createUserWithEmailAndPassword(
+    await _auth.createUserWithEmailAndPassword(
       email: email,
       password: password,
     );

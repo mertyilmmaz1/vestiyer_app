@@ -1,5 +1,6 @@
 import '../models/clothing.dart';
 import '../models/combination.dart';
+import '../models/outfit_log.dart';
 import '../models/user.dart' as app_user;
 
 /// Base type for Firestore access so real and mock implementations can be swapped.
@@ -22,4 +23,10 @@ abstract class FirestoreServiceBase {
   Stream<List<Combination>> combinationsStream(String userId);
   Future<void> updateCombination(String userId, String combinationId, Map<String, dynamic> updates);
   Future<void> deleteCombination(String userId, String combinationId);
+
+  Future<OutfitLog?> addOutfitLog(String userId, Map<String, dynamic> data);
+  Future<List<OutfitLog>> getOutfitLogs(String userId, {DateTime? from, DateTime? to, int limit = 100});
+
+  Future<void> setWardrobeAnalysis(String userId, Map<String, dynamic> data);
+  Future<Map<String, dynamic>?> getWardrobeAnalysis(String userId);
 }

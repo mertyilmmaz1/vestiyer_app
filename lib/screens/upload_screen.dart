@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:vestiyer_nodejs/core/product/theme/app_colors.dart';
+import 'package:vestiyer_nodejs/core/product/widget/design/vestiyer_primary_button.dart';
 import 'dart:io';
 import 'package:provider/provider.dart';
 import '../providers/wardrobe_provider.dart';
 import '../providers/subscription_provider.dart';
 import '../widgets/paywall_widget.dart';
+import '../widgets/vestiyer_page_header.dart';
 import 'premium_screen.dart';
 import 'dart:async';
 import 'wardrobe_screen.dart';
-import 'dart:math' as math;
 
 class UploadScreen extends StatefulWidget {
   const UploadScreen({super.key});
@@ -45,12 +47,6 @@ class _UploadScreenState extends State<UploadScreen>
 
   late AnimationController _fadeController;
 
-  // OpenAI tarzı monokromatik renk paleti
-  final _primaryColor = Colors.white; // Ana metin rengi
-  final _secondaryColor = Colors.white70; // İkincil metin rengi
-  final _backgroundColor = const Color(0xFF121212); // Koyu arkaplan
-
-  late AnimationController _backgroundController;
 
   @override
   void initState() {
@@ -60,11 +56,6 @@ class _UploadScreenState extends State<UploadScreen>
       vsync: this,
     );
     _fadeController.forward();
-
-    _backgroundController = AnimationController(
-      duration: const Duration(seconds: 30),
-      vsync: this,
-    )..repeat();
 
     // Check if the user has reached the free limit
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -76,15 +67,12 @@ class _UploadScreenState extends State<UploadScreen>
     final subscriptionProvider =
         Provider.of<SubscriptionProvider>(context, listen: false);
 
-    if (subscriptionProvider.hasReachedFreeLimit &&
-        !subscriptionProvider.isPremium) {
+    if (!subscriptionProvider.canAddClothing()) {
       await PaywallWidget.showPaywall(
         context,
         type: PaywallType.itemLimit,
-        barrierDismissible: true,
       );
 
-      // If user is still not premium after seeing the paywall, return to previous screen
       if (!subscriptionProvider.isPremium && mounted) {
         Navigator.of(context).pop();
       }
@@ -94,7 +82,6 @@ class _UploadScreenState extends State<UploadScreen>
   @override
   void dispose() {
     _fadeController.dispose();
-    _backgroundController.dispose();
     _colorController.dispose();
     _materialController.dispose();
     _messageTimer?.cancel();
@@ -162,7 +149,6 @@ class _UploadScreenState extends State<UploadScreen>
         type: PaywallType.itemLimit,
         customMessage:
             'Ücretsiz kıyafet ekleme limitine ulaştınız. Premium üyelikle sınırsız kıyafet ekleyin.',
-        barrierDismissible: true,
       );
       if (!mounted) return;
 
@@ -178,21 +164,21 @@ class _UploadScreenState extends State<UploadScreen>
       final result = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          backgroundColor: const Color(0xFF1E1E1E),
+          backgroundColor: AppColors.tertiary,
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
           title: const Text(
             'Limit Uyarısı',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
-              color: Colors.white,
+              color: AppColors.textPrimary,
             ),
           ),
           content: Text(
             'Ücretsiz sürümde $remainingFreeItems kıyafet ekleme hakkınız kaldı, ancak ${_images.length} kıyafet seçtiniz. Premium üyelikle sınırsız kıyafet ekleyebilirsiniz veya seçiminizi azaltabilirsiniz.',
             style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.7),
+              color: AppColors.textPrimary.withValues(alpha: 0.7),
               fontSize: 14,
               height: 1.5,
             ),
@@ -200,9 +186,9 @@ class _UploadScreenState extends State<UploadScreen>
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text(
+              child: Text(
                 'İptal',
-                style: TextStyle(color: Colors.white70),
+                style: TextStyle(color: AppColors.textPrimary.withValues(alpha: 0.7)),
               ),
             ),
             TextButton(
@@ -215,14 +201,14 @@ class _UploadScreenState extends State<UploadScreen>
               },
               child: const Text(
                 'Premium\'a Yükselt',
-                style: TextStyle(color: Colors.amber),
+                style: TextStyle(color: AppColors.primary),
               ),
             ),
             TextButton(
               onPressed: () => Navigator.pop(context, true),
               child: Text(
                 'İlk $remainingFreeItems Kıyafeti Yükle',
-                style: const TextStyle(color: Colors.white),
+                style: const TextStyle(color: AppColors.textPrimary),
               ),
             ),
           ],
@@ -286,7 +272,6 @@ class _UploadScreenState extends State<UploadScreen>
                 type: PaywallType.itemLimit,
                 customMessage:
                     'Ücretsiz kıyafet ekleme limitine ulaştınız. Premium üyelikle sınırsız kıyafet ekleyin.',
-                barrierDismissible: true,
               );
 
               // If user didn't upgrade, stop the upload process
@@ -303,7 +288,7 @@ class _UploadScreenState extends State<UploadScreen>
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text('Kıyafet yüklenirken hata oluştu: $e'),
-                  backgroundColor: Colors.red.shade900,
+                  backgroundColor: AppColors.error,
                 ),
               );
             }
@@ -330,7 +315,7 @@ class _UploadScreenState extends State<UploadScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Kıyafet başarıyla yüklendi ve analiz edildi'),
-            backgroundColor: Colors.green,
+            backgroundColor: AppColors.primary,
           ),
         );
       }
@@ -340,7 +325,7 @@ class _UploadScreenState extends State<UploadScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Hata: $e'),
-          backgroundColor: Colors.red.shade900,
+          backgroundColor: AppColors.error,
         ),
       );
     } finally {
@@ -363,47 +348,29 @@ class _UploadScreenState extends State<UploadScreen>
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-
+    final title = _isSuccess ? 'Yükleme Başarılı' : 'Kıyafet Yükle';
+    final subtitle = _isSuccess ? null : 'Kıyafetlerini yükle ve kişisel dolabını oluştur.';
     return Scaffold(
-      backgroundColor: _backgroundColor,
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        title: Text(
-          _isSuccess ? 'Yükleme Başarılı' : 'Kıyafet Yükle',
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
-            color: _primaryColor,
-            letterSpacing: -0.2,
-          ),
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            VestiyerPageHeader(
+              title: title,
+              subtitle: subtitle,
+              showBackButton: true,
+              onBack: () => Navigator.maybePop(context),
+            ),
+            Expanded(
+              child: _isLoading
+                  ? _buildLoadingScreen()
+                  : _isSuccess
+                      ? _buildSuccessScreen()
+                      : _buildInitialUploadScreen(),
+            ),
+          ],
         ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        iconTheme: IconThemeData(color: _primaryColor),
-      ),
-      body: Stack(
-        children: [
-          // Animated background
-          AnimatedBuilder(
-            animation: _backgroundController,
-            builder: (_, __) {
-              return CustomPaint(
-                size: Size(size.width, size.height),
-                painter: BackgroundPainter(_backgroundController.value),
-              );
-            },
-          ),
-
-          // Content
-          SafeArea(
-            child: _isLoading
-                ? _buildLoadingScreen()
-                : _isSuccess
-                    ? _buildSuccessScreen()
-                    : _buildInitialUploadScreen(),
-          ),
-        ],
       ),
     );
   }
@@ -412,40 +379,21 @@ class _UploadScreenState extends State<UploadScreen>
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 16),
-            Text(
-              'Dolabını Güncelle',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w700,
-                color: _primaryColor,
-                letterSpacing: -0.5,
-              ),
-            ),
             const SizedBox(height: 8),
-            Text(
-              'Kıyafetlerini yükle ve kişisel dolabını oluştur.',
-              style: TextStyle(
-                fontSize: 16,
-                color: _secondaryColor,
-                letterSpacing: 0.2,
-              ),
-            ),
-            const SizedBox(height: 24),
             GestureDetector(
               onTap: () => _getImages(ImageSource.gallery),
               child: Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 30),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.05),
-                  borderRadius: BorderRadius.circular(20),
+                  color: AppColors.tertiary,
+                  borderRadius: BorderRadius.circular(24),
                   border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.1),
+                    color: AppColors.textPrimary.withValues(alpha: 0.1),
                     width: 1,
                   ),
                 ),
@@ -456,17 +404,17 @@ class _UploadScreenState extends State<UploadScreen>
                       width: 72,
                       height: 72,
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.1),
+                        color: AppColors.textPrimary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(36),
                         border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.05),
+                          color: AppColors.tertiary,
                           width: 1,
                         ),
                       ),
                       child: Icon(
                         Icons.add_photo_alternate_outlined,
                         size: 32,
-                        color: Colors.white.withValues(alpha: 0.8),
+                        color: AppColors.textPrimary.withValues(alpha: 0.8),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -475,7 +423,7 @@ class _UploadScreenState extends State<UploadScreen>
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
-                        color: _primaryColor,
+                        color: AppColors.textPrimary,
                         letterSpacing: 0.2,
                       ),
                     ),
@@ -484,7 +432,7 @@ class _UploadScreenState extends State<UploadScreen>
                       'Galeriden seç veya fotoğraf çek',
                       style: TextStyle(
                         fontSize: 14,
-                        color: _secondaryColor,
+                        color: AppColors.textPrimary.withValues(alpha: 0.7),
                         letterSpacing: 0.2,
                       ),
                     ),
@@ -499,7 +447,7 @@ class _UploadScreenState extends State<UploadScreen>
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
-                  color: _primaryColor,
+                  color: AppColors.textPrimary,
                   letterSpacing: -0.2,
                 ),
               ),
@@ -520,16 +468,16 @@ class _UploadScreenState extends State<UploadScreen>
                       onTap: () => _getImages(ImageSource.gallery),
                       child: Container(
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.05),
-                          borderRadius: BorderRadius.circular(16),
+                          color: AppColors.tertiary,
+                          borderRadius: BorderRadius.circular(24),
                           border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.1),
+                            color: AppColors.textPrimary.withValues(alpha: 0.1),
                             width: 1,
                           ),
                         ),
                         child: Icon(
                           Icons.add,
-                          color: _primaryColor.withValues(alpha: 0.8),
+                          color: AppColors.textPrimary.withValues(alpha: 0.8),
                           size: 28,
                         ),
                       ),
@@ -540,14 +488,14 @@ class _UploadScreenState extends State<UploadScreen>
                     children: [
                       Container(
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(24),
                           border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.1),
+                            color: AppColors.textPrimary.withValues(alpha: 0.1),
                             width: 1,
                           ),
                         ),
                         child: ClipRRect(
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(24),
                           child: Image.file(
                             _images[index],
                             fit: BoxFit.cover,
@@ -565,15 +513,15 @@ class _UploadScreenState extends State<UploadScreen>
                               _images.removeAt(index);
                             });
                           },
-                          child: Container(
+                            child: Container(
                             padding: const EdgeInsets.all(4),
                             decoration: BoxDecoration(
                               color: Colors.black.withValues(alpha: 0.6),
-                              borderRadius: BorderRadius.circular(20),
+                              borderRadius: BorderRadius.circular(24),
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Icons.close,
-                              color: Colors.white,
+                              color: AppColors.textPrimary,
                               size: 16,
                             ),
                           ),
@@ -590,11 +538,11 @@ class _UploadScreenState extends State<UploadScreen>
                 child: ElevatedButton(
                   onPressed: _uploadImages,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white.withValues(alpha: 0.1),
-                    foregroundColor: _primaryColor,
+                    backgroundColor: AppColors.textPrimary.withValues(alpha: 0.1),
+                    foregroundColor: AppColors.textPrimary,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(24),
                     ),
                   ),
                   child: Text(
@@ -602,7 +550,7 @@ class _UploadScreenState extends State<UploadScreen>
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: _primaryColor,
+                      color: AppColors.textPrimary,
                     ),
                   ),
                 ),
@@ -623,12 +571,12 @@ class _UploadScreenState extends State<UploadScreen>
             width: 80,
             height: 80,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.1),
+              color: AppColors.textPrimary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(40),
             ),
-            child: const Center(
+            child: Center(
               child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.textPrimary),
                 strokeWidth: 3,
               ),
             ),
@@ -639,7 +587,7 @@ class _UploadScreenState extends State<UploadScreen>
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
-              color: _primaryColor,
+              color: AppColors.textPrimary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -648,7 +596,7 @@ class _UploadScreenState extends State<UploadScreen>
             '${_currentUploadIndex + 1} / $_totalUploads',
             style: TextStyle(
               fontSize: 14,
-              color: _secondaryColor,
+              color: AppColors.textPrimary.withValues(alpha: 0.7),
             ),
           ),
         ],
@@ -667,12 +615,12 @@ class _UploadScreenState extends State<UploadScreen>
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: Colors.green.withValues(alpha: 0.2),
+                color: AppColors.primary.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(40),
               ),
               child: const Icon(
                 Icons.check_circle,
-                color: Colors.green,
+                color: AppColors.primary,
                 size: 48,
               ),
             ),
@@ -682,7 +630,7 @@ class _UploadScreenState extends State<UploadScreen>
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.w700,
-                color: _primaryColor,
+                color: AppColors.textPrimary,
               ),
             ),
             const SizedBox(height: 16),
@@ -690,14 +638,18 @@ class _UploadScreenState extends State<UploadScreen>
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.05),
-                  borderRadius: BorderRadius.circular(12),
+                  color: AppColors.tertiary,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: AppColors.textPrimary.withValues(alpha: 0.1),
+                    width: 1,
+                  ),
                 ),
                 child: Text(
                   _uploadedDescription!,
                   style: TextStyle(
                     fontSize: 14,
-                    color: _secondaryColor,
+                    color: AppColors.textPrimary.withValues(alpha: 0.7),
                     height: 1.5,
                   ),
                   textAlign: TextAlign.center,
@@ -710,11 +662,11 @@ class _UploadScreenState extends State<UploadScreen>
                   child: ElevatedButton(
                     onPressed: _resetUpload,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white.withValues(alpha: 0.1),
-                      foregroundColor: _primaryColor,
+                      backgroundColor: AppColors.textPrimary.withValues(alpha: 0.1),
+                      foregroundColor: AppColors.textPrimary,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(24),
                       ),
                     ),
                     child: const Text('Yeni Yükleme'),
@@ -722,8 +674,9 @@ class _UploadScreenState extends State<UploadScreen>
                 ),
                 const SizedBox(width: 16),
                 Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
+                  child: VestiyerPrimaryButton(
+                    text: 'Dolabı Gör',
+                    onTap: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -731,15 +684,6 @@ class _UploadScreenState extends State<UploadScreen>
                         ),
                       );
                     },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: Colors.black,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text('Dolabı Gör'),
                   ),
                 ),
               ],
@@ -749,69 +693,4 @@ class _UploadScreenState extends State<UploadScreen>
       ),
     );
   }
-}
-
-class BackgroundPainter extends CustomPainter {
-  final double animationValue;
-
-  BackgroundPainter(this.animationValue);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint();
-
-    // Draw dark background
-    final backgroundGradient = const LinearGradient(
-      colors: [
-        Color(0xFF121212),
-        Color(0xFF1A1A1A),
-      ],
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-    ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
-
-    paint.shader = backgroundGradient;
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), paint);
-
-    // Draw animated gradient shapes
-    final shapePaint = Paint()..style = PaintingStyle.fill;
-
-    // First blob
-    shapePaint.color = Colors.white.withValues(alpha: 0.03);
-    final path1 = Path();
-    final centerX1 = size.width * 0.2 + math.sin(animationValue * math.pi) * 40;
-    final centerY1 =
-        size.height * 0.2 + math.cos(animationValue * math.pi) * 40;
-    final radius1 = size.width * 0.5;
-    path1.addOval(
-        Rect.fromCircle(center: Offset(centerX1, centerY1), radius: radius1));
-    canvas.drawPath(path1, shapePaint);
-
-    // Second blob
-    shapePaint.color = Colors.white.withValues(alpha: 0.02);
-    final path2 = Path();
-    final centerX2 =
-        size.width * 0.8 + math.cos(animationValue * 1.5 * math.pi) * 30;
-    final centerY2 =
-        size.height * 0.5 + math.sin(animationValue * 1.5 * math.pi) * 30;
-    final radius2 = size.width * 0.4;
-    path2.addOval(
-        Rect.fromCircle(center: Offset(centerX2, centerY2), radius: radius2));
-    canvas.drawPath(path2, shapePaint);
-
-    // Third blob
-    shapePaint.color = Colors.white.withValues(alpha: 0.01);
-    final path3 = Path();
-    final centerX3 =
-        size.width * 0.5 + math.sin(animationValue * 2 * math.pi + 2) * 20;
-    final centerY3 =
-        size.height * 0.8 + math.cos(animationValue * 2 * math.pi + 2) * 20;
-    final radius3 = size.width * 0.6;
-    path3.addOval(
-        Rect.fromCircle(center: Offset(centerX3, centerY3), radius: radius3));
-    canvas.drawPath(path3, shapePaint);
-  }
-
-  @override
-  bool shouldRepaint(BackgroundPainter oldDelegate) => true;
 }

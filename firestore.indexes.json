@@ -1,0 +1,13 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "combinations",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "isFavorite", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

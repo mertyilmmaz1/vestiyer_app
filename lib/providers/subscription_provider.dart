@@ -1,8 +1,19 @@
-import 'package:flutter/foundation.dart';
+import 'dart:collection';
 
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../core/product/init/application_initialize.dart';
 import '../models/user.dart';
 import '../services/firebase_auth_service.dart';
 import '../services/firestore_service_base.dart';
+
+import 'package:purchases_flutter/purchases_flutter.dart';
+
+/// RevenueCat entitlement identifier (must match dashboard).
+const String _kPremiumEntitlementId = 'premium';
 
 enum SubscriptionType {
   monthly,
@@ -11,20 +22,29 @@ enum SubscriptionType {
 }
 
 class SubscriptionProvider extends ChangeNotifier {
+  SubscriptionProvider(this._authService, this._firestore) {
+    _initialize();
+  }
+
   final FirebaseAuthService _authService;
   final FirestoreServiceBase _firestore;
+
   bool _isLoading = false;
   bool _isInitialized = false;
-  bool _isPremium = false;
+  bool _isPremiumFromRevenueCat = false;
   DateTime? _subscriptionEndDate;
   SubscriptionType _subscriptionType = SubscriptionType.none;
   int _freeItemsUsed = 0;
   final int _freeItemLimit = 10;
   static const int freeLimit = 10;
   User? _currentUser;
+  DateTime? _lastPaywallShownAt;
+  static const String _keyLastPaywallShownAt = 'last_paywall_shown_at';
+
+  /// Debug-only: override premium for testing (e.g. from dev menu).
+  bool _debugPremiumOverride = false;
 
   bool get isLoading => _isLoading;
-  bool get isPremium => _isPremium;
   DateTime? get subscriptionEndDate => _subscriptionEndDate;
   SubscriptionType get subscriptionType => _subscriptionType;
   int get freeItemsUsed => _freeItemsUsed;
@@ -33,9 +53,23 @@ class SubscriptionProvider extends ChangeNotifier {
   bool get hasReachedFreeLimit => _freeItemsUsed >= freeLimit;
   User? get currentUser => _currentUser;
 
-  SubscriptionProvider(this._authService, this._firestore) {
-    _initialize();
+  /// Test premium: only in debug and when .env PREMIUM_TEST_MODE=true or dev override.
+  bool get _isTestPremiumEnabled =>
+      kDebugMode &&
+      (dotenv.env['PREMIUM_TEST_MODE']?.toLowerCase() == 'true' ||
+          _debugPremiumOverride);
+
+  /// Premium status: test override OR RevenueCat entitlement.
+  bool get isPremium => _isTestPremiumEnabled || _isPremiumFromRevenueCat;
+
+  /// Son paywall'dan bu yana yeterli süre (24 saat) geçti mi? Rate-limit için.
+  bool get canShowPaywallAgain {
+    if (_lastPaywallShownAt == null) return true;
+    return DateTime.now().difference(_lastPaywallShownAt!).inHours >= 24;
   }
+
+  /// Kıyafet ekleme izni için sadece [canAddClothing] kullanın.
+  /// Özellik kilidi (AI Stilist, Gardırop analizi) için [isPremium] kullanın.
 
   void setCurrentUser(User? user) {
     _currentUser = user;
@@ -46,8 +80,15 @@ class SubscriptionProvider extends ChangeNotifier {
     }
   }
 
+  /// Debug-only: toggle premium for testing without purchasing.
+  void setDebugPremiumOverride(bool value) {
+    if (!kDebugMode) return;
+    _debugPremiumOverride = value;
+    notifyListeners();
+  }
+
   void _resetSubscriptionData() {
-    _isPremium = false;
+    _isPremiumFromRevenueCat = false;
     _freeItemsUsed = 0;
     _subscriptionEndDate = null;
     _subscriptionType = SubscriptionType.none;
@@ -59,10 +100,18 @@ class SubscriptionProvider extends ChangeNotifier {
     try {
       _isLoading = true;
       notifyListeners();
+      final prefs = await SharedPreferences.getInstance();
+      final stored = prefs.getString(_keyLastPaywallShownAt);
+      if (stored != null) {
+        _lastPaywallShownAt = DateTime.tryParse(stored);
+      }
       final uid = _authService.currentUserId;
       if (uid != null) {
         _currentUser = await _firestore.getUserProfile(uid);
         if (_currentUser != null) await refreshSubscriptionStatus();
+      }
+      if (!kUseMockBackend) {
+        Purchases.addCustomerInfoUpdateListener(_onCustomerInfoUpdated);
       }
       _isInitialized = true;
     } catch (e) {
@@ -73,6 +122,48 @@ class SubscriptionProvider extends ChangeNotifier {
     }
   }
 
+  void _onCustomerInfoUpdated(CustomerInfo customerInfo) {
+    _applyCustomerInfo(customerInfo);
+    notifyListeners();
+  }
+
+  void _applyCustomerInfo(CustomerInfo customerInfo) {
+    final entitlement =
+        customerInfo.entitlements.all[_kPremiumEntitlementId];
+    if (entitlement != null && entitlement.isActive) {
+      _isPremiumFromRevenueCat = true;
+      final exp = entitlement.expirationDate;
+      _subscriptionEndDate =
+          exp == null ? null : DateTime.tryParse(exp.toString());
+      _subscriptionType = _inferSubscriptionType(entitlement);
+    } else {
+      _isPremiumFromRevenueCat = false;
+      _subscriptionEndDate = null;
+      _subscriptionType = SubscriptionType.none;
+    }
+  }
+
+  SubscriptionType _inferSubscriptionType(EntitlementInfo e) {
+    final id = e.identifier.toLowerCase();
+    if (id.contains('annual') || id.contains('yearly')) {
+      return SubscriptionType.yearly;
+    }
+    if (id.contains('monthly') || id.contains('month')) {
+      return SubscriptionType.monthly;
+    }
+    return SubscriptionType.none;
+  }
+
+  @override
+  void dispose() {
+    if (!kUseMockBackend) {
+      try {
+        Purchases.removeCustomerInfoUpdateListener(_onCustomerInfoUpdated);
+      } catch (_) {}
+    }
+    super.dispose();
+  }
+
   Future<void> refreshSubscriptionStatus() async {
     if (_currentUser == null) {
       _resetSubscriptionData();
@@ -81,14 +172,20 @@ class SubscriptionProvider extends ChangeNotifier {
     try {
       _isLoading = true;
       notifyListeners();
-      final user = await _firestore.getUserProfile(_currentUser!.id);
-      if (user != null) {
-        _currentUser = user;
-        _isPremium = user.isPremium;
-        _subscriptionEndDate = null;
-        _subscriptionType = _isPremium ? SubscriptionType.monthly : SubscriptionType.none;
-        await _updateFreeItemsUsed();
+      if (!kUseMockBackend) {
+        try {
+          final customerInfo = await Purchases.getCustomerInfo();
+          _applyCustomerInfo(customerInfo);
+        } catch (e) {
+          debugPrint('RevenueCat getCustomerInfo: $e');
+          _isPremiumFromRevenueCat = false;
+          _subscriptionEndDate = null;
+          _subscriptionType = SubscriptionType.none;
+        }
       }
+      final user = await _firestore.getUserProfile(_currentUser!.id);
+      if (user != null) _currentUser = user;
+      await _updateFreeItemsUsed();
     } catch (e) {
       debugPrint('Error refreshing subscription status: $e');
     } finally {
@@ -108,53 +205,123 @@ class SubscriptionProvider extends ChangeNotifier {
   }
 
   bool canAddClothing() {
-    if (_isPremium) return true;
+    if (isPremium) return true;
     return _freeItemsUsed < freeLimit;
   }
 
   void incrementFreeItemsUsed() {
-    if (!_isPremium) {
+    if (!isPremium) {
       _freeItemsUsed++;
       notifyListeners();
     }
   }
 
-  Future<void> purchaseSubscription(SubscriptionType type) async {
+  /// Purchases the given [Package] via RevenueCat. Returns true on success.
+  Future<bool> purchasePackage(Package package) async {
+    if (kUseMockBackend) return false;
     try {
       _isLoading = true;
       notifyListeners();
-      final now = DateTime.now();
-      final endDate = type == SubscriptionType.monthly
-          ? DateTime(now.year, now.month + 1, now.day)
-          : DateTime(now.year + 1, now.month, now.day);
-      _isPremium = true;
-      _subscriptionEndDate = endDate;
-      _subscriptionType = type;
+      final customerInfo = await Purchases.purchasePackage(package);
+      _applyCustomerInfo(customerInfo);
+      return true;
+    } on PlatformException catch (e) {
+      final code = PurchasesErrorHelper.getErrorCode(e);
+      if (code == PurchasesErrorCode.purchaseCancelledError) {
+        debugPrint('Purchase cancelled by user');
+      } else {
+        debugPrint('Purchase error: ${e.message}');
+      }
+      return false;
     } catch (e) {
-      debugPrint('Error purchasing subscription: $e');
+      debugPrint('Error purchasing: $e');
+      return false;
     } finally {
       _isLoading = false;
       notifyListeners();
+    }
+  }
+
+  /// Fetches current offerings. Returns null on error or when not configured.
+  Future<Offerings?> getOfferings() async {
+    if (kUseMockBackend) return null;
+    try {
+      return await Purchases.getOfferings();
+    } catch (e) {
+      debugPrint('Error fetching offerings: $e');
+      return null;
+    }
+  }
+
+  /// Purchase by subscription type (monthly/yearly). Uses current offering.
+  Future<bool> purchaseSubscription(SubscriptionType type) async {
+    if (kUseMockBackend) return false;
+    if (type == SubscriptionType.none) return false;
+    try {
+      final offerings = await getOfferings();
+      final current = offerings?.current;
+      if (current == null || current.availablePackages.isEmpty) {
+        debugPrint('No current offering or packages');
+        return false;
+      }
+      Package package;
+      if (type == SubscriptionType.monthly) {
+        package = current.monthly ??
+            current.availablePackages
+                .where((p) => p.packageType == PackageType.monthly)
+                .firstOrNull ??
+            current.availablePackages.first;
+      } else {
+        package = current.annual ??
+            current.availablePackages
+                .where((p) => p.packageType == PackageType.annual)
+                .firstOrNull ??
+            current.availablePackages.first;
+      }
+      return await purchasePackage(package);
+    } catch (e) {
+      debugPrint('Error in purchaseSubscription: $e');
+      return false;
     }
   }
 
   Future<void> restorePurchases() async {
+    if (kUseMockBackend) {
+      await refreshSubscriptionStatus();
+      return;
+    }
     try {
       _isLoading = true;
       notifyListeners();
-      await refreshSubscriptionStatus();
+      final customerInfo = await Purchases.restorePurchases();
+      _applyCustomerInfo(customerInfo);
     } catch (e) {
       debugPrint('Error restoring purchases: $e');
+      _isPremiumFromRevenueCat = false;
+      _subscriptionEndDate = null;
+      _subscriptionType = SubscriptionType.none;
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  Future<void> updateLastPaywallShown() async {}
+  Future<void> updateLastPaywallShown() async {
+    _lastPaywallShownAt = DateTime.now();
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+        _keyLastPaywallShownAt,
+        _lastPaywallShownAt!.toIso8601String(),
+      );
+    } catch (e) {
+      debugPrint('Error persisting last paywall shown: $e');
+    }
+  }
 
   bool shouldShowPaywall() {
-    if (_isPremium) return false;
+    if (isPremium) return false;
     return hasReachedFreeLimit;
   }
 

@@ -61,6 +61,7 @@ exports.analyzeClothing = functions
 
     const category = mainGroupToCategory[result.parsedAnalysis.mainGroup] || 'top';
     const colors = result.colors || [result.parsedAnalysis.color].filter(Boolean);
+    const clothingCost = (result.usage.prompt_tokens * 0.00765) / 1000 + (result.usage.completion_tokens * 0.03) / 1000;
     const doc = {
       userId: targetUserId,
       title: title || result.parsedAnalysis.category || 'Kıyafet',
@@ -73,7 +74,7 @@ exports.analyzeClothing = functions
       apiUsage: {
         promptTokens: result.usage.prompt_tokens,
         completionTokens: result.usage.completion_tokens,
-        totalCost: (result.usage.prompt_tokens * 0.00765) / 1000 + (result.usage.completion_tokens * 0.03) / 1000,
+        totalCost: clothingCost,
         model: 'gpt-4o',
         analyzedAt: admin.firestore.FieldValue.serverTimestamp()
       },
@@ -86,6 +87,16 @@ exports.analyzeClothing = functions
       .doc(targetUserId)
       .collection('clothing')
       .add(doc);
+
+    await db.collection('users').doc(targetUserId).collection('api_usage').add({
+      operationType: 'clothing_upload',
+      model: 'gpt-4o',
+      promptTokens: result.usage.prompt_tokens,
+      completionTokens: result.usage.completion_tokens,
+      cost: clothingCost,
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      clothingId: ref.id
+    });
 
     return {
       success: true,
@@ -129,6 +140,17 @@ exports.generateCombinations = functions
     if (!result.success) {
       throw new functions.https.HttpsError('internal', result.error || 'Kombin oluşturulamadı.');
     }
+
+    const comboCost = (result.usage.prompt_tokens * 0.00015) / 1000 + (result.usage.completion_tokens * 0.0006) / 1000;
+    await db.collection('users').doc(targetUserId).collection('api_usage').add({
+      operationType: 'combination',
+      model: 'gpt-4o-mini',
+      promptTokens: result.usage.prompt_tokens,
+      completionTokens: result.usage.completion_tokens,
+      cost: comboCost,
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      combinationCount: (result.combinations || []).length
+    });
 
     const savedIds = [];
     for (const combo of result.combinations) {

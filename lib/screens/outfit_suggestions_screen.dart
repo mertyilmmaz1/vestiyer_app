@@ -1,12 +1,17 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/wardrobe_provider.dart';
+import 'package:vestiyer_nodejs/core/product/theme/app_colors.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+
 import '../models/clothing.dart';
 import '../models/combination.dart';
+import '../providers/wardrobe_provider.dart';
 import '../services/firestore_service_base.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import 'dart:async';
+import '../widgets/vestiyer_page_header.dart';
 import 'clothing_detail_screen.dart';
+import 'outfit_history_screen.dart';
 
 class OutfitSuggestionsScreen extends StatefulWidget {
   const OutfitSuggestionsScreen({super.key});
@@ -124,35 +129,87 @@ class _OutfitSuggestionsScreenState extends State<OutfitSuggestionsScreen> {
     }
   }
 
+  Future<void> _showMarkAsWornDialog(BuildContext context, Combination combination) async {
+    DateTime selected = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: selected,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+      helpText: 'Kombini ne zaman giydiniz?',
+    );
+    if (picked == null || !context.mounted) return;
+    selected = picked;
+    await _markCombinationAsWorn(combination, selected);
+  }
+
+  Future<void> _markCombinationAsWorn(Combination combination, DateTime wornAt) async {
+    final firestore = context.read<FirestoreServiceBase>();
+    final userId = context.read<WardrobeProvider>().currentUserId;
+    if (userId == null) return;
+    try {
+      await firestore.addOutfitLog(userId, {
+        'combinationId': combination.id,
+        'wornAt': wornAt,
+        'combinationName': combination.name,
+        'occasion': combination.occasion,
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Giyim kaydı eklendi')),
+        );
+        _loadSuggestions();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Kayıt eklenirken hata: $e')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF121212),
-      appBar: AppBar(
-        title: const Text(
-          'Kombin Önerileri',
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            VestiyerPageHeader(
+              title: 'Kombin Önerileri',
+              subtitle: 'Kayıtlı kombinleriniz',
+              showBackButton: true,
+              onBack: () => Navigator.maybePop(context),
+              actions: [
+                IconButton(
+                  icon: Icon(Icons.history, color: AppColors.textPrimary.withValues(alpha: 0.7)),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const OutfitHistoryScreen()),
+                    );
+                  },
+                  tooltip: 'Giyim geçmişi',
+                ),
+                IconButton(
+                  icon: Icon(Icons.refresh, color: AppColors.textPrimary.withValues(alpha: 0.7)),
+                  onPressed: _loadSuggestions,
+                  tooltip: 'Yenile',
+                ),
+              ],
+            ),
+            Expanded(
+              child: _isLoading
+                  ? _buildLoadingScreen()
+                  : _combinations.isEmpty
+                      ? _buildEmptyState()
+                      : _buildCombinationsList(),
+            ),
+          ],
         ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.white70),
-            onPressed: _loadSuggestions,
-            tooltip: 'Yenile',
-          ),
-        ],
       ),
-      body: _isLoading
-          ? _buildLoadingScreen()
-          : _combinations.isEmpty
-              ? _buildEmptyState()
-              : _buildCombinationsList(),
     );
   }
 
@@ -165,12 +222,12 @@ class _OutfitSuggestionsScreenState extends State<OutfitSuggestionsScreen> {
             width: 80,
             height: 80,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.1),
+              color: AppColors.textPrimary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(40),
             ),
             child: const Center(
               child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.textPrimary),
                 strokeWidth: 3,
               ),
             ),
@@ -184,7 +241,7 @@ class _OutfitSuggestionsScreenState extends State<OutfitSuggestionsScreen> {
               style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w500,
-                color: Colors.white,
+                color: AppColors.textPrimary,
               ),
               textAlign: TextAlign.center,
             ),
@@ -204,7 +261,7 @@ class _OutfitSuggestionsScreenState extends State<OutfitSuggestionsScreen> {
             Icon(
               Icons.auto_awesome_outlined,
               size: 80,
-              color: Colors.white.withValues(alpha: 0.3),
+              color: AppColors.textPrimary.withValues(alpha: 0.3),
             ),
             const SizedBox(height: 24),
             Text(
@@ -212,7 +269,7 @@ class _OutfitSuggestionsScreenState extends State<OutfitSuggestionsScreen> {
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.w600,
-                color: Colors.white.withValues(alpha: 0.9),
+                color: AppColors.textPrimary.withValues(alpha: 0.9),
               ),
             ),
             const SizedBox(height: 16),
@@ -220,7 +277,7 @@ class _OutfitSuggestionsScreenState extends State<OutfitSuggestionsScreen> {
               'AI Stilist\'ten yeni kombinler oluşturarak başlayın',
               style: TextStyle(
                 fontSize: 16,
-                color: Colors.white.withValues(alpha: 0.7),
+                color: AppColors.textPrimary.withValues(alpha: 0.7),
               ),
               textAlign: TextAlign.center,
             ),
@@ -228,10 +285,10 @@ class _OutfitSuggestionsScreenState extends State<OutfitSuggestionsScreen> {
             ElevatedButton.icon(
               onPressed: () => Navigator.pop(context),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white.withValues(alpha: 0.1),
-                foregroundColor: Colors.white,
+                backgroundColor: AppColors.textPrimary.withValues(alpha: 0.1),
+                foregroundColor: AppColors.textPrimary,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(24),
                 ),
               ),
               icon: const Icon(Icons.arrow_back),
@@ -245,7 +302,8 @@ class _OutfitSuggestionsScreenState extends State<OutfitSuggestionsScreen> {
 
   Widget _buildCombinationsList() {
     return ListView.builder(
-      padding: const EdgeInsets.all(16),
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
       itemCount: _combinations.length,
       itemBuilder: (context, index) {
         final combination = _combinations[index];
@@ -254,135 +312,30 @@ class _OutfitSuggestionsScreenState extends State<OutfitSuggestionsScreen> {
         return Container(
           margin: const EdgeInsets.only(bottom: 20),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.05),
-            borderRadius: BorderRadius.circular(20),
+            color: AppColors.tertiary,
+            borderRadius: BorderRadius.circular(24),
             border: Border.all(
-              color: Colors.white.withValues(alpha: 0.1),
+              color: AppColors.textPrimary.withValues(alpha: 0.1),
+              width: 1,
             ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            combination.name,
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                        if (combination.isFavorite)
-                          Icon(
-                            Icons.favorite,
-                            color: Colors.red.shade400,
-                            size: 20,
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      combination.description ?? '',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.white.withValues(alpha: 0.7),
-                        height: 1.4,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.blue.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            combination.occasion,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.blue.shade300,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.green.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            combination.season,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.green.shade300,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                        if (combination.isAIGenerated) ...[
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.purple.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.auto_awesome,
-                                  size: 12,
-                                  color: Colors.purple.shade300,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'AI',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.purple.shade300,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                height: 140,
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                child: GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 12,
+                    childAspectRatio: 1.15,
+                  ),
                   itemCount: outfitClothing.length,
                   itemBuilder: (context, itemIndex) {
                     final clothing = outfitClothing[itemIndex];
-
                     return GestureDetector(
                       onTap: () {
                         Navigator.push(
@@ -394,17 +347,17 @@ class _OutfitSuggestionsScreenState extends State<OutfitSuggestionsScreen> {
                         );
                       },
                       child: Container(
-                        width: 100,
-                        margin: const EdgeInsets.only(right: 12),
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(24),
                           border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.1),
+                            color: AppColors.textPrimary.withValues(alpha: 0.1),
+                            width: 1,
                           ),
                         ),
                         child: ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(24),
                           child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               Expanded(
                                 child: CachedNetworkImage(
@@ -412,31 +365,32 @@ class _OutfitSuggestionsScreenState extends State<OutfitSuggestionsScreen> {
                                   fit: BoxFit.cover,
                                   width: double.infinity,
                                   placeholder: (context, url) => Container(
-                                    color: Colors.white.withValues(alpha: 0.05),
-                                    child: const Center(
+                                    color: AppColors.textPrimary.withValues(alpha: 0.05),
+                                    child: Center(
                                       child: CircularProgressIndicator(
-                                        color: Colors.white70,
+                                        color: AppColors.textPrimary.withValues(alpha: 0.7),
                                         strokeWidth: 2,
                                       ),
                                     ),
                                   ),
                                   errorWidget: (context, url, error) =>
                                       Container(
-                                    color: Colors.white.withValues(alpha: 0.05),
+                                    color: AppColors.textPrimary.withValues(alpha: 0.05),
                                     child: Icon(
                                       Icons.image_not_supported,
-                                      color: Colors.white.withValues(alpha: 0.3),
+                                      color: AppColors.textPrimary.withValues(alpha: 0.3),
                                     ),
                                   ),
                                 ),
                               ),
                               Container(
-                                padding: const EdgeInsets.all(8),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 6),
                                 child: Text(
                                   clothing.category,
                                   style: const TextStyle(
                                     fontSize: 10,
-                                    color: Colors.white,
+                                    color: AppColors.textPrimary,
                                     fontWeight: FontWeight.w500,
                                   ),
                                   textAlign: TextAlign.center,
@@ -450,6 +404,135 @@ class _OutfitSuggestionsScreenState extends State<OutfitSuggestionsScreen> {
                       ),
                     );
                   },
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            combination.name,
+                            style: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ),
+                        if (combination.isFavorite)
+                          Icon(
+                            Icons.favorite,
+                            color: AppColors.primary,
+                            size: 18,
+                          ),
+                      ],
+                    ),
+                    if (combination.description != null &&
+                        combination.description!.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        combination.description!,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: AppColors.textPrimary.withValues(alpha: 0.7),
+                          height: 1.3,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                          child: Text(
+                            combination.occasion,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.textPrimary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                          child: Text(
+                            combination.season,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textPrimary.withValues(alpha: 0.8),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        if (combination.isAIGenerated)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(24),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.auto_awesome,
+                                  size: 11,
+                                  color: AppColors.primary,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'AI',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    OutlinedButton.icon(
+                      onPressed: () => _showMarkAsWornDialog(context, combination),
+                      icon: const Icon(Icons.check_circle_outline, size: 16),
+                      label: const Text('Bugün giydim'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.textPrimary.withValues(alpha: 0.9),
+                        side: BorderSide(color: AppColors.textPrimary.withValues(alpha: 0.3)),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],

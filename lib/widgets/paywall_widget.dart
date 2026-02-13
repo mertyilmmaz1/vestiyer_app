@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:vestiyer_nodejs/core/product/theme/app_colors.dart';
 import '../providers/subscription_provider.dart';
 import '../screens/premium_screen.dart';
 
@@ -8,179 +9,316 @@ enum PaywallType {
   featureGated,
 }
 
+/// Paywall yalnızca [showPaywall] ile bottom sheet olarak gösterilir.
 class PaywallWidget extends StatelessWidget {
-  final PaywallType type;
-  final String customMessage;
-  final VoidCallback? onClose;
-
-  const PaywallWidget({
-    super.key,
-    this.type = PaywallType.itemLimit,
-    this.customMessage = '',
-    this.onClose,
-  });
+  const PaywallWidget({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final subscriptionProvider = Provider.of<SubscriptionProvider>(context);
-
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.1),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              if (onClose != null)
-                IconButton(
-                  icon: Icon(
-                    Icons.close,
-                    color: Colors.white.withValues(alpha: 0.6),
-                    size: 20,
-                  ),
-                  onPressed: onClose,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.diamond_outlined,
-              color: Colors.white,
-              size: 36,
-            ),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            type == PaywallType.itemLimit
-                ? 'Kıyafet Limitine Ulaştınız'
-                : 'Premium Özellik',
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-              letterSpacing: -0.5,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            customMessage.isNotEmpty
-                ? customMessage
-                : type == PaywallType.itemLimit
-                    ? 'Ücretsiz sürümde maksimum ${subscriptionProvider.freeItemLimit} kıyafet ekleyebilirsiniz. Premium abonelikle sınırsız kıyafet ekleyin ve tüm özelliklere erişin.'
-                    : 'Bu özellik premium abonelere özeldir. Abone olarak tüm özelliklere sınırsız erişim kazanın.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.white.withValues(alpha: 0.7),
-              height: 1.5,
-            ),
-          ),
-          const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  PageRouteBuilder(
-                    pageBuilder: (_, __, ___) => const PremiumScreen(),
-                    transitionsBuilder: (_, animation, __, child) {
-                      return FadeTransition(
-                        opacity: animation,
-                        child: child,
-                      );
-                    },
-                  ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: Colors.black,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Text(
-                'Premium\'a Yükselt',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          if (type == PaywallType.featureGated)
-            TextButton(
-              onPressed: onClose,
-              child: Text(
-                'Şimdi Değil',
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.6),
-                  fontSize: 14,
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
+    return const SizedBox.shrink();
   }
 
-  // Show a dialog with the paywall
+  /// Paywall'ı bottom sheet olarak açar. Tüm paywall gösterimleri bu metod ile yapılmalıdır.
+  /// [itemLimit]: barrier dışına tıklanarak kapatılamaz.
+  /// [featureGated]: barrier dismissible, "Şimdi değil" gösterilir.
   static Future<void> showPaywall(
     BuildContext context, {
     PaywallType type = PaywallType.itemLimit,
     String customMessage = '',
-    bool barrierDismissible = true,
   }) async {
     final subscriptionProvider =
         Provider.of<SubscriptionProvider>(context, listen: false);
 
-    // Record last paywall shown timestamp in Firestore
     final user = subscriptionProvider.currentUser;
     if (user != null) {
       await subscriptionProvider.updateLastPaywallShown();
     }
 
-    if (context.mounted) {
-      await showDialog(
-        context: context,
-        barrierDismissible: barrierDismissible,
-        builder: (context) => Dialog(
-          backgroundColor: Colors.transparent,
-          child: PaywallWidget(
+    if (!context.mounted) return;
+    final navigator = Navigator.of(context);
+    final barrierDismissible = type == PaywallType.featureGated;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      isDismissible: barrierDismissible,
+      enableDrag: barrierDismissible,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black54,
+      builder: (sheetContext) {
+        final maxHeight = MediaQuery.of(sheetContext).size.height * 0.5;
+        return ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: maxHeight),
+          child: _PaywallBottomSheetContent(
             type: type,
             customMessage: customMessage,
-            onClose:
-                barrierDismissible ? () => Navigator.of(context).pop() : null,
+            subscriptionProvider: subscriptionProvider,
+            onUpgrade: () async {
+              Navigator.pop(sheetContext);
+              if (!context.mounted) return;
+              await navigator.push<void>(
+                MaterialPageRoute(
+                  builder: (_) => const PremiumScreen(),
+                  fullscreenDialog: true,
+                ),
+              );
+              if (context.mounted) {
+                await subscriptionProvider.refreshSubscriptionStatus();
+              }
+            },
+            onDismiss: () => Navigator.pop(sheetContext),
+            showDismissOption: barrierDismissible,
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _PaywallBottomSheetContent extends StatelessWidget {
+  final PaywallType type;
+  final String customMessage;
+  final SubscriptionProvider subscriptionProvider;
+  final VoidCallback onUpgrade;
+  final VoidCallback onDismiss;
+  final bool showDismissOption;
+
+  const _PaywallBottomSheetContent({
+    required this.type,
+    required this.customMessage,
+    required this.subscriptionProvider,
+    required this.onUpgrade,
+    required this.onDismiss,
+    required this.showDismissOption,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final paddingBottom = MediaQuery.of(context).padding.bottom;
+    final features = subscriptionProvider.getPremiumFeatures().take(2).toList();
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.tertiary,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        border: Border(
+          top: BorderSide(
+            color: AppColors.textPrimary.withValues(alpha: 0.1),
+            width: 1,
+          ),
+          left: BorderSide(
+            color: AppColors.textPrimary.withValues(alpha: 0.1),
+            width: 1,
+          ),
+          right: BorderSide(
+            color: AppColors.textPrimary.withValues(alpha: 0.1),
+            width: 1,
           ),
         ),
-      );
-    }
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: EdgeInsets.only(left: 20, right: 20, bottom: paddingBottom + 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 8),
+              _buildHandle(),
+              const SizedBox(height: 14),
+              _buildIcon(),
+              const SizedBox(height: 12),
+              _buildTitle(),
+              const SizedBox(height: 6),
+              _buildMessage(),
+              const SizedBox(height: 10),
+              _buildPriceLine(),
+              const SizedBox(height: 12),
+              _buildFeatures(features),
+              const SizedBox(height: 16),
+              _buildCtaButton(context),
+              const SizedBox(height: 6),
+              _buildRestoreButton(context),
+              if (showDismissOption) ...[
+                const SizedBox(height: 4),
+                _buildDismissButton(),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHandle() {
+    return Container(
+      width: 40,
+      height: 4,
+      decoration: BoxDecoration(
+        color: AppColors.textPrimary.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(2),
+      ),
+    );
+  }
+
+  Widget _buildIcon() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.15),
+        shape: BoxShape.circle,
+      ),
+      child: const Icon(
+        Icons.diamond_rounded,
+        color: AppColors.primary,
+        size: 28,
+      ),
+    );
+  }
+
+  Widget _buildTitle() {
+    return Text(
+      type == PaywallType.itemLimit
+          ? 'Kıyafet limitine ulaştınız'
+          : 'Premium\'a geçin',
+      textAlign: TextAlign.center,
+      style: const TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.w700,
+        color: AppColors.textPrimary,
+        letterSpacing: -0.5,
+      ),
+    );
+  }
+
+  Widget _buildMessage() {
+    final defaultMessage = type == PaywallType.itemLimit
+        ? 'Premium ile sınırsız kıyafet ve tüm özelliklere erişin.'
+        : 'AI kombinleri ve gardırop analizi premium üyeler içindir.';
+    final text = customMessage.isNotEmpty ? customMessage : defaultMessage;
+    final displayText = text.length > 55 ? '${text.substring(0, 52)}...' : text;
+    return Text(
+      displayText,
+      textAlign: TextAlign.center,
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(
+        fontSize: 13,
+        color: AppColors.textPrimary.withValues(alpha: 0.6),
+        height: 1.3,
+      ),
+    );
+  }
+
+  Widget _buildPriceLine() {
+    return Text(
+      'Aylık ₺59.99 · Yıllık ₺449.99',
+      style: TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.w500,
+        color: AppColors.textPrimary.withValues(alpha: 0.7),
+      ),
+    );
+  }
+
+  Widget _buildFeatures(List<String> features) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: features
+          .map(
+            (f) => Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.check_circle_rounded,
+                    size: 16,
+                    color: AppColors.primary.withValues(alpha: 0.9),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    f,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.textPrimary.withValues(alpha: 0.85),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
+          .toList(),
+    );
+  }
+
+  Widget _buildCtaButton(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: Material(
+        color: AppColors.primary,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          onTap: onUpgrade,
+          borderRadius: BorderRadius.circular(14),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            alignment: Alignment.center,
+            child: const Text(
+              'Premium\'a geç',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRestoreButton(BuildContext context) {
+    return TextButton(
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      onPressed: () async {
+        await subscriptionProvider.restorePurchases();
+        if (!context.mounted) return;
+        if (subscriptionProvider.isPremium) {
+          Navigator.pop(context);
+        }
+      },
+      child: Text(
+        'Satın alımları geri yükle',
+        style: TextStyle(
+          fontSize: 12,
+          color: AppColors.textPrimary.withValues(alpha: 0.5),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDismissButton() {
+    return TextButton(
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      onPressed: onDismiss,
+      child: Text(
+        'Şimdi değil',
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+          color: AppColors.textPrimary.withValues(alpha: 0.5),
+        ),
+      ),
+    );
   }
 }
