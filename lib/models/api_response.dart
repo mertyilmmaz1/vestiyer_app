@@ -63,14 +63,18 @@ class GeneratedCombinationData {
     required this.diversityScore,
   });
 
+  static int _safeInt(dynamic v) =>
+      (v is int) ? v : (v is num) ? v.toInt() : 0;
+
   factory GeneratedCombinationData.fromJson(Map<String, dynamic> json) =>
       GeneratedCombinationData(
-        combinations: List<Map<String, dynamic>>.from(json['combinations']),
-        savedCombinations: List<Combination>.from(json['savedCombinations']
-            .map((item) => Combination.fromJson(item))),
-        totalItems: json['totalItems'],
-        usedItems: json['usedItems'],
-        diversityScore: json['diversityScore'],
+        combinations: List<Map<String, dynamic>>.from(json['combinations'] ?? []),
+        savedCombinations: List<Combination>.from((json['savedCombinations'] as List<dynamic>?)
+                ?.map((item) => Combination.fromJson(Map<String, dynamic>.from(item as Map))) ??
+            []),
+        totalItems: _safeInt(json['totalItems']),
+        usedItems: _safeInt(json['usedItems']),
+        diversityScore: _safeInt(json['diversityScore']),
       );
 }
 

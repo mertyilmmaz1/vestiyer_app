@@ -1,15 +1,24 @@
 import 'package:flutter/material.dart';
 
-/// Centralized color palette. Avoid hardcoded colors.
+/// Zara editorial palette - kontrollü lüks, kontrast odaklı.
+/// Rehber: "Zara'da renk yoktur. Kontrast vardır."
 abstract class AppColors {
-  static const Color background = Color(0xFF070A0D);
-  static const Color primary = Color(0xFF04BFAD);
-  static const Color secondary = Color(0xFF027373);
-  static const Color tertiary = Color(0xFF1A1D21);
-  static const Color cardBackground = Color(0xFF1A1B21);
-  static const Color inputBackground = Color(0xFF1E1F26);
-  static const Color textSecondary = Color(0xFF979DA6);
+  // Primary palette (rehber)
+  static const Color background = Color(0xFFFFFFFF);
+  static const Color softBackground = Color(0xFFF7F7F7);
+  static const Color black = Color(0xFF111111);
+  static const Color greyText = Color(0xFF6E6E6E);
+  static const Color border = Color(0xFFEAEAEA);
+
+  // Aliases (geriye dönük uyumluluk)
+  static const Color primary = black;
+  static const Color secondary = black;
+  static const Color tertiary = softBackground;
+  static const Color textPrimary = black;
+  static const Color textSecondary = greyText;
+  static const Color divider = border;
+  static const Color cardBackground = softBackground;
+  static const Color inputBackground = Color(0xFFF9F9F9);
+
   static const Color error = Color(0xFF80142B);
-  static const Color textPrimary = Color(0xFFFFFFFF);
-  static const Color divider = Color(0xFF2A2B33);
 }

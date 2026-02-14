@@ -5,6 +5,7 @@ class Clothing {
   final String category;
   final String imageUrl;
   final String imagePath;
+  final String? segmentedImageUrl;
   final List<String> colors; // Backend'den gelen renk array'i
   final AdvancedAnalysis? advancedAnalysis;
   final FormattedAnalysis? formattedAnalysis;
@@ -19,6 +20,7 @@ class Clothing {
     required this.category,
     required this.imageUrl,
     required this.imagePath,
+    this.segmentedImageUrl,
     required this.colors,
     this.advancedAnalysis,
     this.formattedAnalysis,
@@ -27,6 +29,14 @@ class Clothing {
     required this.updatedAt,
   });
 
+  /// Prefer segmented (background-removed) image when available.
+  String get displayImageUrl => segmentedImageUrl ?? imageUrl;
+
+  static List<String> _safeStringList(dynamic v) {
+    if (v == null || v is! List) return [];
+    return v.map((e) => e?.toString() ?? '').toList();
+  }
+
   factory Clothing.fromJson(Map<String, dynamic> json) => Clothing(
         id: json['_id'] ?? json['id'] ?? '',
         userId: json['userId'] ?? '',
@@ -34,7 +44,8 @@ class Clothing {
         category: json['category'],
         imageUrl: json['imageUrl'],
         imagePath: json['imagePath'],
-        colors: List<String>.from(json['colors'] ?? []), // Renk array'i
+        segmentedImageUrl: json['segmentedImageUrl'],
+        colors: _safeStringList(json['colors']),
         advancedAnalysis: json['advancedAnalysis'] != null
             ? AdvancedAnalysis.fromJson(json['advancedAnalysis'])
             : null,
@@ -61,6 +72,7 @@ class Clothing {
         'category': category,
         'imageUrl': imageUrl,
         'imagePath': imagePath,
+        if (segmentedImageUrl != null) 'segmentedImageUrl': segmentedImageUrl,
         'colors': colors,
         'advancedAnalysis': advancedAnalysis?.toJson(),
         'formattedAnalysis': formattedAnalysis?.toJson(),
@@ -76,6 +88,7 @@ class Clothing {
         'category': category,
         'imageUrl': imageUrl,
         'imagePath': imagePath,
+        if (segmentedImageUrl != null) 'segmentedImageUrl': segmentedImageUrl,
         'colors': colors, // Renk array'i
         'advancedAnalysis': advancedAnalysis?.toJson(),
         'formattedAnalysis': formattedAnalysis?.toJson(),
@@ -186,12 +199,28 @@ class ApiUsage {
     required this.analyzedAt,
   });
 
+  static DateTime _dateFromJson(dynamic v) {
+    if (v == null) return DateTime.now();
+    if (v is DateTime) return v;
+    if (v is String) return DateTime.parse(v);
+    return (v as dynamic).toDate();
+  }
+
+  static int _safeInt(dynamic v) => (v is int) ? v : (v is num) ? v.toInt() : 0;
+
+  static double _safeDouble(dynamic v) {
+    if (v == null) return 0.0;
+    if (v is num) return v.toDouble();
+    if (v is String) return double.tryParse(v) ?? 0.0;
+    return 0.0;
+  }
+
   factory ApiUsage.fromJson(Map<String, dynamic> json) => ApiUsage(
-        promptTokens: json['promptTokens'],
-        completionTokens: json['completionTokens'],
-        totalCost: json['totalCost']?.toDouble() ?? 0.0,
-        model: json['model'],
-        analyzedAt: DateTime.parse(json['analyzedAt']),
+        promptTokens: _safeInt(json['promptTokens']),
+        completionTokens: _safeInt(json['completionTokens']),
+        totalCost: _safeDouble(json['totalCost']),
+        model: json['model']?.toString() ?? '',
+        analyzedAt: _dateFromJson(json['analyzedAt']),
       );
 
   Map<String, dynamic> toJson() => {

@@ -3,22 +3,30 @@ import 'package:flutter/material.dart';
 import '../../extensions/context_extension.dart';
 import '../../theme/app_colors.dart';
 
-/// "veya" style divider.
+/// Editorial divider - thickness 0.5, AppColors.border.
+/// Opsiyonel label ile "veya" stili.
 class VestiyerDivider extends StatelessWidget {
   const VestiyerDivider({
     super.key,
-    this.label = 'veya',
+    this.label,
   });
 
-  final String label;
+  final String? label;
 
   @override
   Widget build(BuildContext context) {
+    if (label == null || label!.isEmpty) {
+      return Divider(
+        color: AppColors.border,
+        thickness: 0.5,
+        height: 1,
+      );
+    }
     return Row(
       children: [
         Expanded(
           child: Divider(
-            color: AppColors.textSecondary.withValues(alpha: 0.3),
+            color: AppColors.border,
             thickness: 0.5,
             height: 1,
           ),
@@ -26,17 +34,18 @@ class VestiyerDivider extends StatelessWidget {
         Padding(
           padding: EdgeInsets.symmetric(horizontal: context.dynamicWidth(0.04)),
           child: Text(
-            label,
+            label!,
             style: TextStyle(
-              fontWeight: FontWeight.w500,
-              color: AppColors.textPrimary.withValues(alpha: 0.35),
+              fontWeight: FontWeight.w400,
+              color: AppColors.greyText,
               fontSize: 14,
+              letterSpacing: 0.8,
             ),
           ),
         ),
         Expanded(
           child: Divider(
-            color: AppColors.textSecondary.withValues(alpha: 0.3),
+            color: AppColors.border,
             thickness: 0.5,
             height: 1,
           ),

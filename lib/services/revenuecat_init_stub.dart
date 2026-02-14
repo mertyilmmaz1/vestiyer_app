@@ -3,3 +3,6 @@ Future<void> configureRevenueCat() async {}
 
 /// Stub: no-op on platforms where RevenueCat is not configured.
 Future<void> revenueCatLogIn(String userId) async {}
+
+/// Stub: RevenueCat is never configured on this platform.
+bool get isRevenueCatConfigured => false;

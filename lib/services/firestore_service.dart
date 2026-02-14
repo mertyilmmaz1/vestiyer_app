@@ -51,6 +51,19 @@ class FirestoreService extends FirestoreServiceBase {
     await _firestore.collection('users').doc(uid).update(updates);
   }
 
+  @override
+  Future<void> setUserStyleProfile(
+      String uid, Map<String, dynamic> styleProfile) async {
+    final payload = Map<String, dynamic>.from(styleProfile);
+    if (payload['completedAt'] is DateTime) {
+      payload['completedAt'] = Timestamp.fromDate(payload['completedAt'] as DateTime);
+    }
+    await _firestore.collection('users').doc(uid).set({
+      'styleProfile': payload,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
   // ---------- Clothing ----------
 
   @override

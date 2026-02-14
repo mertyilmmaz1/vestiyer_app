@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:vestiyer_nodejs/core/product/navigation/editorial_page_route.dart';
 import 'package:vestiyer_nodejs/core/product/theme/app_colors.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/clothing.dart';
@@ -204,8 +205,8 @@ class _OutfitHistoryScreenState extends State<OutfitHistoryScreen> {
         return Container(
           margin: const EdgeInsets.only(bottom: 16),
           decoration: BoxDecoration(
-            color: AppColors.tertiary,
-            borderRadius: BorderRadius.circular(24),
+            color: AppColors.softBackground,
+            borderRadius: BorderRadius.zero,
             border: Border.all(
               color: AppColors.textPrimary.withValues(alpha: 0.1),
               width: 1,
@@ -214,7 +215,7 @@ class _OutfitHistoryScreenState extends State<OutfitHistoryScreen> {
           child: Material(
             color: Colors.transparent,
             child: InkWell(
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.zero,
               onTap: () {},
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -230,13 +231,13 @@ class _OutfitHistoryScreenState extends State<OutfitHistoryScreen> {
                           ),
                           decoration: BoxDecoration(
                             color: AppColors.textPrimary.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(24),
+                            borderRadius: BorderRadius.zero,
                           ),
                           child: Text(
                             dateStr,
                             style: TextStyle(
                               fontSize: 13,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.w400,
                               color:
                                   AppColors.textPrimary.withValues(alpha: 0.9),
                             ),
@@ -252,7 +253,7 @@ class _OutfitHistoryScreenState extends State<OutfitHistoryScreen> {
                             ),
                             decoration: BoxDecoration(
                               color: AppColors.primary.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(24),
+                              borderRadius: BorderRadius.zero,
                             ),
                             child: Text(
                               log.occasion!,
@@ -271,7 +272,7 @@ class _OutfitHistoryScreenState extends State<OutfitHistoryScreen> {
                       name,
                       style: const TextStyle(
                         fontSize: 18,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w400,
                         color: AppColors.textPrimary,
                       ),
                     ),
@@ -290,20 +291,19 @@ class _OutfitHistoryScreenState extends State<OutfitHistoryScreen> {
                               onTap: () {
                                 Navigator.push(
                                   context,
-                                  MaterialPageRoute(
-                                    builder: (_) =>
-                                        ClothingDetailScreen(item: c),
+                                  EditorialPageRoute(
+                                    page: ClothingDetailScreen(item: c),
                                   ),
                                 );
                               },
                               child: ClipRRect(
-                                borderRadius: BorderRadius.circular(24),
+                                borderRadius: BorderRadius.zero,
                                 child: SizedBox(
                                   width: 72,
                                   height: 72,
-                                  child: c.imageUrl.isNotEmpty
+                                  child: c.displayImageUrl.isNotEmpty
                                       ? CachedNetworkImage(
-                                          imageUrl: c.imageUrl,
+                                          imageUrl: c.displayImageUrl,
                                           fit: BoxFit.cover,
                                           placeholder: (_, __) => Container(
                                             color: AppColors.textPrimary

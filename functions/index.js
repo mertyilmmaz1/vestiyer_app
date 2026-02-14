@@ -1,15 +1,29 @@
+/**
+ * Vestiyer / Dolap AI – Cloud Functions
+ * Callables: analyzeClothing, generateCombinations, getStyleAdvice, managePremiumStatus
+ * Profil fotoğrafı ve kıyafet görselleri client'tan Storage'a yüklenir; Firestore users/{uid} profil alanları client günceller.
+ */
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const {
   analyzeClothingFromUrl,
   generateCombinations,
-  getStyleAdvice
+  selectAndDescribeCombinations,
+  generateStylingAdvice,
+  getStyleAdvice,
+  detectChatIntent
 } = require('./services/aiService');
+const { generateOutfitCandidates } = require('./services/combinationEngine');
+const { checkImageQuality } = require('./services/imageQualityCheck');
+const { extractDominantColors } = require('./services/colorExtraction');
+const { callVpsSegment, checkVpsHealth } = require('./services/segmentService');
 
 admin.initializeApp();
 
 const db = admin.firestore();
 const { OpenAI } = require('openai');
+
+const CONFIDENCE_THRESHOLD = 0.7;
 
 /** Lazy init: OpenAI is only created at runtime when a function runs (so deploy does not require OPENAI_API_KEY). */
 function getOpenAIClient() {
@@ -33,16 +47,25 @@ function requireAuth(context) {
   return context.auth.uid;
 }
 
-const mainGroupToCategory = {
-  'üst giyim': 'top',
-  'alt giyim': 'bottom',
-  'dış giyim': 'outerwear',
-  'ayakkabı': 'shoes',
-  'aksesuar': 'accessory'
-};
+async function uploadSegmentedToStorage(userId, buffer) {
+  const bucket = admin.storage().bucket();
+  const filename = `segmented_${Date.now()}.png`;
+  const path = `clothing_images/${userId}/${filename}`;
+  const file = bucket.file(path);
+  await file.save(buffer, { metadata: { contentType: 'image/png' } });
+  const expiresMs = 10 * 365 * 24 * 60 * 60 * 1000;
+  const [signedUrl] = await file.getSignedUrl({
+    action: 'read',
+    expires: Date.now() + expiresMs
+  });
+  return signedUrl;
+}
 
 exports.analyzeClothing = functions
-  .runWith({ timeoutSeconds: 60, secrets: ['OPENAI_API_KEY'] })
+  .runWith({
+    timeoutSeconds: 60,
+    secrets: ['OPENAI_API_KEY', 'SEGMENT_SERVICE_URL', 'SEGMENT_SERVICE_API_KEY']
+  })
   .https.onCall(async (data, context) => {
     const uid = requireAuth(context);
     const { userId, imageUrl, title } = data || {};
@@ -54,21 +77,65 @@ exports.analyzeClothing = functions
       throw new functions.https.HttpsError('invalid-argument', 'imageUrl zorunludur.');
     }
 
-    const result = await analyzeClothingFromUrl(getOpenAIClient(), imageUrl);
+    const qualityCheck = await checkImageQuality(imageUrl);
+    if (!qualityCheck.ok) {
+      throw new functions.https.HttpsError('invalid-argument', qualityCheck.error || 'Görsel kalitesi yetersiz.');
+    }
+
+    const segmentUrl =
+      process.env.SEGMENT_SERVICE_URL ||
+      (typeof functions.config().segment_service === 'object' && functions.config().segment_service?.url) ||
+      '';
+    const segmentKey =
+      process.env.SEGMENT_SERVICE_API_KEY ||
+      (typeof functions.config().segment_service === 'object' && functions.config().segment_service?.api_key) ||
+      '';
+    const segmentResult = segmentUrl && segmentUrl.startsWith('http')
+      ? await callVpsSegment(imageUrl, segmentUrl, segmentKey)
+      : { success: false };
+
+    let imageForVision = imageUrl;
+    let imageForColor = imageUrl;
+    let segmentedImageUrl = null;
+    let segmentationSkipped = true;
+
+    if (segmentResult.success && segmentResult.buffer) {
+      try {
+        segmentedImageUrl = await uploadSegmentedToStorage(targetUserId, segmentResult.buffer);
+        imageForVision = segmentedImageUrl;
+        imageForColor = segmentResult.buffer;
+        segmentationSkipped = false;
+      } catch (e) {
+        imageForVision = imageUrl;
+        imageForColor = imageUrl;
+      }
+    }
+
+    const backendColors = await extractDominantColors(imageForColor);
+
+    const result = await analyzeClothingFromUrl(getOpenAIClient(), imageForVision, backendColors);
     if (!result.success) {
       throw new functions.https.HttpsError('internal', result.error || 'Analiz başarısız.');
     }
 
-    const category = mainGroupToCategory[result.parsedAnalysis.mainGroup] || 'top';
+    const category = result.category || 'top';
     const colors = result.colors || [result.parsedAnalysis.color].filter(Boolean);
+    const confidence = result.confidence ?? 0.8;
+    const lowConfidence = confidence < CONFIDENCE_THRESHOLD;
     const clothingCost = (result.usage.prompt_tokens * 0.00765) / 1000 + (result.usage.completion_tokens * 0.03) / 1000;
+    // Use segmented image as primary when available – user sees only the garment in wardrobe
+    const finalImageUrl = segmentedImageUrl || imageUrl;
     const doc = {
       userId: targetUserId,
       title: title || result.parsedAnalysis.category || 'Kıyafet',
       category,
-      imageUrl,
-      imagePath: imageUrl,
+      imageUrl: finalImageUrl,
+      imagePath: finalImageUrl,
+      ...(segmentationSkipped && { segmentationSkipped: true }),
       colors,
+      colorsWithDominance: result.colorsWithDominance || null,
+      confidence,
+      lowConfidence,
       advancedAnalysis: result.advancedAnalysis,
       formattedAnalysis: result.formattedAnalysis,
       apiUsage: {
@@ -101,7 +168,8 @@ exports.analyzeClothing = functions
     return {
       success: true,
       clothingId: ref.id,
-      message: 'Kıyafet analiz edildi ve kaydedildi.'
+      message: 'Kıyafet analiz edildi ve kaydedildi.',
+      lowConfidence: lowConfidence || undefined
     };
   });
 
@@ -136,7 +204,57 @@ exports.generateCombinations = functions
       );
     }
 
-    const result = await generateCombinations(getOpenAIClient(), clothingItems);
+    const userDoc = await db.collection('users').doc(targetUserId).get();
+    const userProfile = userDoc.exists && userDoc.data()?.styleProfile
+      ? userDoc.data().styleProfile
+      : null;
+
+    const engineResult = generateOutfitCandidates(clothingItems, occasion, { userProfile });
+
+    if (engineResult.mode === 'insufficient') {
+      throw new functions.https.HttpsError(
+        'failed-precondition',
+        engineResult.message || 'En az 2 kıyafet ekleyerek kombin önerisi alabilirsiniz.'
+      );
+    }
+
+    let result;
+    if (engineResult.mode === 'styling' && engineResult.singleItems && engineResult.singleItems.length > 0) {
+      const adviceResult = await generateStylingAdvice(
+        getOpenAIClient(),
+        engineResult.singleItems[0],
+        occasion
+      );
+      const comboCost = (adviceResult.usage.prompt_tokens * 0.00015) / 1000 +
+        (adviceResult.usage.completion_tokens * 0.0006) / 1000;
+      await db.collection('users').doc(targetUserId).collection('api_usage').add({
+        operationType: 'combination',
+        model: 'gpt-4o-mini',
+        promptTokens: adviceResult.usage.prompt_tokens,
+        completionTokens: adviceResult.usage.completion_tokens,
+        cost: comboCost,
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        mode: 'styling'
+      });
+      return {
+        success: true,
+        mode: 'styling',
+        stylingAdvice: { advice: adviceResult.advice, itemId: adviceResult.itemId },
+        message: 'Stil önerisi hazırlandı.'
+      };
+    }
+
+    if (engineResult.candidates && engineResult.candidates.length > 0) {
+      result = await selectAndDescribeCombinations(
+        getOpenAIClient(),
+        engineResult.candidates,
+        occasion,
+        userProfile
+      );
+    } else {
+      result = await generateCombinations(getOpenAIClient(), clothingItems, occasion, userProfile);
+    }
+
     if (!result.success) {
       throw new functions.https.HttpsError('internal', result.error || 'Kombin oluşturulamadı.');
     }
@@ -181,6 +299,7 @@ exports.generateCombinations = functions
 
     return {
       success: true,
+      mode: engineResult.mode || 'full',
       message: 'Kombinler oluşturuldu.',
       savedCombinations: savedIds,
       totalItems: clothingItems.length,
@@ -189,19 +308,71 @@ exports.generateCombinations = functions
   });
 
 exports.getStyleAdvice = functions
-  .runWith({ timeoutSeconds: 30, secrets: ['OPENAI_API_KEY'] })
+  .runWith({ timeoutSeconds: 60, secrets: ['OPENAI_API_KEY'] })
   .https.onCall(async (data, context) => {
-    requireAuth(context);
-    const { message, conversationHistory, wardrobeContext } = data || {};
+    const uid = requireAuth(context);
+    const { message, conversationHistory, wardrobeSummary } = data || {};
     if (!message || typeof message !== 'string') {
       throw new functions.https.HttpsError('invalid-argument', 'message zorunludur.');
+    }
+
+    const history = Array.isArray(conversationHistory) ? conversationHistory.slice(-5) : [];
+    const summary = wardrobeSummary && typeof wardrobeSummary === 'object' ? wardrobeSummary : null;
+
+    const intent = detectChatIntent(message);
+    let combinationResult = null;
+
+    if (intent === 'combination_advice') {
+      const clothingSnap = await db
+        .collection('users')
+        .doc(uid)
+        .collection('clothing')
+        .orderBy('createdAt', 'desc')
+        .get();
+
+      const clothingItems = clothingSnap.docs.map((d) => {
+        const x = d.data();
+        return { id: d.id, _id: d.id, ...x, advancedAnalysis: x.advancedAnalysis || {} };
+      });
+
+      if (clothingItems.length >= 2) {
+        const engineResult = generateOutfitCandidates(clothingItems, 'casual');
+        if (engineResult.candidates && engineResult.candidates.length > 0) {
+          const selectResult = await selectAndDescribeCombinations(
+            getOpenAIClient(),
+            engineResult.candidates,
+            'casual'
+          );
+          if (selectResult.combinations && selectResult.combinations.length > 0) {
+            combinationResult = { combinations: selectResult.combinations };
+          }
+        } else if (engineResult.mode === 'styling' && engineResult.singleItems && engineResult.singleItems.length > 0) {
+          const adviceResult = await generateStylingAdvice(
+            getOpenAIClient(),
+            engineResult.singleItems[0],
+            'casual'
+          );
+          combinationResult = {
+            combinations: [{
+              name: 'Stil Önerisi',
+              description: adviceResult.advice,
+              items: [adviceResult.itemId],
+              occasion: 'casual',
+              season: 'all-season',
+              accessories: '',
+              usage: ''
+            }]
+          };
+        }
+      }
     }
 
     const result = await getStyleAdvice(
       getOpenAIClient(),
       message,
-      Array.isArray(conversationHistory) ? conversationHistory : [],
-      wardrobeContext
+      history,
+      summary,
+      { combinationResult, occasion: 'casual' }
     );
 
     return {
@@ -223,3 +394,28 @@ exports.managePremiumStatus = functions.https.onCall(async (data, context) => {
   });
   return { success: true };
 });
+
+/** VPS segment servisinin sağlık kontrolü. GET /health ile erişilebilirlik ve gecikme döner. */
+exports.checkSegmentServiceHealth = functions
+  .runWith({
+    timeoutSeconds: 15,
+    secrets: ['SEGMENT_SERVICE_URL']
+  })
+  .https.onCall(async (data, context) => {
+    requireAuth(context);
+
+    const segmentUrl =
+      process.env.SEGMENT_SERVICE_URL ||
+      (typeof functions.config().segment_service === 'object' && functions.config().segment_service?.url) ||
+      '';
+
+    const result = await checkVpsHealth(segmentUrl);
+
+    return {
+      ok: result.ok,
+      configured: !!segmentUrl && segmentUrl.startsWith('http'),
+      ...(result.latencyMs != null && { latencyMs: result.latencyMs }),
+      ...(result.error && { error: result.error }),
+      ...(result.statusCode != null && { statusCode: result.statusCode })
+    };
+  });

@@ -30,6 +30,12 @@ class WardrobeProvider with ChangeNotifier {
     _currentUserId = userId;
     if (userId != null) {
       loadClothingItems();
+    } else {
+      // User logged out — clear all in-memory data
+      _items.clear();
+      _isLoading = false;
+      _lastResponse = null;
+      notifyListeners();
     }
   }
 
@@ -75,14 +81,17 @@ class WardrobeProvider with ChangeNotifier {
       );
 
       final clothingId = result['clothingId'] as String?;
+      final lowConfidence = result['lowConfidence'] as bool? ?? false;
       if (clothingId != null) {
-        final clothing = await _firestore.getClothing(_currentUserId!, clothingId);
+        final clothing =
+            await _firestore.getClothing(_currentUserId!, clothingId);
         if (clothing != null) {
           _items.insert(0, clothing);
           _lastResponse = {
             'description': clothing.advancedAnalysis?.details ??
                 clothing.formattedAnalysis?.detaylar ??
                 clothing.title,
+            if (lowConfidence) 'lowConfidence': true,
           };
           notifyListeners();
         }
@@ -109,7 +118,8 @@ class WardrobeProvider with ChangeNotifier {
 
       final image = img.decodeImage(bytes);
       if (image == null) {
-        throw Exception('Resim decode edilemedi. Desteklenen formatlar: JPEG, PNG, GIF, BMP');
+        throw Exception(
+            'Resim decode edilemedi. Desteklenen formatlar: JPEG, PNG, GIF, BMP');
       }
 
       int targetWidth = 800;
@@ -129,7 +139,9 @@ class WardrobeProvider with ChangeNotifier {
       }
 
       final resized = img.copyResize(image,
-          width: targetWidth, height: targetHeight, interpolation: img.Interpolation.linear);
+          width: targetWidth,
+          height: targetHeight,
+          interpolation: img.Interpolation.linear);
       final compressed = img.encodeJpg(resized, quality: 85);
       final tempDir = await getTemporaryDirectory();
       final tempFile = File(
@@ -182,7 +194,8 @@ class WardrobeProvider with ChangeNotifier {
   List<Clothing> getItemsBySeason(String season) {
     return _items
         .where((item) =>
-            item.advancedAnalysis?.season?.toLowerCase() == season.toLowerCase() ||
+            item.advancedAnalysis?.season?.toLowerCase() ==
+                season.toLowerCase() ||
             item.advancedAnalysis?.season?.toLowerCase() == 'all-season')
         .toList();
   }

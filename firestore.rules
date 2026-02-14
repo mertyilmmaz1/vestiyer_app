@@ -1,4 +1,5 @@
 rules_version = '2';
+// Firestore: kullanıcı kendi dokümanlarına erişir (profil, profileImage, styleProfile vb.).
 service cloud.firestore {
   match /databases/{database}/documents {
     match /users/{userId} {

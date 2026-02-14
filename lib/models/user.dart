@@ -1,3 +1,5 @@
+import 'style_profile.dart';
+
 class User {
   final String id;
   final String email;
@@ -8,6 +10,7 @@ class User {
   final DateTime? lastLogin;
   final bool isActive;
   final bool isPremium;
+  final StyleProfile? styleProfile;
 
   User({
     required this.id,
@@ -19,21 +22,29 @@ class User {
     this.lastLogin,
     required this.isActive,
     required this.isPremium,
+    this.styleProfile,
   });
 
-  factory User.fromJson(Map<String, dynamic> json) => User(
-        id: json['_id'] ?? json['id'] ?? '',
-        email: json['email'] ?? '',
-        firstName: json['firstName'],
-        lastName: json['lastName'],
-        profileImage: json['profileImage'],
-        createdAt: User._dateFromJson(json['createdAt']),
-        lastLogin: json['lastLogin'] != null
-            ? User._dateFromJson(json['lastLogin'])
-            : null,
-        isActive: json['isActive'] ?? true,
-        isPremium: json['isPremium'] ?? false,
-      );
+  factory User.fromJson(Map<String, dynamic> json) {
+    final styleProfileData = json['styleProfile'];
+    return User(
+      id: json['_id'] ?? json['id'] ?? '',
+      email: json['email'] ?? '',
+      firstName: json['firstName'],
+      lastName: json['lastName'],
+      profileImage: json['profileImage'],
+      createdAt: User._dateFromJson(json['createdAt']),
+      lastLogin: json['lastLogin'] != null
+          ? User._dateFromJson(json['lastLogin'])
+          : null,
+      isActive: json['isActive'] ?? true,
+      isPremium: json['isPremium'] ?? false,
+      styleProfile: styleProfileData != null
+          ? StyleProfile.fromJson(
+              Map<String, dynamic>.from(styleProfileData as Map))
+          : null,
+    );
+  }
 
   static DateTime _dateFromJson(dynamic v) {
     if (v == null) return DateTime.now();
@@ -51,6 +62,7 @@ class User {
         'lastLogin': lastLogin,
         'isActive': isActive,
         'isPremium': isPremium,
+        if (styleProfile != null) 'styleProfile': styleProfile!.toFirestore(),
       };
 
   Map<String, dynamic> toJson() => {
@@ -63,5 +75,6 @@ class User {
         'lastLogin': lastLogin?.toIso8601String(),
         'isActive': isActive,
         'isPremium': isPremium,
+        if (styleProfile != null) 'styleProfile': styleProfile!.toJson(),
       };
 }

@@ -1,16 +1,23 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:provider/provider.dart';
 
 import 'core/product/init/application_initialize.dart';
+import 'core/product/navigation/editorial_page_route.dart';
 import 'core/product/theme/app_colors.dart';
 import 'core/product/theme/app_theme.dart';
+import 'core/product/theme/app_typography.dart';
 import 'providers/subscription_provider.dart';
+import 'providers/tutorial_provider.dart';
 import 'providers/wardrobe_provider.dart';
+import 'models/user.dart' as app_user;
 import 'screens/ai_stylist_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
+import 'screens/style_dna_onboarding_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/splash_screen.dart';
@@ -27,6 +34,7 @@ import 'services/hive_cache_service.dart';
 import 'services/mock/mock_cloud_functions_service.dart';
 import 'services/mock/mock_firebase_auth_service.dart';
 import 'services/mock/mock_firebase_storage_service.dart';
+import 'services/tutorial_coach_service.dart';
 import 'services/mock/mock_firestore_service.dart';
 
 HiveCacheService? _hiveCache;
@@ -44,9 +52,17 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         Provider<FirebaseAuthService>(
-          create: (_) => kUseMockBackend
-              ? MockFirebaseAuthService()
-              : FirebaseAuthService(),
+          create: (_) {
+            if (kUseMockBackend) return MockFirebaseAuthService();
+            final webClientId =
+                dotenv.env['FIREBASE_GOOGLE_WEB_CLIENT_ID']?.trim();
+            return FirebaseAuthService(
+              googleServerClientId:
+                  (webClientId != null && webClientId.isNotEmpty)
+                      ? webClientId
+                      : null,
+            );
+          },
         ),
         Provider<FirestoreServiceBase>(
           create: (_) => kUseMockBackend
@@ -79,10 +95,13 @@ class MyApp extends StatelessWidget {
             context.read<FirestoreServiceBase>(),
           ),
         ),
+        ChangeNotifierProvider<TutorialProvider>(
+          create: (context) => TutorialProvider(),
+        ),
       ],
       child: MaterialApp(
         title: 'Vestiyer',
-        theme: AppTheme.darkTheme,
+        theme: AppTheme.lightTheme,
         home: const SplashScreenWrapper(),
       ),
     );
@@ -121,16 +140,12 @@ class _SplashScreenWrapperState extends State<SplashScreenWrapper> {
 
     if (isSignedIn) {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (context) => const AuthWrapper(),
-        ),
+        EditorialPageRoute(page: const AuthWrapper()),
       );
     } else {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (context) => OnboardingScreen(
-            nextScreen: const AuthWrapper(),
-          ),
+        EditorialPageRoute(
+          page: OnboardingScreen(nextScreen: const AuthWrapper()),
         ),
       );
     }
@@ -166,6 +181,7 @@ class _SplashScreenWrapperState extends State<SplashScreenWrapper> {
     if (!mounted) return;
     context.read<WardrobeProvider>().setCurrentUserId(uid);
     context.read<SubscriptionProvider>().setCurrentUser(profile);
+    await context.read<TutorialProvider>().setCurrentUserId(uid);
     await revenueCatLogIn(uid);
     if (!mounted) return;
     _AuthenticatedHome.markPreInitialized();
@@ -174,6 +190,68 @@ class _SplashScreenWrapperState extends State<SplashScreenWrapper> {
   @override
   Widget build(BuildContext context) {
     return const SplashScreen();
+  }
+}
+
+class _AuthContent extends StatefulWidget {
+  const _AuthContent({required this.uid});
+
+  final String uid;
+
+  @override
+  State<_AuthContent> createState() => _AuthContentState();
+}
+
+class _AuthContentState extends State<_AuthContent> {
+  late Future<app_user.User?> _profileFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _profileFuture =
+        context.read<FirestoreServiceBase>().getUserProfile(widget.uid);
+  }
+
+  void _refreshProfile() {
+    setState(() {
+      _profileFuture =
+          context.read<FirestoreServiceBase>().getUserProfile(widget.uid);
+    });
+  }
+
+  void _onStyleDNAComplete(app_user.User? updatedUser) {
+    if (updatedUser != null && updatedUser.styleProfile?.isCompleted == true) {
+      setState(() {
+        _profileFuture = Future.value(updatedUser);
+      });
+    } else {
+      _refreshProfile();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<app_user.User?>(
+      future: _profileFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Scaffold(
+            backgroundColor: AppColors.background,
+            body: Center(
+              child: CircularProgressIndicator(color: AppColors.primary),
+            ),
+          );
+        }
+        final profile = snapshot.data;
+        if (profile?.styleProfile?.isCompleted != true) {
+          return StyleDNAOnboardingScreen(
+            userId: widget.uid,
+            onComplete: _onStyleDNAComplete,
+          );
+        }
+        return const _AuthenticatedHome();
+      },
+    );
   }
 }
 
@@ -186,7 +264,8 @@ class AuthWrapper extends StatelessWidget {
       return ValueListenableBuilder<bool>(
         valueListenable: mockSignedInNotifier,
         builder: (_, signedIn, __) {
-          return signedIn ? const _AuthenticatedHome() : const LoginScreen();
+          if (!signedIn) return const LoginScreen();
+          return _AuthContent(uid: MockFirebaseAuthService.mockUserId);
         },
       );
     }
@@ -206,12 +285,18 @@ class AuthWrapper extends StatelessWidget {
         }
         final user = snapshot.data;
         if (user != null) {
-          return const _AuthenticatedHome();
+          return _AuthContent(uid: user.uid);
         }
         return const LoginScreen();
       },
     );
   }
+}
+
+/// Public function callable from other screens (e.g. profile_screen logout)
+/// to reset the pre-initialized flag so the next user gets fresh initialization.
+void resetAuthenticatedHomeState() {
+  _AuthenticatedHome.resetPreInitialized();
 }
 
 class _AuthenticatedHome extends StatefulWidget {
@@ -223,6 +308,11 @@ class _AuthenticatedHome extends StatefulWidget {
     _preInitialized = true;
   }
 
+  /// Reset the pre-initialized flag on logout so the next user gets fresh init.
+  static void resetPreInitialized() {
+    _preInitialized = false;
+  }
+
   @override
   State<_AuthenticatedHome> createState() => _AuthenticatedHomeState();
 }
@@ -231,14 +321,28 @@ class _AuthenticatedHomeState extends State<_AuthenticatedHome> {
   bool _initialized = false;
   int _currentIndex = 0;
 
+  final _uploadButtonKey = GlobalKey();
+  final _aiTabKey = GlobalKey();
+  final _coachService = TutorialCoachService();
+
+  /// Track the last step we showed a coach mark for to avoid re-showing.
+  TutorialStep? _lastShownCoachStep;
+
   @override
   void initState() {
     super.initState();
     if (_AuthenticatedHome._preInitialized) {
       _initialized = true;
+      _scheduleTutorialCheck();
       return;
     }
     _initUser();
+  }
+
+  @override
+  void dispose() {
+    _coachService.dismiss();
+    super.dispose();
   }
 
   Future<void> _initUser() async {
@@ -250,19 +354,87 @@ class _AuthenticatedHomeState extends State<_AuthenticatedHome> {
     if (!mounted) return;
     context.read<WardrobeProvider>().setCurrentUserId(uid);
     context.read<SubscriptionProvider>().setCurrentUser(profile);
+    await context.read<TutorialProvider>().setCurrentUserId(uid);
     await revenueCatLogIn(uid);
     if (!mounted) return;
     setState(() => _initialized = true);
+    _scheduleTutorialCheck();
+  }
+
+  void _scheduleTutorialCheck() {
+    // Wait for the first frame to complete so GlobalKeys are attached.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _maybeShowTutorial();
+    });
+  }
+
+  void _maybeShowTutorial() {
+    final tp = context.read<TutorialProvider>();
+    if (!tp.shouldShowOverlay) return;
+    if (tp.currentStep == _lastShownCoachStep) return;
+
+    final step = tp.currentStep;
+    GlobalKey? targetKey;
+
+    switch (step) {
+      case TutorialStep.welcome:
+        targetKey = _uploadButtonKey;
+        break;
+      case TutorialStep.uploading:
+        targetKey = _uploadButtonKey;
+        break;
+      case TutorialStep.reached5Items:
+        targetKey = _aiTabKey;
+        break;
+      case TutorialStep.aiPreview:
+        targetKey = AIStylistScreen.generateButtonKey;
+        // Ensure AI tab is selected so the button is visible.
+        if (_currentIndex != 2) {
+          setState(() => _currentIndex = 2);
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) _maybeShowTutorial();
+          });
+          return;
+        }
+        break;
+      case TutorialStep.completed:
+        return;
+    }
+
+    _lastShownCoachStep = step;
+    _coachService.showForStep(
+      context: context,
+      step: step,
+      targetKey: targetKey,
+      onDismiss: () {
+        tp.dismissOverlay();
+      },
+      onSkip: () async {
+        await tp.skipTutorial();
+      },
+      onContinue: () async {
+        await tp.completeStep(step);
+      },
+    );
   }
 
   void _onTabTapped(int index) {
-    if (index == 2) {
-      Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => const UploadScreen()),
-      );
-      return;
-    }
     setState(() => _currentIndex = index);
+
+    // Tutorial: user manually navigates to AI STİLİST → advance to aiPreview
+    final tutorialProvider =
+        Provider.of<TutorialProvider>(context, listen: false);
+    if (tutorialProvider.currentStep == TutorialStep.reached5Items &&
+        index == 2) {
+      tutorialProvider.completeStep(TutorialStep.reached5Items);
+    }
+  }
+
+  void _openUpload() {
+    Navigator.of(context).push(
+      EditorialPageRoute(page: const UploadScreen()),
+    );
   }
 
   @override
@@ -270,108 +442,133 @@ class _AuthenticatedHomeState extends State<_AuthenticatedHome> {
     if (!_initialized) {
       return const SplashScreen();
     }
+
+    final topTabs = [
+      {'label': 'ANA SAYFA', 'index': 0},
+      {'label': 'DOLABIM', 'index': 1},
+      {'label': 'AI STİLİST', 'index': 2},
+      {'label': 'PROFİL', 'index': 3},
+    ];
+
+    // Watch tutorial provider to react to step changes.
+    context.watch<TutorialProvider>();
+
+    // Schedule a coach mark check after this build completes.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _maybeShowTutorial();
+    });
+
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: IndexedStack(
-        index: _currentIndex > 2 ? _currentIndex - 1 : _currentIndex,
-        children: [
-          HomeScreen(onSelectTab: (i) => setState(() => _currentIndex = i)),
-          const WardrobeScreen(showBackButton: false),
-          const AIStylistScreen(),
-          const ProfileScreen(showBackButton: false),
-        ],
-      ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: AppColors.tertiary,
-          border: Border(
-            top: BorderSide(
-              color: AppColors.textPrimary.withValues(alpha: 0.08),
-              width: 1,
-            ),
-          ),
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _NavItem(
-                  icon: Icons.home_outlined,
-                  selectedIcon: Icons.home_rounded,
-                  label: 'Ana Sayfa',
-                  isSelected: _currentIndex == 0,
-                  onTap: () => _onTabTapped(0),
-                ),
-                _NavItem(
-                  icon: Icons.checkroom_outlined,
-                  selectedIcon: Icons.checkroom_rounded,
-                  label: 'Dolabım',
-                  isSelected: _currentIndex == 1,
-                  onTap: () => _onTabTapped(1),
-                ),
-                _NavItem(
-                  icon: Icons.add_circle_outline,
-                  selectedIcon: Icons.add_circle,
-                  label: 'Yükle',
-                  isSelected: false,
-                  onTap: () => _onTabTapped(2),
-                ),
-                _NavItem(
-                  icon: Icons.auto_awesome_outlined,
-                  selectedIcon: Icons.auto_awesome,
-                  label: 'Kombinler',
-                  isSelected: _currentIndex == 3,
-                  onTap: () => _onTabTapped(3),
-                ),
-                _NavItem(
-                  icon: Icons.person_outline_rounded,
-                  selectedIcon: Icons.person_rounded,
-                  label: 'Profil',
-                  isSelected: _currentIndex == 4,
-                  onTap: () => _onTabTapped(4),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _NavItem extends StatelessWidget {
-  const _NavItem({
-    required this.icon,
-    required this.selectedIcon,
-    required this.label,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final IconData selectedIcon;
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = isSelected ? AppColors.primary : AppColors.textPrimary.withValues(alpha: 0.6);
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      body: SafeArea(
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(isSelected ? selectedIcon : icon, size: 26, color: color),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(fontSize: 11, color: color, fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500),
+            // ─── GLOBAL TOP HEADER (Zara Inspired) ───
+            Container(
+              padding: const EdgeInsets.fromLTRB(20, 12, 12, 0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'VESTIYER',
+                      style: AppTypography.display.copyWith(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w400,
+                        letterSpacing: 4.0,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const HugeIcon(
+                      icon: HugeIcons.strokeRoundedNotification01,
+                      color: AppColors.textPrimary,
+                      size: 24,
+                    ),
+                    onPressed: () {
+                      // Notification logic or screen
+                    },
+                  ),
+                  IconButton(
+                    key: _uploadButtonKey,
+                    icon: const HugeIcon(
+                      icon: HugeIcons.strokeRoundedAdd01,
+                      color: AppColors.textPrimary,
+                      size: 24,
+                    ),
+                    onPressed: () {
+                      // Tutorial: user taps + → advance welcome to uploading
+                      final tp =
+                          Provider.of<TutorialProvider>(context, listen: false);
+                      if (tp.currentStep == TutorialStep.welcome) {
+                        tp.completeStep(TutorialStep.welcome);
+                      }
+                      _openUpload();
+                    },
+                  ),
+                ],
+              ),
+            ),
+            // ─── TOP TAB BAR ───
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                child: Row(
+                  children: topTabs.map((tab) {
+                    final index = tab['index'] as int;
+                    final isSelected = _currentIndex == index;
+                    final isAiTab = index == 2;
+                    return InkWell(
+                      key: isAiTab ? _aiTabKey : null,
+                      onTap: () => _onTabTapped(index),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
+                        decoration: BoxDecoration(
+                          border: Border(
+                            bottom: BorderSide(
+                              color: isSelected
+                                  ? AppColors.textPrimary
+                                  : Colors.transparent,
+                              width: 1.5,
+                            ),
+                          ),
+                        ),
+                        child: Text(
+                          tab['label'] as String,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight:
+                                isSelected ? FontWeight.w500 : FontWeight.w300,
+                            letterSpacing: 1.5,
+                            color: isSelected
+                                ? AppColors.textPrimary
+                                : AppColors.textPrimary.withValues(alpha: 0.5),
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
+            const Divider(height: 1, color: AppColors.border),
+            // ─── PAGE CONTENT ───
+            Expanded(
+              child: IndexedStack(
+                index: _currentIndex,
+                children: [
+                  HomeScreen(
+                      onSelectTab: (i) => setState(() => _currentIndex = i)),
+                  const WardrobeScreen(showBackButton: false),
+                  const AIStylistScreen(),
+                  const ProfileScreen(showBackButton: false),
+                ],
+              ),
             ),
           ],
         ),
@@ -379,4 +576,3 @@ class _NavItem extends StatelessWidget {
     );
   }
 }
-

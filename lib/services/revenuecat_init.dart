@@ -6,3 +6,6 @@ Future<void> configureRevenueCat() => rc.configureRevenueCat();
 
 /// Logs in the user to RevenueCat (e.g. Firebase UID). No-op on web or when not configured.
 Future<void> revenueCatLogIn(String userId) => rc.revenueCatLogIn(userId);
+
+/// True only if RevenueCat was configured (API key set and configure succeeded). Use to avoid calling any Purchases API when not set up.
+bool get isRevenueCatConfigured => rc.isRevenueCatConfigured;

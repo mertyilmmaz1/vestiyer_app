@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import 'package:vestiyer_nodejs/core/product/theme/app_colors.dart';
+import 'package:vestiyer_nodejs/core/product/theme/app_spacing.dart';
+import 'package:vestiyer_nodejs/core/product/theme/app_typography.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -42,12 +44,13 @@ class _SplashScreenState extends State<SplashScreen>
               Container(
                 width: 120,
                 height: 120,
-                decoration: BoxDecoration(
-                  color: AppColors.tertiary,
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
-                    color: AppColors.textPrimary.withValues(alpha: 0.1),
-                    width: 1,
+                decoration: const BoxDecoration(
+                  color: AppColors.softBackground,
+                  border: Border(
+                    top: BorderSide(color: AppColors.border, width: 0.5),
+                    bottom: BorderSide(color: AppColors.border, width: 0.5),
+                    left: BorderSide(color: AppColors.border, width: 0.5),
+                    right: BorderSide(color: AppColors.border, width: 0.5),
                   ),
                 ),
                 child: const Icon(
@@ -56,26 +59,25 @@ class _SplashScreenState extends State<SplashScreen>
                   color: AppColors.primary,
                 ),
               ),
-              const SizedBox(height: 40),
-              const Text(
+              const SizedBox(height: AppSpacing.xl),
+              Text(
                 'Vestiyer',
-                style: TextStyle(
-                  fontSize: 36,
-                  fontWeight: FontWeight.w700,
+                style: AppTypography.display.copyWith(
+                  fontSize: 32,
+                  fontWeight: FontWeight.w400,
+                  letterSpacing: 1.2,
                   color: AppColors.textPrimary,
-                  letterSpacing: -0.5,
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.md),
               Text(
                 'Kıyafet dolabınızı yapay zeka ile yönetin',
-                style: TextStyle(
-                  fontSize: 18,
-                  color: AppColors.textPrimary.withValues(alpha: 0.7),
-                  letterSpacing: 0.2,
+                style: AppTypography.body.copyWith(
+                  fontSize: 16,
+                  color: AppColors.textSecondary,
                 ),
               ),
-              const SizedBox(height: 60),
+              const SizedBox(height: AppSpacing.xxl - 4),
               SizedBox(
                 width: 40,
                 height: 40,

@@ -37,6 +37,13 @@ class CachedFirestoreService extends FirestoreServiceBase {
   }
 
   @override
+  Future<void> setUserStyleProfile(
+      String uid, Map<String, dynamic> styleProfile) async {
+    await _delegate.setUserStyleProfile(uid, styleProfile);
+    await _cache.invalidateUser(uid);
+  }
+
+  @override
   Future<Clothing?> addClothing(
       String userId, Map<String, dynamic> data) async {
     final result = await _delegate.addClothing(userId, data);

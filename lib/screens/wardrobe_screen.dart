@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:provider/provider.dart';
 import 'package:vestiyer_nodejs/core/product/theme/app_colors.dart';
+import 'package:vestiyer_nodejs/core/product/theme/app_typography.dart';
 import '../providers/wardrobe_provider.dart';
 import '../models/clothing.dart';
 import '../widgets/vestiyer_page_header.dart';
@@ -8,6 +10,10 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'ai_stylist_screen.dart';
 import 'clothing_detail_screen.dart';
 import 'package:flutter/services.dart';
+
+import 'package:vestiyer_nodejs/utils/clothing_formatter.dart';
+import '../widgets/bouncing_widget.dart';
+import '../widgets/staggered_slide_fade.dart';
 
 class WardrobeScreen extends StatefulWidget {
   const WardrobeScreen({super.key, this.showBackButton = true});
@@ -32,20 +38,27 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppColors.tertiary,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text('Kıyafeti Sil',
-            style: TextStyle(color: AppColors.textPrimary)),
+        backgroundColor: AppColors.softBackground,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.zero,
+          side: BorderSide(color: AppColors.border, width: 0.5),
+        ),
+        title: Text(
+          'Kıyafeti Sil',
+          style: AppTypography.headline.copyWith(color: AppColors.textPrimary),
+        ),
         content: Text(
           'Bu kıyafeti silmek istediğinizden emin misiniz?',
-          style: TextStyle(color: AppColors.textPrimary.withValues(alpha: 0.7)),
+          style: AppTypography.body.copyWith(color: AppColors.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('İptal',
-                style: TextStyle(
-                    color: AppColors.textPrimary.withValues(alpha: 0.7))),
+            child: Text(
+              'İptal',
+              style:
+                  AppTypography.body.copyWith(color: AppColors.textSecondary),
+            ),
           ),
           TextButton(
             onPressed: () async {
@@ -68,7 +81,10 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
                 }
               }
             },
-            child: const Text('Sil', style: TextStyle(color: AppColors.error)),
+            child: Text(
+              'Sil',
+              style: AppTypography.body.copyWith(color: AppColors.error),
+            ),
           ),
         ],
       ),
@@ -79,20 +95,27 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppColors.tertiary,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text('Dolabı Sıfırla',
-            style: TextStyle(color: AppColors.textPrimary)),
+        backgroundColor: AppColors.softBackground,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.zero,
+          side: BorderSide(color: AppColors.border, width: 0.5),
+        ),
+        title: Text(
+          'Dolabı Sıfırla',
+          style: AppTypography.headline.copyWith(color: AppColors.textPrimary),
+        ),
         content: Text(
           'Tüm kıyafetleriniz silinecek. Bu işlem geri alınamaz. Emin misiniz?',
-          style: TextStyle(color: AppColors.textPrimary.withValues(alpha: 0.7)),
+          style: AppTypography.body.copyWith(color: AppColors.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('İptal',
-                style: TextStyle(
-                    color: AppColors.textPrimary.withValues(alpha: 0.7))),
+            child: Text(
+              'İptal',
+              style:
+                  AppTypography.body.copyWith(color: AppColors.textSecondary),
+            ),
           ),
           TextButton(
             onPressed: () async {
@@ -118,8 +141,10 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
                 }
               }
             },
-            child:
-                const Text('Sıfırla', style: TextStyle(color: AppColors.error)),
+            child: Text(
+              'Sıfırla',
+              style: AppTypography.body.copyWith(color: AppColors.error),
+            ),
           ),
         ],
       ),
@@ -133,125 +158,142 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
         final items = wardrobeProvider.items;
 
         return Scaffold(
-          backgroundColor: AppColors.background,
-          body: SafeArea(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                VestiyerPageHeader(
-                  title: 'Dolabım',
-                  subtitle: items.isEmpty ? 'Henüz kıyafet yok' : '${items.length} kıyafet',
-                  showBackButton: widget.showBackButton,
-                  onBack: () => Navigator.maybePop(context),
-                  actions: items.isEmpty
-                      ? []
-                      : [
-                          IconButton(
-                            icon: Icon(Icons.format_list_bulleted,
-                                color: AppColors.textPrimary.withValues(alpha: 0.7),
-                                size: 26),
-                            onPressed: () async {
-                              try {
-                                final formattedItems =
-                                    wardrobeProvider.getFormattedClothingItems();
-                                if (context.mounted) {
-                                  showDialog(
-                                    context: context,
-                                    builder: (context) => AlertDialog(
-                                      backgroundColor: AppColors.tertiary,
-                                      shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(24)),
-                                      title: const Text('Kıyafet Listesi',
-                                          style: TextStyle(color: AppColors.textPrimary)),
-                                      content: SingleChildScrollView(
-                                        physics: const BouncingScrollPhysics(),
-                                        child: SelectableText(
-                                          formattedItems,
-                                          style: TextStyle(
-                                              fontFamily: 'monospace',
-                                              color: AppColors.textPrimary
-                                                  .withValues(alpha: 0.7)),
+          backgroundColor: Colors.transparent,
+          body: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              VestiyerPageHeader(
+                title: 'Dolabım',
+                subtitle: items.isEmpty
+                    ? 'Henüz kıyafet yok'
+                    : '${items.length} kıyafet',
+                showBackButton: widget.showBackButton,
+                onBack: () => Navigator.maybePop(context),
+                actions: items.isEmpty
+                    ? []
+                    : [
+                        IconButton(
+                          icon: HugeIcon(
+                              icon: HugeIcons.strokeRoundedTask01,
+                              color:
+                                  AppColors.textPrimary.withValues(alpha: 0.7),
+                              size: 26),
+                          onPressed: () async {
+                            try {
+                              final formattedItems =
+                                  wardrobeProvider.getFormattedClothingItems();
+                              if (context.mounted) {
+                                showDialog(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    backgroundColor: AppColors.softBackground,
+                                    shape: const RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.zero,
+                                      side: BorderSide(
+                                          color: AppColors.border, width: 0.5),
+                                    ),
+                                    title: Text(
+                                      'Kıyafet Listesi',
+                                      style: AppTypography.headline.copyWith(
+                                          color: AppColors.textPrimary),
+                                    ),
+                                    content: SingleChildScrollView(
+                                      physics: const BouncingScrollPhysics(),
+                                      child: SelectableText(
+                                        formattedItems,
+                                        style: AppTypography.body.copyWith(
+                                          fontFamily: 'monospace',
+                                          color: AppColors.textSecondary,
                                         ),
                                       ),
-                                      actions: [
-                                        TextButton.icon(
-                                          icon: Icon(Icons.copy,
-                                              color: AppColors.textPrimary
-                                                  .withValues(alpha: 0.7)),
-                                          label: const Text('Kopyala',
-                                              style: TextStyle(
-                                                  color: AppColors.textPrimary)),
-                                          onPressed: () {
-                                            Clipboard.setData(
-                                                ClipboardData(text: formattedItems));
-                                            if (context.mounted) {
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                const SnackBar(
-                                                  content:
-                                                      Text('Kıyafet listesi kopyalandı'),
-                                                  backgroundColor: AppColors.tertiary,
-                                                ),
-                                              );
-                                              Navigator.pop(context);
-                                            }
-                                          },
-                                        ),
-                                        TextButton(
-                                          onPressed: () => Navigator.pop(context),
-                                          child: Text('Kapat',
-                                              style: TextStyle(
-                                                  color: AppColors.textPrimary
-                                                      .withValues(alpha: 0.7))),
-                                        ),
-                                      ],
                                     ),
-                                  );
-                                }
-                              } catch (e) {
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('Hata: $e'),
-                                      backgroundColor: AppColors.tertiary,
-                                    ),
-                                  );
-                                }
+                                    actions: [
+                                      TextButton.icon(
+                                        icon: HugeIcon(
+                                            icon: HugeIcons.strokeRoundedCopy01,
+                                            color: AppColors.textSecondary),
+                                        label: Text('Kopyala',
+                                            style: AppTypography.body.copyWith(
+                                                color: AppColors.textPrimary)),
+                                        onPressed: () {
+                                          Clipboard.setData(ClipboardData(
+                                              text: formattedItems));
+                                          if (context.mounted) {
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              const SnackBar(
+                                                content: Text(
+                                                    'Kıyafet listesi kopyalandı'),
+                                                backgroundColor:
+                                                    AppColors.tertiary,
+                                              ),
+                                            );
+                                            Navigator.pop(context);
+                                          }
+                                        },
+                                      ),
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(context),
+                                        child: Text(
+                                          'Kapat',
+                                          style: AppTypography.body.copyWith(
+                                              color: AppColors.textSecondary),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
                               }
-                            },
-                            tooltip: 'Kıyafet Listesi',
-                          ),
-                          IconButton(
-                            icon: Icon(Icons.delete_sweep_outlined,
-                                color: AppColors.textPrimary.withValues(alpha: 0.7),
-                                size: 26),
-                            onPressed: () => _showResetWardrobeConfirmation(context),
-                            tooltip: 'Dolabı Sıfırla',
-                          ),
-                        ],
-                ),
-                Expanded(
-                  child: items.isEmpty
-                      ? _buildEmptyState(context)
-                      : GridView.builder(
-                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-                          physics: const BouncingScrollPhysics(),
-                          gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: 16,
-                            mainAxisSpacing: 16,
-                            childAspectRatio: 0.75,
-                          ),
-                          itemCount: items.length,
-                          itemBuilder: (context, index) {
-                            final item = items[index];
-                            return _buildClothingCard(
-                                context, item, wardrobeProvider);
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Hata: $e'),
+                                    backgroundColor: AppColors.tertiary,
+                                  ),
+                                );
+                              }
+                            }
                           },
+                          tooltip: 'Kıyafet Listesi',
                         ),
-                ),
-              ],
-            ),
+                        IconButton(
+                          icon: HugeIcon(
+                              icon: HugeIcons.strokeRoundedDelete02,
+                              color:
+                                  AppColors.textPrimary.withValues(alpha: 0.7),
+                              size: 26),
+                          onPressed: () =>
+                              _showResetWardrobeConfirmation(context),
+                          tooltip: 'Dolabı Sıfırla',
+                        ),
+                      ],
+              ),
+              Expanded(
+                child: items.isEmpty
+                    ? _buildEmptyState(context)
+                    : GridView.builder(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+                        physics: const BouncingScrollPhysics(),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
+                          childAspectRatio: 0.75,
+                        ),
+                        itemCount: items.length,
+                        itemBuilder: (context, index) {
+                          final item = items[index];
+                          return StaggeredSlideFade(
+                            index: index,
+                            child: _buildClothingCard(
+                                context, item, wardrobeProvider),
+                          );
+                        },
+                      ),
+              ),
+            ],
           ),
           floatingActionButton:
               items.isNotEmpty ? _buildKombinFab(context) : null,
@@ -267,31 +309,31 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.checkroom_outlined,
+            HugeIcon(
+              icon: HugeIcons.strokeRoundedClothes,
               size: 70,
               color: AppColors.textPrimary.withValues(alpha: 0.2),
             ),
             const SizedBox(height: 20),
             Text(
-              'Henüz kıyafet eklenmemiş',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
+              'HENÜZ KIYAFET EKLENMEMİŞ',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w400,
                 color: AppColors.textPrimary,
+                letterSpacing: 1.5,
               ),
             ),
             const SizedBox(height: 10),
             Container(
               padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
               decoration: BoxDecoration(
-                color: AppColors.tertiary,
-                borderRadius: BorderRadius.circular(24),
+                color: AppColors.softBackground,
                 border: Border.all(
                   style: BorderStyle.solid,
                   strokeAlign: BorderSide.strokeAlignInside,
-                  color: AppColors.textPrimary.withValues(alpha: 0.1),
-                  width: 1,
+                  color: AppColors.border,
+                  width: 0.5,
                 ),
               ),
               child: Text(
@@ -326,17 +368,15 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
       },
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.tertiary,
-          borderRadius: BorderRadius.circular(24),
+          color: AppColors.softBackground,
           border: Border.all(
             style: BorderStyle.solid,
             strokeAlign: BorderSide.strokeAlignInside,
-            color: AppColors.textPrimary.withValues(alpha: 0.1),
-            width: 1,
+            color: AppColors.border,
+            width: 0.5,
           ),
         ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
+        child: ClipRect(
           child: Stack(
             children: [
               Column(
@@ -356,7 +396,7 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
                           ),
                         ),
                         child: CachedNetworkImage(
-                          imageUrl: item.imageUrl,
+                          imageUrl: item.displayImageUrl,
                           fit: BoxFit.cover,
                           placeholder: (context, url) => Container(
                             color:
@@ -376,16 +416,17 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
                   ),
                   Container(
                     padding: const EdgeInsets.all(12),
-                    color: AppColors.tertiary,
+                    color: AppColors.softBackground,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          item.category,
+                          ClothingFormatter.format(item.category).toUpperCase(),
                           style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
+                            fontWeight: FontWeight.w400,
+                            fontSize: 12,
                             color: AppColors.textPrimary,
+                            letterSpacing: 1.0,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -412,19 +453,18 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
                   color: Colors.transparent,
                   child: InkWell(
                     onTap: () => _showDeleteConfirmation(context, item),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.zero,
                     child: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                         color: AppColors.cardBackground,
-                        borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: AppColors.textPrimary.withValues(alpha: 0.08),
-                          width: 1,
+                          color: AppColors.border,
+                          width: 0.5,
                         ),
                       ),
-                      child: Icon(
-                        Icons.delete_outline_rounded,
+                      child: HugeIcon(
+                        icon: HugeIcons.strokeRoundedDelete02,
                         size: 20,
                         color: AppColors.textPrimary.withValues(alpha: 0.8),
                       ),
@@ -442,63 +482,63 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
   Widget _buildKombinFab(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
         border: Border.all(
           style: BorderStyle.solid,
           strokeAlign: BorderSide.strokeAlignInside,
-          color: AppColors.textPrimary.withValues(alpha: 0.1),
-          width: 1,
+          color: AppColors.border,
+          width: 0.5,
         ),
       ),
-      child: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.push(
-            context,
-            PageRouteBuilder(
-              pageBuilder: (_, __, ___) => const AIStylistScreen(),
-              transitionsBuilder: (_, animation, __, child) {
-                return SlideTransition(
-                  position: Tween<Offset>(
-                    begin: const Offset(1, 0),
-                    end: Offset.zero,
-                  ).animate(CurvedAnimation(
-                    parent: animation,
-                    curve: Curves.easeOutQuint,
-                  )),
-                  child: child,
-                );
-              },
+      child: BouncingWidget(
+        child: FloatingActionButton.extended(
+          onPressed: () {
+            Navigator.push(
+              context,
+              PageRouteBuilder(
+                pageBuilder: (_, __, ___) => const AIStylistScreen(),
+                transitionsBuilder: (_, animation, __, child) {
+                  return SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(1, 0),
+                      end: Offset.zero,
+                    ).animate(CurvedAnimation(
+                      parent: animation,
+                      curve: Curves.easeOutQuint,
+                    )),
+                    child: child,
+                  );
+                },
+              ),
+            );
+          },
+          backgroundColor: AppColors.softBackground,
+          elevation: 0,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.zero,
+          ),
+          icon: Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: AppColors.textPrimary.withValues(alpha: 0.1),
             ),
-          );
-        },
-        backgroundColor: AppColors.tertiary,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-        ),
-        icon: Container(
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(
-            color: AppColors.textPrimary.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(12),
+            child: const HugeIcon(
+              icon: HugeIcons.strokeRoundedMagicWand01,
+              color: AppColors.textPrimary,
+              size: 20,
+            ),
           ),
-          child: const Icon(
-            Icons.auto_awesome_outlined,
-            color: AppColors.textPrimary,
-            size: 20,
+          label: const Text(
+            'KOMBİN',
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w400,
+              fontSize: 13,
+              letterSpacing: 1.5,
+            ),
           ),
+          extendedPadding:
+              const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         ),
-        label: const Text(
-          'Kombin',
-          style: TextStyle(
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.w600,
-            fontSize: 15,
-            letterSpacing: 0.5,
-          ),
-        ),
-        extendedPadding:
-            const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       ),
     );
   }
@@ -507,8 +547,8 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
     return Container(
       color: AppColors.tertiary,
       child: const Center(
-        child: Icon(
-          Icons.image_not_supported,
+        child: HugeIcon(
+          icon: HugeIcons.strokeRoundedImage01,
           color: AppColors.textSecondary,
           size: 40,
         ),

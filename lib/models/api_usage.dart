@@ -29,6 +29,13 @@ class ApiUsage {
     };
   }
 
+  static DateTime _dateFromJson(dynamic v) {
+    if (v == null) return DateTime.now();
+    if (v is DateTime) return v;
+    if (v is String) return DateTime.parse(v);
+    return (v as dynamic).toDate();
+  }
+
   factory ApiUsage.fromMap(Map<String, dynamic> map) {
     return ApiUsage(
       id: map['id'],
@@ -37,7 +44,7 @@ class ApiUsage {
       promptTokens: map['prompt_tokens'],
       completionTokens: map['completion_tokens'],
       cost: map['cost'],
-      timestamp: DateTime.parse(map['timestamp']),
+      timestamp: _dateFromJson(map['timestamp']),
     );
   }
 }

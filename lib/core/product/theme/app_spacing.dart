@@ -1,0 +1,10 @@
+/// Editorial spacing - boşluk = lüks.
+/// Kurallar: Ekran kenarı 24, bölüm arası 40+, başlık-içerik 24, buton padding 18-22.
+abstract class AppSpacing {
+  static const xs = 4.0;
+  static const sm = 8.0;
+  static const md = 16.0;
+  static const lg = 24.0;
+  static const xl = 40.0;
+  static const xxl = 64.0;
+}

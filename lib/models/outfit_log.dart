@@ -24,9 +24,9 @@ class OutfitLog {
         userId: json['userId'] ?? '',
         combinationId: json['combinationId'] ?? '',
         wornAt: OutfitLog._dateFromJson(json['wornAt']),
-        note: json['note'] as String?,
-        combinationName: json['combinationName'] as String?,
-        occasion: json['occasion'] as String?,
+        note: json['note'] != null ? json['note'].toString() : null,
+        combinationName: json['combinationName'] != null ? json['combinationName'].toString() : null,
+        occasion: json['occasion'] != null ? json['occasion'].toString() : null,
       );
 
   static DateTime _dateFromJson(dynamic v) {

@@ -62,9 +62,15 @@ dependencies:
   
   # UI Components
   carousel_slider: ^5.0.0
+  google_fonts: ^6.2.1
   
   # RevenueCat for in-app subscriptions
   purchases_flutter: ^8.4.0
+
+  # Sign-in providers (Google, Apple)
+  google_sign_in: ^6.2.2
+  sign_in_with_apple: ^6.1.3
+  crypto: ^3.0.3
 
   # Firebase
   firebase_core: ^3.12.1
@@ -76,6 +82,8 @@ dependencies:
   firebase_messaging: ^15.2.4
   firebase_crashlytics: ^4.3.4
   flutter_dotenv: ^5.1.0
+  hugeicons: ^1.1.5
+  tutorial_coach_mark: ^1.3.3
 
 dev_dependencies:
   flutter_test:

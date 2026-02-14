@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:vestiyer_nodejs/core/product/theme/app_colors.dart';
+import 'package:vestiyer_nodejs/core/product/theme/app_spacing.dart';
+import 'package:vestiyer_nodejs/core/product/theme/app_typography.dart';
 
-/// Referans tasarım: "Vestiyer Asistanı" iki satır başlık + PRO badge + input + yeşil gönder.
+/// Zara editorial: serif section title, minimal input, square corners.
 class AssistantCard extends StatelessWidget {
   const AssistantCard({
     super.key,
@@ -18,67 +21,77 @@ class AssistantCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.tertiary,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: AppColors.textPrimary.withValues(alpha: 0.1),
-          width: 1,
+      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.xl,
+      ),
+      decoration: const BoxDecoration(
+        color: AppColors.background,
+        border: Border(
+          top: BorderSide(color: AppColors.border, width: 0.5),
+          bottom: BorderSide(color: AppColors.border, width: 0.5),
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Section label — küçük uppercase etiket (Zara menü stili)
           Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Vestiyer',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  const Text(
-                    'Asistanı',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.primary,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                ],
+              HugeIcon(
+                icon: HugeIcons.strokeRoundedMagicWand01,
+                color: AppColors.textPrimary,
+                size: 16,
               ),
-              if (showProBadge) ...[
-                const SizedBox(width: 10),
+              const SizedBox(width: 8),
+              Text(
+                'STİL ASİSTANI',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: AppColors.textPrimary,
+                  letterSpacing: 2.0,
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+              const Spacer(),
+              if (showProBadge)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(20),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
                   ),
-                  child: const Text(
+                  decoration: const BoxDecoration(
+                    color: AppColors.black,
+                  ),
+                  child: Text(
                     'PRO',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      fontWeight: FontWeight.w400,
+                      letterSpacing: 1.5,
+                      color: Colors.white,
+                      fontSize: 10,
                     ),
                   ),
                 ),
-              ],
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.md),
+          // Serif başlık
+          Text(
+            'Bugün nasıl\nyardımcı olabilirim?',
+            style: AppTypography.display.copyWith(
+              fontSize: 22,
+              fontWeight: FontWeight.w400,
+              letterSpacing: 0.5,
+              height: 1.3,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          // Input + gönder butonu
           Row(
             children: [
               Expanded(
@@ -87,34 +100,52 @@ class AssistantCard extends StatelessWidget {
                   decoration: InputDecoration(
                     hintText: hintText,
                     filled: true,
-                    fillColor: AppColors.inputBackground,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
+                    fillColor: AppColors.softBackground,
+                    border: const OutlineInputBorder(
+                      borderRadius: BorderRadius.zero,
                       borderSide: BorderSide.none,
                     ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    enabledBorder: const OutlineInputBorder(
+                      borderRadius: BorderRadius.zero,
+                      borderSide: BorderSide(
+                        color: AppColors.border,
+                        width: 0.5,
+                      ),
+                    ),
+                    focusedBorder: const OutlineInputBorder(
+                      borderRadius: BorderRadius.zero,
+                      borderSide: BorderSide(
+                        color: AppColors.black,
+                        width: 0.5,
+                      ),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 14),
+                    hintStyle: theme.textTheme.bodySmall?.copyWith(
+                      color: AppColors.textSecondary,
+                      letterSpacing: 0.5,
+                    ),
                   ),
-                  style: const TextStyle(
+                  style: theme.textTheme.bodyMedium?.copyWith(
                     color: AppColors.textPrimary,
-                    fontSize: 15,
                   ),
                   onSubmitted: (_) => onSend(),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               Material(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(24),
+                color: AppColors.black,
                 child: InkWell(
                   onTap: onSend,
-                  borderRadius: BorderRadius.circular(24),
                   child: const SizedBox(
                     width: 48,
                     height: 48,
-                    child: Icon(
-                      Icons.arrow_upward_rounded,
-                      color: AppColors.textPrimary,
-                      size: 24,
+                    child: Center(
+                      child: HugeIcon(
+                        icon: HugeIcons.strokeRoundedArrowRight01,
+                        color: Colors.white,
+                        size: 20,
+                      ),
                     ),
                   ),
                 ),

@@ -36,7 +36,7 @@ class MockCloudFunctionsService extends CloudFunctionsService {
   Future<Map<String, dynamic>> getStyleAdvice(
     String message, {
     List<Map<String, dynamic>>? conversationHistory,
-    String? wardrobeContext,
+    Map<String, dynamic>? wardrobeSummary,
   }) async {
     await Future.delayed(const Duration(milliseconds: 400));
     return {
@@ -48,5 +48,11 @@ class MockCloudFunctionsService extends CloudFunctionsService {
   @override
   Future<Map<String, dynamic>> managePremiumStatus(String userId, Map<String, dynamic> payload) async {
     return {'success': true};
+  }
+
+  @override
+  Future<Map<String, dynamic>> checkSegmentServiceHealth() async {
+    await Future.delayed(const Duration(milliseconds: 100));
+    return {'ok': false, 'configured': false, 'error': 'Mock modda VPS yapılandırılmadı'};
   }
 }

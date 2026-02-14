@@ -3,6 +3,7 @@ import 'dart:async';
 import '../../models/clothing.dart';
 import '../../models/combination.dart';
 import '../../models/outfit_log.dart';
+import '../../models/style_profile.dart';
 import '../../models/user.dart' as app_user;
 import '../../utils/mock_data_helper.dart';
 import '../firestore_service_base.dart';
@@ -60,7 +61,44 @@ class MockFirestoreService extends FirestoreServiceBase {
 
   @override
   Future<void> updateUserProfile(
-      String uid, Map<String, dynamic> updates) async {}
+      String uid, Map<String, dynamic> updates) async {
+    if (updates.containsKey('styleProfile') && _mockUser != null) {
+      final sp = updates['styleProfile'];
+      _mockUser = app_user.User(
+        id: _mockUser!.id,
+        email: _mockUser!.email,
+        firstName: _mockUser!.firstName,
+        lastName: _mockUser!.lastName,
+        profileImage: _mockUser!.profileImage,
+        createdAt: _mockUser!.createdAt,
+        lastLogin: _mockUser!.lastLogin,
+        isActive: _mockUser!.isActive,
+        isPremium: _mockUser!.isPremium,
+        styleProfile: sp != null
+            ? StyleProfile.fromJson(Map<String, dynamic>.from(sp as Map))
+            : null,
+      );
+    }
+  }
+
+  @override
+  Future<void> setUserStyleProfile(
+      String uid, Map<String, dynamic> styleProfile) async {
+    await _ensureLoaded();
+    if (uid != mockUserId) return;
+    _mockUser = app_user.User(
+      id: _mockUser!.id,
+      email: _mockUser!.email,
+      firstName: _mockUser!.firstName,
+      lastName: _mockUser!.lastName,
+      profileImage: _mockUser!.profileImage,
+      createdAt: _mockUser!.createdAt,
+      lastLogin: _mockUser!.lastLogin,
+      isActive: _mockUser!.isActive,
+      isPremium: _mockUser!.isPremium,
+      styleProfile: StyleProfile.fromJson(styleProfile),
+    );
+  }
 
   @override
   Future<Clothing?> addClothing(

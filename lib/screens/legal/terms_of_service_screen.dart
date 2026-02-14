@@ -107,7 +107,7 @@ class TermsOfServiceScreen extends StatelessWidget {
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           color: AppColors.tertiary,
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.zero,
           border: Border.all(
             color: AppColors.textPrimary.withValues(alpha: 0.1),
             width: 1,

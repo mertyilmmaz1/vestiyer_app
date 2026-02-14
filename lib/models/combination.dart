@@ -35,6 +35,18 @@ class Combination {
     required this.updatedAt,
   });
 
+  static int? _safeInt(dynamic v) {
+    if (v == null) return null;
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    return null;
+  }
+
+  static List<String> _safeStringList(dynamic v) {
+    if (v == null || v is! List) return [];
+    return v.map((e) => e?.toString() ?? '').toList();
+  }
+
   factory Combination.fromJson(Map<String, dynamic> json) => Combination(
         id: json['_id'] ?? json['id'] ?? '',
         userId: json['userId'] ?? '',
@@ -48,10 +60,10 @@ class Combination {
             [],
         isAIGenerated: json['isAIGenerated'] ?? false,
         isFavorite: json['isFavorite'] ?? false,
-        rating: json['rating'],
-        timesWorn: json['timesWorn'] ?? 0,
+        rating: _safeInt(json['rating']),
+        timesWorn: _safeInt(json['timesWorn']) ?? 0,
         lastWorn: json['lastWorn'] != null ? Combination._dateFromJson(json['lastWorn']) : null,
-        tags: List<String>.from(json['tags'] ?? []),
+        tags: _safeStringList(json['tags']),
         createdAt: Combination._dateFromJson(json['createdAt']),
         updatedAt: Combination._dateFromJson(json['updatedAt']),
       );

@@ -34,16 +34,17 @@ class CloudFunctionsService {
   }
 
   /// Get style advice from AI stylist (chat).
+  /// Uses [wardrobeSummary] (compact JSON) instead of raw wardrobe list.
   Future<Map<String, dynamic>> getStyleAdvice(
     String message, {
     List<Map<String, dynamic>>? conversationHistory,
-    String? wardrobeContext,
+    Map<String, dynamic>? wardrobeSummary,
   }) async {
     final callable = _functions.httpsCallable('getStyleAdvice');
     final result = await callable.call<Map<String, dynamic>>({
       'message': message,
       if (conversationHistory != null) 'conversationHistory': conversationHistory,
-      if (wardrobeContext != null) 'wardrobeContext': wardrobeContext,
+      if (wardrobeSummary != null) 'wardrobeSummary': wardrobeSummary,
     });
     return result.data;
   }
@@ -56,6 +57,14 @@ class CloudFunctionsService {
       'userId': userId,
       ...payload,
     });
+    return result.data;
+  }
+
+  /// VPS segment servisinin sağlık kontrolü. Giriş yapmış kullanıcı gerekir.
+  /// Returns: { ok: bool, configured: bool, latencyMs?: int, error?: string, statusCode?: int }
+  Future<Map<String, dynamic>> checkSegmentServiceHealth() async {
+    final callable = _functions.httpsCallable('checkSegmentServiceHealth');
+    final result = await callable.call<Map<String, dynamic>>({});
     return result.data;
   }
 }

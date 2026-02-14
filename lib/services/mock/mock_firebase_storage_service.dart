@@ -15,5 +15,16 @@ class MockFirebaseStorageService extends FirebaseStorageService {
   }
 
   @override
+  Future<String> uploadProfileImage(String userId, File file) async {
+    return 'https://mock-storage.example.com/profile_images/$userId/avatar.jpg';
+  }
+
+  @override
+  Future<String> uploadProfileImageBytes(
+      String userId, List<int> bytes, String filename) async {
+    return 'https://mock-storage.example.com/profile_images/$userId/$filename';
+  }
+
+  @override
   Future<void> deleteByUrl(String url) async {}
 }

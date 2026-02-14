@@ -9,6 +9,7 @@ import '../core/product/init/application_initialize.dart';
 import '../models/user.dart';
 import '../services/firebase_auth_service.dart';
 import '../services/firestore_service_base.dart';
+import '../services/revenuecat_init.dart';
 
 import 'package:purchases_flutter/purchases_flutter.dart';
 
@@ -40,6 +41,11 @@ class SubscriptionProvider extends ChangeNotifier {
   User? _currentUser;
   DateTime? _lastPaywallShownAt;
   static const String _keyLastPaywallShownAt = 'last_paywall_shown_at';
+  static const String _keyLastFreeCombinationDate =
+      'last_free_combination_date';
+
+  /// Günlük 1 ücretsiz kombin limiti için son kullanım tarihi.
+  DateTime? _lastFreeCombinationDate;
 
   /// Debug-only: override premium for testing (e.g. from dev menu).
   bool _debugPremiumOverride = false;
@@ -59,8 +65,52 @@ class SubscriptionProvider extends ChangeNotifier {
       (dotenv.env['PREMIUM_TEST_MODE']?.toLowerCase() == 'true' ||
           _debugPremiumOverride);
 
+  static const String _keyIsTutorialSampleUsed = 'is_tutorial_sample_used';
+
+  /// Tutorial kapsamında bir defalık premium özelliği (AI analiz) deneme hakkı kullanıldı mı?
+  bool _isTutorialSampleUsed = false;
+
+  bool get isTutorialSampleUsed => _isTutorialSampleUsed;
+
   /// Premium status: test override OR RevenueCat entitlement.
   bool get isPremium => _isTestPremiumEnabled || _isPremiumFromRevenueCat;
+
+  Future<void> useTutorialSample() async {
+    _isTutorialSampleUsed = true;
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_keyIsTutorialSampleUsed, true);
+    } catch (e) {
+      debugPrint('Error persisting tutorial sample usage: $e');
+    }
+  }
+
+  /// Free kullanıcı için bugün ücretsiz kombin hakkı kaldı mı?
+  bool get hasDailyFreeCombinationLeft {
+    if (isPremium) return true;
+    if (_lastFreeCombinationDate == null) return true;
+    final now = DateTime.now();
+    return _lastFreeCombinationDate!.year != now.year ||
+        _lastFreeCombinationDate!.month != now.month ||
+        _lastFreeCombinationDate!.day != now.day;
+  }
+
+  /// Günlük ücretsiz kombin kullanıldı - kaydet.
+  Future<void> useDailyFreeCombination() async {
+    if (isPremium) return;
+    _lastFreeCombinationDate = DateTime.now();
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+        _keyLastFreeCombinationDate,
+        _lastFreeCombinationDate!.toIso8601String(),
+      );
+    } catch (e) {
+      debugPrint('Error persisting last free combination date: $e');
+    }
+  }
 
   /// Son paywall'dan bu yana yeterli süre (24 saat) geçti mi? Rate-limit için.
   bool get canShowPaywallAgain {
@@ -92,6 +142,8 @@ class SubscriptionProvider extends ChangeNotifier {
     _freeItemsUsed = 0;
     _subscriptionEndDate = null;
     _subscriptionType = SubscriptionType.none;
+    _lastFreeCombinationDate = null;
+    _isTutorialSampleUsed = false;
     notifyListeners();
   }
 
@@ -105,12 +157,17 @@ class SubscriptionProvider extends ChangeNotifier {
       if (stored != null) {
         _lastPaywallShownAt = DateTime.tryParse(stored);
       }
+      final comboStored = prefs.getString(_keyLastFreeCombinationDate);
+      if (comboStored != null) {
+        _lastFreeCombinationDate = DateTime.tryParse(comboStored);
+      }
+      _isTutorialSampleUsed = prefs.getBool(_keyIsTutorialSampleUsed) ?? false;
       final uid = _authService.currentUserId;
       if (uid != null) {
         _currentUser = await _firestore.getUserProfile(uid);
         if (_currentUser != null) await refreshSubscriptionStatus();
       }
-      if (!kUseMockBackend) {
+      if (!kUseMockBackend && isRevenueCatConfigured) {
         Purchases.addCustomerInfoUpdateListener(_onCustomerInfoUpdated);
       }
       _isInitialized = true;
@@ -128,8 +185,7 @@ class SubscriptionProvider extends ChangeNotifier {
   }
 
   void _applyCustomerInfo(CustomerInfo customerInfo) {
-    final entitlement =
-        customerInfo.entitlements.all[_kPremiumEntitlementId];
+    final entitlement = customerInfo.entitlements.all[_kPremiumEntitlementId];
     if (entitlement != null && entitlement.isActive) {
       _isPremiumFromRevenueCat = true;
       final exp = entitlement.expirationDate;
@@ -156,7 +212,7 @@ class SubscriptionProvider extends ChangeNotifier {
 
   @override
   void dispose() {
-    if (!kUseMockBackend) {
+    if (!kUseMockBackend && isRevenueCatConfigured) {
       try {
         Purchases.removeCustomerInfoUpdateListener(_onCustomerInfoUpdated);
       } catch (_) {}
@@ -172,7 +228,7 @@ class SubscriptionProvider extends ChangeNotifier {
     try {
       _isLoading = true;
       notifyListeners();
-      if (!kUseMockBackend) {
+      if (!kUseMockBackend && isRevenueCatConfigured) {
         try {
           final customerInfo = await Purchases.getCustomerInfo();
           _applyCustomerInfo(customerInfo);
@@ -218,7 +274,7 @@ class SubscriptionProvider extends ChangeNotifier {
 
   /// Purchases the given [Package] via RevenueCat. Returns true on success.
   Future<bool> purchasePackage(Package package) async {
-    if (kUseMockBackend) return false;
+    if (kUseMockBackend || !isRevenueCatConfigured) return false;
     try {
       _isLoading = true;
       notifyListeners();
@@ -244,7 +300,7 @@ class SubscriptionProvider extends ChangeNotifier {
 
   /// Fetches current offerings. Returns null on error or when not configured.
   Future<Offerings?> getOfferings() async {
-    if (kUseMockBackend) return null;
+    if (kUseMockBackend || !isRevenueCatConfigured) return null;
     try {
       return await Purchases.getOfferings();
     } catch (e) {
@@ -255,7 +311,7 @@ class SubscriptionProvider extends ChangeNotifier {
 
   /// Purchase by subscription type (monthly/yearly). Uses current offering.
   Future<bool> purchaseSubscription(SubscriptionType type) async {
-    if (kUseMockBackend) return false;
+    if (kUseMockBackend || !isRevenueCatConfigured) return false;
     if (type == SubscriptionType.none) return false;
     try {
       final offerings = await getOfferings();
@@ -286,7 +342,7 @@ class SubscriptionProvider extends ChangeNotifier {
   }
 
   Future<void> restorePurchases() async {
-    if (kUseMockBackend) {
+    if (kUseMockBackend || !isRevenueCatConfigured) {
       await refreshSubscriptionStatus();
       return;
     }
@@ -338,11 +394,11 @@ class SubscriptionProvider extends ChangeNotifier {
 
   List<String> getPremiumFeatures() {
     return [
-      'Sınırsız kıyafet ekleme',
-      'Gelişmiş AI kombinleri',
-      'Özel stilist tavsiyeleri',
-      'Reklamsız deneyim',
-      'Öncelikli müşteri desteği',
+      'Dolabını tam analiz et',
+      'Sana özel stil asistanı',
+      'Kişisel stil raporu',
+      'Eksik parça tespiti',
+      'Sınırsız kombin ve kıyafet',
     ];
   }
 }

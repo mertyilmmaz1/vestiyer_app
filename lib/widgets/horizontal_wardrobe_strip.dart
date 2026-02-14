@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:vestiyer_nodejs/core/product/theme/app_colors.dart';
+import 'package:vestiyer_nodejs/core/product/theme/app_spacing.dart';
+import 'package:vestiyer_nodejs/core/product/theme/app_typography.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/clothing.dart';
+import '../../widgets/bouncing_widget.dart';
 
-/// Bölüm başlığı + isteğe bağlı "Tümünü Gör" + yatay kıyafet listesi.
+/// Zara editorial: serif başlık, kare görsel, ince uppercase label.
 class HorizontalWardrobeStrip extends StatelessWidget {
   const HorizontalWardrobeStrip({
     super.key,
@@ -26,39 +29,52 @@ class HorizontalWardrobeStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Section başlığı — Zara serif stili
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.xl,
+            AppSpacing.lg,
+            AppSpacing.lg,
+          ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.display.copyWith(
+                    fontSize: 22,
+                    color: AppColors.textPrimary,
+                    letterSpacing: 1.5,
+                  ),
                 ),
               ),
               if (onSeeAll != null)
-                TextButton(
-                  onPressed: onSeeAll,
-                  child: const Text(
-                    'Tümünü Gör',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.primary,
+                GestureDetector(
+                  onTap: onSeeAll,
+                  child: Text(
+                    'TÜMÜNÜ GÖR',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: AppColors.textSecondary,
+                      letterSpacing: 1.5,
+                      fontSize: 10,
                     ),
                   ),
                 ),
             ],
           ),
         ),
+        // Ürün listesi — Zara grid stili
         SizedBox(
-          height: 140,
+          height: 190,
           child: items.isEmpty
               ? _EmptyStrip(
                   message: emptyMessage,
@@ -66,11 +82,12 @@ class HorizontalWardrobeStrip extends StatelessWidget {
                   onAction: onEmptyAction,
                 )
               : ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                   scrollDirection: Axis.horizontal,
                   physics: const BouncingScrollPhysics(),
                   itemCount: items.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 12),
+                  separatorBuilder: (_, __) => const SizedBox(width: 16),
                   itemBuilder: (context, index) {
                     final item = items[index];
                     return _WardrobeThumbCard(
@@ -96,55 +113,65 @@ class _WardrobeThumbCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: SizedBox(
-          width: 110,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: AspectRatio(
-                  aspectRatio: 1,
-                  child: CachedNetworkImage(
-                    imageUrl: item.imageUrl,
-                    fit: BoxFit.cover,
-                    placeholder: (_, __) => Container(
-                      color: AppColors.tertiary,
-                      child: Icon(
-                        Icons.checkroom_outlined,
-                        color: AppColors.textPrimary.withValues(alpha: 0.3),
-                        size: 32,
+    final theme = Theme.of(context);
+    return BouncingWidget(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          child: SizedBox(
+            width: 140,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Kare görsel — border-radius yok (Zara stili)
+                Container(
+                  color: AppColors.softBackground,
+                  child: AspectRatio(
+                    aspectRatio: 0.85,
+                    child: CachedNetworkImage(
+                      imageUrl: item.displayImageUrl,
+                      fit: BoxFit.cover,
+                      placeholder: (_, __) => Container(
+                        color: AppColors.softBackground,
+                        child: const Center(
+                          child: Icon(
+                            Icons.checkroom_outlined,
+                            color: AppColors.border,
+                            size: 28,
+                          ),
+                        ),
                       ),
-                    ),
-                    errorWidget: (_, __, ___) => Container(
-                      color: AppColors.tertiary,
-                      child: Icon(
-                        Icons.broken_image_outlined,
-                        color: AppColors.textPrimary.withValues(alpha: 0.3),
-                        size: 32,
+                      errorWidget: (_, __, ___) => Container(
+                        color: AppColors.softBackground,
+                        child: const Center(
+                          child: Icon(
+                            Icons.broken_image_outlined,
+                            color: AppColors.border,
+                            size: 28,
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                item.title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: AppColors.textPrimary.withValues(alpha: 0.8),
-                  fontWeight: FontWeight.w500,
+                const SizedBox(height: 10),
+                // Ürün adı — Zara: küçük uppercase, ince weight
+                Text(
+                  item.title.toUpperCase(),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: AppColors.textPrimary,
+                    letterSpacing: 0.8,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w300,
+                    height: 1.4,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -165,29 +192,43 @@ class _EmptyStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              message,
+              message.toUpperCase(),
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: AppColors.textPrimary.withValues(alpha: 0.5),
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: AppColors.textSecondary,
+                letterSpacing: 1.5,
               ),
             ),
             if (actionLabel != null && onAction != null) ...[
-              const SizedBox(height: 8),
-              TextButton(
-                onPressed: onAction,
-                child: Text(
-                  actionLabel!,
-                  style: const TextStyle(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w600,
+              const SizedBox(height: 16),
+              GestureDetector(
+                onTap: onAction,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: AppColors.black,
+                      width: 0.5,
+                    ),
+                  ),
+                  child: Text(
+                    actionLabel!.toUpperCase(),
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: AppColors.textPrimary,
+                      letterSpacing: 1.5,
+                      fontSize: 10,
+                    ),
                   ),
                 ),
               ),

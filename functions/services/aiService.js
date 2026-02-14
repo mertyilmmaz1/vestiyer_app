@@ -1,50 +1,91 @@
 const OpenAI = require('openai');
+const {
+  normalizeMainGroup,
+  normalizeCategory,
+  normalizeMaterial,
+  normalizeFit,
+  normalizePattern,
+  mapMainGroupToFirestore,
+  MAIN_GROUPS,
+  MATERIALS,
+  FIT_VALUES,
+  PATTERN_VALUES
+} = require('./categoryTaxonomy');
 
-const PROMPT_TEXT = `Bu kıyafetin kombin için önemli özelliklerini detaylı olarak analiz et. Yanıtı şu formatta ver:
+const STEP1_SCHEMA = {
+  type: 'object',
+  properties: {
+    mainGroup: {
+      type: 'string',
+      enum: MAIN_GROUPS,
+      description: 'Ana grup'
+    },
+    category: {
+      type: 'string',
+      description: 'Kategori'
+    },
+    material: {
+      type: 'string',
+      enum: MATERIALS,
+      description: 'Materyal'
+    },
+    pattern: {
+      type: 'string',
+      enum: PATTERN_VALUES,
+      description: 'Desen'
+    },
+    fit: {
+      type: 'string',
+      enum: FIT_VALUES,
+      description: 'Fit'
+    },
+    confidence: {
+      type: 'number',
+      description: 'Güven skoru 0-1'
+    }
+  },
+  required: ['mainGroup', 'category', 'material', 'pattern', 'fit', 'confidence'],
+  additionalProperties: false
+};
 
-Ana Grup: [üst giyim, alt giyim, dış giyim, ayakkabı, aksesuar]
-Kategori: [ana grup içindeki detay kategori - örn: gömlek, pantolon, elbise, ceket, ayakkabı]
-Renk: [ana renk ve varsa detay renkleri]
-Materyal: [kumaş/malzeme türü - örn: pamuk, keten, deri, kot]
-Stil: [casual, formal, spor, bohem, klasik, vintage, vb.]
-Sezon: [hangi mevsimler için uygun - örn: yaz, kış, tüm yıl]
-Detaylar: [desen, dikiş, kesim, fit, tasarım özellikleri ve kombinasyon için önemli diğer detaylar]
+const STEP2_SCHEMA = {
+  type: 'object',
+  properties: {
+    style: {
+      type: 'array',
+      items: { type: 'string' },
+      description: 'Stil listesi'
+    },
+    season: {
+      type: 'array',
+      items: { type: 'string' },
+      description: 'Sezon listesi'
+    },
+    details: {
+      type: 'string',
+      description: 'Detaylar'
+    }
+  },
+  required: ['style', 'season', 'details'],
+  additionalProperties: false
+};
 
-ÖNEMLİ NOTLAR:
-1. Ana Grup seçiminde şu kategorileri kullan: Üst Giyim, Alt Giyim, Dış Giyim, Ayakkabı, Aksesuar.
-2. Her kıyafeti sadece bir ana gruba yerleştir. Renk analizinde hem ana rengi hem de varsa desen/çizgi renklerini belirt.`;
+const STEP1_PROMPT = `Bu kıyafetin SADECE görsel özelliklerini analiz et.
+Kurallar:
+- Görsel arka plansız veya beyaz arka planlı kıyafet içerir. SADECE kıyafeti analiz et; arka plan, oda, yatak, duvar, aksesuar vb. yok say.
+- Tahmin yapma. Görünmeyen şeyi yazma.
+- mainGroup: ${MAIN_GROUPS.join(', ')} seç.
+- category: Ana grup içindeki detay kategori (örn: gomlek, tisort, pantolon, kot).
+- material: ${MATERIALS.join(', ')} seç.
+- pattern: ${PATTERN_VALUES.join(', ')} seç.
+- fit: ${FIT_VALUES.join(', ')} seç.
+- confidence: 0-1 arası güven skoru.`;
 
-function normalizeMainGroup(group) {
-  const normalized = (group || '').toLowerCase().trim();
-  const valid = ['üst giyim', 'alt giyim', 'dış giyim', 'ayakkabı', 'aksesuar'];
-  return valid.find(g => g === normalized) || 'üst giyim';
-}
-
-function mapMainGroupToCategory(mainGroup) {
-  const m = {
-    'üst giyim': 'top',
-    'alt giyim': 'bottom',
-    'dış giyim': 'outerwear',
-    'ayakkabı': 'shoes',
-    'aksesuar': 'accessory'
-  };
-  return m[mainGroup] || 'top';
-}
-
-function parseAnalysis(analysis) {
-  let mainGroup = '', category = '', color = '', material = '', style = '', season = '', details = '';
-  const lines = analysis.split('\n');
-  for (const line of lines) {
-    if (line.startsWith('Ana Grup:')) mainGroup = normalizeMainGroup(line.replace('Ana Grup:', '').trim());
-    else if (line.startsWith('Kategori:')) category = line.replace('Kategori:', '').trim();
-    else if (line.startsWith('Renk:')) color = line.replace('Renk:', '').trim();
-    else if (line.startsWith('Materyal:')) material = line.replace('Materyal:', '').trim();
-    else if (line.startsWith('Stil:')) style = line.replace('Stil:', '').trim();
-    else if (line.startsWith('Sezon:')) season = line.replace('Sezon:', '').trim();
-    else if (line.startsWith('Detaylar:')) details = line.replace('Detaylar:', '').trim();
-  }
-  return { mainGroup, category, color, material, style, season, details };
-}
+const STEP2_PROMPT = (step1Output) => `Aşağıdaki teknik özelliklere göre stil ve sezon çıkar.
+Teknik özellikler: ${JSON.stringify(step1Output)}
+style: casual, formal, spor, klasik, vintage, minimal vb. (array)
+season: ilkbahar, yaz, sonbahar, kis, tum_yil (array)
+details: Kısa detay açıklaması (1-2 cümle).`;
 
 function getCombinationName(n) {
   const names = { 1: 'Günlük Kombin', 2: 'İş Kombini', 3: 'Özel Kombin' };
@@ -53,13 +94,128 @@ function getCombinationName(n) {
 
 function mapUsageToOccasion(usage) {
   if (!usage) return 'casual';
-  const t = usage.toLowerCase();
+  const t = (usage || '').toLowerCase();
   if (/iş|ofis|formal|görüşme|çalış/.test(t)) return 'work';
   if (/spor|aktif|egzersiz/.test(t)) return 'sport';
   if (/parti|özel|davet|akşam|gece/.test(t)) return 'party';
   if (/günlük|casual|evde/.test(t)) return 'daily';
   if (/resmi|töreni/.test(t)) return 'formal';
   return 'casual';
+}
+
+async function analyzeClothingFromUrl(openai, imageUrl, backendColors = null) {
+  const response1 = await openai.chat.completions.create({
+    model: 'gpt-4o',
+    messages: [
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: STEP1_PROMPT },
+          { type: 'image_url', image_url: { url: imageUrl } }
+        ]
+      }
+    ],
+    response_format: {
+      type: 'json_schema',
+      json_schema: {
+        name: 'clothing_step1',
+        strict: true,
+        schema: STEP1_SCHEMA
+      }
+    },
+    max_tokens: 300
+  });
+
+  const step1Content = response1.choices[0].message.content;
+  let step1;
+  try {
+    step1 = JSON.parse(step1Content);
+  } catch (e) {
+    throw new Error('Analiz yanıtı işlenemedi.');
+  }
+
+  const response2 = await openai.chat.completions.create({
+    model: 'gpt-4o',
+    messages: [
+      {
+        role: 'user',
+        content: STEP2_PROMPT(step1)
+      }
+    ],
+    response_format: {
+      type: 'json_schema',
+      json_schema: {
+        name: 'clothing_step2',
+        strict: true,
+        schema: STEP2_SCHEMA
+      }
+    },
+    max_tokens: 400
+  });
+
+  const step2Content = response2.choices[0].message.content;
+  let step2;
+  try {
+    step2 = JSON.parse(step2Content);
+  } catch (e) {
+    step2 = { style: ['casual'], season: ['tum_yil'], details: '' };
+  }
+
+  const mainGroup = normalizeMainGroup(step1.mainGroup);
+  const category = normalizeCategory(mainGroup, step1.category);
+  const material = normalizeMaterial(step1.material);
+  const pattern = normalizePattern(step1.pattern);
+  const fit = normalizeFit(step1.fit);
+  const confidence = Math.max(0, Math.min(1, Number(step1.confidence) || 0.8));
+
+  const colorsWithDominance = backendColors && backendColors.length > 0
+    ? backendColors
+    : [{ name: 'belirsiz', dominance: 1 }];
+
+  const colors = colorsWithDominance.map(c => c.name);
+  const colorStr = colors.join(', ');
+
+  const style = Array.isArray(step2.style) ? step2.style : ['casual'];
+  const season = Array.isArray(step2.season) ? step2.season : ['tum_yil'];
+  const details = step2.details || '';
+
+  const firestoreCategory = mapMainGroupToFirestore(mainGroup);
+
+  return {
+    success: true,
+    rawAnalysis: JSON.stringify({ step1, step2 }),
+    parsedAnalysis: { mainGroup, category, color: colorStr, material, style, season, details },
+    formattedAnalysis: {
+      ana_grup: mainGroup,
+      kategori: category,
+      renk: colorStr,
+      materyal: material,
+      stil: style.join(', '),
+      sezon: season.join(', '),
+      detaylar: details
+    },
+    category: firestoreCategory,
+    colors,
+    colorsWithDominance,
+    confidence,
+    advancedAnalysis: {
+      mainGroup,
+      category,
+      color: colorStr,
+      material,
+      style: style.join(', '),
+      season: season.join(', '),
+      details,
+      pattern,
+      fit,
+      confidence,
+      rawAnalysis: JSON.stringify({ step1, step2 })
+    },
+    usage: {
+      prompt_tokens: (response1.usage?.prompt_tokens || 0) + (response2.usage?.prompt_tokens || 0),
+      completion_tokens: (response1.usage?.completion_tokens || 0) + (response2.usage?.completion_tokens || 0)
+    }
+  };
 }
 
 function parseOutfits(content) {
@@ -110,57 +266,25 @@ SEZON: [Uygun mevsim(ler)]
 
 Lütfen 3 FARKLI KOMBİN oluştur: Günlük (Casual), İş/Ofis (Formal), Spor veya Özel Durum.`;
 
-async function analyzeClothingFromUrl(openai, imageUrl) {
-  const response = await openai.chat.completions.create({
-    model: 'gpt-4o',
-    messages: [
-      {
-        role: 'user',
-        content: [
-          { type: 'text', text: PROMPT_TEXT },
-          { type: 'image_url', image_url: { url: imageUrl } }
-        ]
-      }
-    ],
-    max_tokens: 800
-  });
-  const analysis = response.choices[0].message.content;
-  const usage = response.usage;
-  const { mainGroup, category, color, material, style, season, details } = parseAnalysis(analysis);
-  const colors = color.includes(',') ? color.split(',').map(c => c.trim()) : [color];
-  return {
-    success: true,
-    rawAnalysis: analysis,
-    parsedAnalysis: { mainGroup, category, color, material, style, season, details },
-    formattedAnalysis: {
-      ana_grup: mainGroup,
-      kategori: category,
-      renk: color,
-      materyal: material,
-      stil: style,
-      sezon: season,
-      detaylar: details
-    },
-    category: mapMainGroupToCategory(mainGroup),
-    colors,
-    advancedAnalysis: {
-      mainGroup,
-      category,
-      color,
-      material,
-      style,
-      season,
-      details,
-      rawAnalysis: analysis
-    },
-    usage: {
-      prompt_tokens: usage.prompt_tokens,
-      completion_tokens: usage.completion_tokens
-    }
-  };
+function formatUserProfileForPrompt(userProfile) {
+  if (!userProfile || typeof userProfile !== 'object') return '';
+  const parts = [];
+  if (Array.isArray(userProfile.styleDNA) && userProfile.styleDNA.length > 0) {
+    parts.push(`Stil tercihleri: ${userProfile.styleDNA.join(', ')}`);
+  }
+  if (Array.isArray(userProfile.colorBias) && userProfile.colorBias.length > 0) {
+    parts.push(`Renk tercihi: ${userProfile.colorBias.join(', ')}`);
+  }
+  if (userProfile.fitPreference) {
+    parts.push(`Fit tercihi: ${userProfile.fitPreference}`);
+  }
+  if (userProfile.lifestyle) {
+    parts.push(`Yaşam tarzı: ${userProfile.lifestyle}`);
+  }
+  return parts.length > 0 ? `Kullanıcı profil bilgisi: ${parts.join('. ')}. Bu tercihlere uygun kombinler oluştur.` : '';
 }
 
-async function generateCombinations(openai, clothingItems) {
+async function generateCombinations(openai, clothingItems, occasion = null, userProfile = null) {
   if (!clothingItems || clothingItems.length === 0) {
     throw new Error('Dolabınızda henüz kıyafet bulunmuyor. Önce kıyafet eklemelisiniz.');
   }
@@ -169,7 +293,7 @@ async function generateCombinations(openai, clothingItems) {
     const adv = item.advancedAnalysis || {};
     return `[Kıyafet ${idField(item)}]
 ID: ${idField(item)}
-Ana Grup: ${mapMainGroupToCategory(item.category)}
+Ana Grup: ${item.category || 'top'}
 Kategori: ${item.category}
 Başlık: ${item.title || 'Kıyafet'}
 Renk: ${(item.colors && item.colors.join) ? item.colors.join(', ') : (adv.color || 'Belirtilmemiş')}
@@ -180,13 +304,16 @@ Detaylar: ${adv.details || 'Belirtilmemiş'}
 -------------------`;
   }).join('\n\n');
 
+  const occasionHint = occasion ? `\nKullanıcı ${occasion} ortamı için kombin istiyor.` : '';
+  const profileHint = formatUserProfileForPrompt(userProfile);
+
   const response = await openai.chat.completions.create({
     model: 'gpt-4o-mini',
     messages: [
       { role: 'system', content: COMBINATION_SYSTEM },
       {
         role: 'user',
-        content: `Mevcut Kıyafetlerim:\n${descriptions}\n\nLütfen bu kıyafetlerle 3 FARKLI KOMBİN oluştur. Eğer bir kategoride yeterli kıyafet yoksa belirt ve mevcut parçalarla uygun kombinler oluştur.`
+        content: `Mevcut Kıyafetlerim:\n${descriptions}${occasionHint}${profileHint ? '\n' + profileHint : ''}\n\nLütfen bu kıyafetlerle 3 FARKLI KOMBİN oluştur. Eğer bir kategoride yeterli kıyafet yoksa belirt ve mevcut parçalarla uygun kombinler oluştur.`
       }
     ],
     temperature: 0.2,
@@ -217,26 +344,140 @@ Detaylar: ${adv.details || 'Belirtilmemiş'}
   };
 }
 
-async function getStyleAdvice(openai, message, conversationHistory = [], wardrobeContext) {
-  const messages = [
-    {
-      role: 'system',
-      content: 'Sen bir profesyonel kişisel stilistsin. Kullanıcıya giyim, kombin ve stil konularında yardımcı oluyorsun. Kısa, net ve Türkçe yanıt ver.'
-    }
+/**
+ * Detect chat intent from user message (rule-based).
+ * @returns {'wardrobe_question'|'combination_advice'|'style_chat'}
+ */
+function detectChatIntent(message) {
+  if (!message || typeof message !== 'string') return 'style_chat';
+  const t = message.toLowerCase().trim();
+
+  const wardrobePatterns = [
+    /dolabım|dolabim|dolabı|gardırop|gardrop|gardırobum/,
+    /eksik\s+ne|ne\s+eksik|ne\s+var|nasıl\s+dolap|dolap\s+nasıl/,
+    /satın\s+al|satin\s+al|almam\s+gerek|öner.*al|al.*öner/,
+    /kaç\s+parça|toplam|kategori|dağılım/
   ];
-  if (wardrobeContext) {
-    messages.push({
-      role: 'system',
-      content: `Kullanıcının gardırop özeti:\n${wardrobeContext}`
-    });
+  if (wardrobePatterns.some((p) => p.test(t))) return 'wardrobe_question';
+
+  const combinationPatterns = [
+    /bugün\s+ne\s+giy|ne\s+giysem|ne\s+giyeyim|ne\s+giyeyim/,
+    /kombin\s+öner|kombin\s+ver|outfit|kombin\s+yap/,
+    /giyeceğim|giyecegim|giyeyim|giysem/
+  ];
+  if (combinationPatterns.some((p) => p.test(t))) return 'combination_advice';
+
+  return 'style_chat';
+}
+
+/** Format wardrobe summary object for system prompt. */
+function formatWardrobeSummaryForPrompt(summary) {
+  if (!summary || typeof summary !== 'object') return '';
+  const counts = summary.counts || {};
+  const styles = summary.dominant_styles || [];
+  const colors = summary.dominant_colors || [];
+  const seasons = summary.seasons || [];
+  const missing = summary.missing_categories || [];
+  const total = summary.total_items ?? 0;
+  const conf = summary.confidence_level ?? 'medium';
+
+  const parts = [
+    `Toplam kıyafet: ${total}. Güven: ${conf}.`,
+    `Kategori sayıları: ${JSON.stringify(counts)}.`,
+    `Baskın stiller: ${styles.join(', ') || 'belirsiz'}.`,
+    `Baskın renkler: ${colors.join(', ') || 'belirsiz'}.`,
+    `Sezonlar: ${seasons.join(', ') || 'belirsiz'}.`
+  ];
+  if (missing.length > 0) {
+    parts.push(`Eksik kategoriler: ${missing.join(', ')}. (Bunları asla varmış gibi söyleme.)`);
   }
-  for (const msg of conversationHistory) {
+  return parts.join(' ');
+}
+
+const CHAT_BASE_RULES = `Sen bir profesyonel kişisel stil danışmanısın.
+- Kombin oluşturma kurallarını ihlal etme.
+- Dolapta olmayan ürünü varmış gibi söyleme.
+- Eksik kategori varsa açıkça belirt; pozitif dil kullan (örn: "Ayakkabı eklemen kombin tamamlar").
+- Kısa, net ve Türkçe cevap ver.
+- ID üretme, fiyat verme, link verme, "şu ürünü satın al" deme.
+- İstersen "Dolabına uygun ayakkabı türü önerebilirim" gibi yönlendirici bitir.`;
+
+const MODE1_PROMPT = `Mod: Dolap hakkında soru.
+Kullanıcı dolabını soruyor. Wardrobe summary'e göre: eksik kategorileri söyle, satın alma tavsiyesi ver (genel, ürün önermeden).
+${CHAT_BASE_RULES}`;
+
+const MODE2_PROMPT = (missingCategories) => `Mod: Kombin danışma.
+Kombin motoru sonuçlarını doğal dille özetle. ID kullanma.
+${missingCategories.length > 0 ? `Eksik kategoriler (${missingCategories.join(', ')}): Açıkça belirt, mevcut parçalarla öner, eksik olanı tamamlamak için genel tavsiye ver (örn: beyaz sneaker).` : ''}
+${CHAT_BASE_RULES}`;
+
+const MODE3_PROMPT = `Mod: Stil sohbeti.
+Dolap verisine göre kişiselleştir, genel stil bilgisi ekle.
+${CHAT_BASE_RULES}`;
+
+/**
+ * Get style advice with mode-based behavior.
+ * @param {Object} openai - OpenAI client
+ * @param {string} message - User message
+ * @param {Array} conversationHistory - Max 5 messages [{role, content}]
+ * @param {Object} wardrobeSummary - Wardrobe summary JSON from client
+ * @param {Object} [options] - { combinationResult, occasion }
+ * @param {Object} options.combinationResult - For mode 2: { combinations: [...] }
+ * @param {string} options.occasion - For mode 2 context
+ */
+async function getStyleAdvice(openai, message, conversationHistory = [], wardrobeSummary, options = {}) {
+  const history = Array.isArray(conversationHistory) ? conversationHistory.slice(-5) : [];
+  const intent = detectChatIntent(message);
+  const mode = intent === 'wardrobe_question' ? 1 : intent === 'combination_advice' ? 2 : 3;
+
+  const summaryStr = formatWardrobeSummaryForPrompt(wardrobeSummary);
+  const missingCategories = (wardrobeSummary && wardrobeSummary.missing_categories) || [];
+
+  let systemContent = '';
+  let userContent = message;
+
+  if (mode === 1) {
+    systemContent = MODE1_PROMPT;
+    if (summaryStr) {
+      systemContent += `\n\nKullanıcının gardırop özeti: ${summaryStr}`;
+    }
+  } else if (mode === 2 && options.combinationResult && options.combinationResult.combinations && options.combinationResult.combinations.length > 0) {
+    systemContent = MODE2_PROMPT(missingCategories);
+    if (summaryStr) {
+      systemContent += `\n\nGardırop özeti: ${summaryStr}`;
+    }
+    const combos = options.combinationResult.combinations;
+    const comboText = combos.map((c, i) => {
+      const desc = c.description || '';
+      const occ = c.occasion || c.usage || '';
+      const acc = c.accessories || '';
+      const sea = c.season || '';
+      return `Kombin ${i + 1}: ${desc} Kullanım: ${occ}. Aksesuar: ${acc}. Sezon: ${sea}.`;
+    }).join('\n');
+    userContent = `Kullanıcı kombin istedi. Kombin motoru şu önerileri üretti:\n${comboText}\n\nBunları doğal dille özetle. ID kullanma.`;
+  } else if (mode === 2) {
+    systemContent = MODE2_PROMPT(missingCategories);
+    if (summaryStr) {
+      systemContent += `\n\nGardırop özeti: ${summaryStr}`;
+    }
+    systemContent += '\n\nNot: Kombin oluşturmak için yeterli kıyafet yok veya motor sonuç dönmedi. Mevcut dolaba göre genel kombin tavsiyesi ver.';
+    userContent = message;
+  } else {
+    systemContent = MODE3_PROMPT;
+    if (summaryStr) {
+      systemContent += `\n\nGardırop özeti: ${summaryStr}`;
+    }
+    userContent = message;
+  }
+
+  const messages = [{ role: 'system', content: systemContent }];
+  for (const msg of history) {
     messages.push({
       role: msg.role === 'user' ? 'user' : 'assistant',
-      content: msg.content || msg.message
+      content: msg.content || msg.message || ''
     });
   }
-  messages.push({ role: 'user', content: message });
+  messages.push({ role: 'user', content: userContent });
 
   const response = await openai.chat.completions.create({
     model: 'gpt-4o-mini',
@@ -251,9 +492,145 @@ async function getStyleAdvice(openai, message, conversationHistory = [], wardrob
   };
 }
 
+const SELECT_DESCRIBE_SCHEMA = {
+  type: 'object',
+  properties: {
+    combinations: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          index: { type: 'integer', description: 'Aday indeksi (0-based)' },
+          aciklama: { type: 'string', description: 'Kombin açıklaması' },
+          kullanim: { type: 'string', description: 'Giyilebileceği ortamlar' },
+          tamamlayicilar: { type: 'string', description: 'Aksesuar önerileri' },
+          sezon: { type: 'string', description: 'Uygun mevsim' }
+        },
+        required: ['index', 'aciklama', 'kullanim', 'tamamlayicilar', 'sezon'],
+        additionalProperties: false
+      }
+    }
+  },
+  required: ['combinations'],
+  additionalProperties: false
+};
+
+async function selectAndDescribeCombinations(openai, candidates, occasion, userProfile = null) {
+  if (!candidates || candidates.length === 0) {
+    return { success: true, combinations: [], usage: { prompt_tokens: 0, completion_tokens: 0 } };
+  }
+
+  const idField = (item) => item.id || item._id;
+  const candidateDesc = candidates.map((c, i) => {
+    const items = c.items || [];
+    const ids = items.map(idField);
+    const names = items.map(it => it.title || it.category || idField(it)).join(', ');
+    return `[Aday ${i}] ID'ler: ${ids.join(', ')} | Parçalar: ${names}`;
+  }).join('\n');
+
+  const occasionHint = occasion ? ` Kullanıcı ${occasion} ortamı için kombin istiyor.` : '';
+  const profileHint = formatUserProfileForPrompt(userProfile);
+  const systemContent = `Sen bir profesyonel stilistsin. Verilen kombin adaylarından en uyumlu olanları seç ve her biri için kısa açıklama yaz.${occasionHint}${profileHint ? ' ' + profileHint : ''}`;
+
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
+    messages: [
+      {
+        role: 'system',
+        content: systemContent
+      },
+      {
+        role: 'user',
+        content: `Kombin adayları:\n${candidateDesc}\n\nHer aday için index (0'dan başlayarak), aciklama (max 2 cümle), kullanim, tamamlayicilar ve sezon döndür. En fazla ${Math.min(3, candidates.length)} kombin seç.`
+      }
+    ],
+    response_format: {
+      type: 'json_schema',
+      json_schema: {
+        name: 'select_combinations',
+        strict: true,
+        schema: SELECT_DESCRIBE_SCHEMA
+      }
+    },
+    max_tokens: 600
+  });
+
+  const content = response.choices[0].message.content;
+  let parsed;
+  try {
+    parsed = JSON.parse(content);
+  } catch (e) {
+    parsed = { combinations: [] };
+  }
+
+  const combinations = (parsed.combinations || []).slice(0, 3).map((desc, i) => {
+    const idx = typeof desc.index === 'number' ? desc.index : i;
+    const candidate = candidates[idx];
+    const items = candidate && candidate.items ? candidate.items.map(idField) : [];
+    return {
+      name: getCombinationName(i + 1),
+      items,
+      occasion: mapUsageToOccasion(desc.kullanim),
+      description: desc.aciklama || '',
+      season: desc.sezon || 'all-season',
+      accessories: desc.tamamlayicilar || '',
+      usage: desc.kullanim || ''
+    };
+  }).filter(c => c.items.length > 0);
+
+  return {
+    success: true,
+    combinations,
+    rawResponse: content,
+    usage: {
+      prompt_tokens: response.usage?.prompt_tokens || 0,
+      completion_tokens: response.usage?.completion_tokens || 0
+    }
+  };
+}
+
+async function generateStylingAdvice(openai, singleItem, occasion) {
+  const idField = (item) => item.id || item._id;
+  const adv = singleItem.advancedAnalysis || {};
+  const desc = `Parça: ${singleItem.title || 'Kıyafet'} | ID: ${idField(singleItem)}
+Kategori: ${singleItem.category}
+Renk: ${(singleItem.colors || []).join(', ') || adv.color || 'Belirtilmemiş'}
+Materyal: ${adv.material || 'Belirtilmemiş'}
+Stil: ${adv.style || 'Belirtilmemiş'}`;
+
+  const occasionHint = occasion ? ` Kullanıcı ${occasion} ortamı için öneri istiyor.` : '';
+
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
+    messages: [
+      {
+        role: 'system',
+        content: `Sen bir profesyonel stilistsin. Kullanıcının sadece bir parça kıyafeti var. Bu parçayı nasıl kombinleyebileceğine dair kısa, pratik öneriler ver. Örn: "Bu üstü koyu renk slim fit jean ile kombinleyebilirsin."${occasionHint}`
+      },
+      { role: 'user', content: desc }
+    ],
+    temperature: 0.7,
+    max_tokens: 300
+  });
+
+  return {
+    success: true,
+    advice: response.choices[0].message.content,
+    itemId: idField(singleItem),
+    usage: {
+      prompt_tokens: response.usage?.prompt_tokens || 0,
+      completion_tokens: response.usage?.completion_tokens || 0
+    }
+  };
+}
+
 module.exports = {
   analyzeClothingFromUrl,
   generateCombinations,
+  selectAndDescribeCombinations,
+  generateStylingAdvice,
   getStyleAdvice,
-  mapMainGroupToCategory
+  detectChatIntent,
+  mapMainGroupToCategory: mapMainGroupToFirestore,
+  parseOutfits
 };

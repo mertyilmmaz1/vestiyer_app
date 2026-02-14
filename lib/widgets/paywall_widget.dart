@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:vestiyer_nodejs/core/product/navigation/editorial_page_route.dart';
 import 'package:vestiyer_nodejs/core/product/theme/app_colors.dart';
 import '../providers/subscription_provider.dart';
 import '../screens/premium_screen.dart';
+import 'bouncing_widget.dart';
 
 enum PaywallType {
   itemLimit,
@@ -57,9 +59,8 @@ class PaywallWidget extends StatelessWidget {
               Navigator.pop(sheetContext);
               if (!context.mounted) return;
               await navigator.push<void>(
-                MaterialPageRoute(
-                  builder: (_) => const PremiumScreen(),
-                  fullscreenDialog: true,
+                EditorialPageRoute(
+                  page: const PremiumScreen(),
                 ),
               );
               if (context.mounted) {
@@ -98,49 +99,38 @@ class _PaywallBottomSheetContent extends StatelessWidget {
     final features = subscriptionProvider.getPremiumFeatures().take(2).toList();
 
     return Container(
-      decoration: BoxDecoration(
-        color: AppColors.tertiary,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: const BoxDecoration(
+        color: AppColors.background,
         border: Border(
           top: BorderSide(
-            color: AppColors.textPrimary.withValues(alpha: 0.1),
-            width: 1,
-          ),
-          left: BorderSide(
-            color: AppColors.textPrimary.withValues(alpha: 0.1),
-            width: 1,
-          ),
-          right: BorderSide(
-            color: AppColors.textPrimary.withValues(alpha: 0.1),
-            width: 1,
+            color: AppColors.textPrimary,
+            width: 0.5,
           ),
         ),
       ),
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: EdgeInsets.only(left: 20, right: 20, bottom: paddingBottom + 12),
+          padding: EdgeInsets.only(
+              left: 24, right: 24, bottom: paddingBottom + 24, top: 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const SizedBox(height: 8),
-              _buildHandle(),
-              const SizedBox(height: 14),
               _buildIcon(),
-              const SizedBox(height: 12),
+              const SizedBox(height: 20),
               _buildTitle(),
-              const SizedBox(height: 6),
-              _buildMessage(),
-              const SizedBox(height: 10),
-              _buildPriceLine(),
               const SizedBox(height: 12),
+              _buildMessage(),
+              const SizedBox(height: 24),
+              _buildPriceLine(),
+              const SizedBox(height: 24),
               _buildFeatures(features),
-              const SizedBox(height: 16),
+              const SizedBox(height: 32),
               _buildCtaButton(context),
-              const SizedBox(height: 6),
+              const SizedBox(height: 16),
               _buildRestoreButton(context),
               if (showDismissOption) ...[
-                const SizedBox(height: 4),
+                const SizedBox(height: 8),
                 _buildDismissButton(),
               ],
             ],
@@ -150,73 +140,63 @@ class _PaywallBottomSheetContent extends StatelessWidget {
     );
   }
 
-  Widget _buildHandle() {
-    return Container(
-      width: 40,
-      height: 4,
-      decoration: BoxDecoration(
-        color: AppColors.textPrimary.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(2),
-      ),
-    );
-  }
-
   Widget _buildIcon() {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.15),
-        shape: BoxShape.circle,
-      ),
-      child: const Icon(
-        Icons.diamond_rounded,
-        color: AppColors.primary,
-        size: 28,
-      ),
+    return const Icon(
+      Icons.diamond_outlined,
+      color: AppColors.textPrimary,
+      size: 48,
     );
   }
 
   Widget _buildTitle() {
     return Text(
-      type == PaywallType.itemLimit
-          ? 'Kıyafet limitine ulaştınız'
-          : 'Premium\'a geçin',
+      type == PaywallType.itemLimit ? 'DOLABINIZ DOLDU' : 'PREMIUM ÖZELLİK',
       textAlign: TextAlign.center,
       style: const TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.w700,
+        fontSize: 20,
+        fontWeight: FontWeight.w600,
         color: AppColors.textPrimary,
-        letterSpacing: -0.5,
+        letterSpacing: 2.0,
       ),
     );
   }
 
   Widget _buildMessage() {
     final defaultMessage = type == PaywallType.itemLimit
-        ? 'Premium ile sınırsız kıyafet ve tüm özelliklere erişin.'
-        : 'AI kombinleri ve gardırop analizi premium üyeler içindir.';
+        ? 'Sınırsız kıyafet eklemek ve dolabınızı özgürce yönetmek için Premium\'a geçin.'
+        : 'Yapay zeka analizlerine ve özel stil asistanına erişmek için Premium\'a geçin.';
     final text = customMessage.isNotEmpty ? customMessage : defaultMessage;
-    final displayText = text.length > 55 ? '${text.substring(0, 52)}...' : text;
-    return Text(
-      displayText,
-      textAlign: TextAlign.center,
-      maxLines: 2,
-      overflow: TextOverflow.ellipsis,
-      style: TextStyle(
-        fontSize: 13,
-        color: AppColors.textPrimary.withValues(alpha: 0.6),
-        height: 1.3,
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+          fontSize: 14,
+          color: AppColors.textSecondary,
+          height: 1.5,
+          fontWeight: FontWeight.w300,
+        ),
       ),
     );
   }
 
   Widget _buildPriceLine() {
-    return Text(
-      'Aylık ₺59.99 · Yıllık ₺449.99',
-      style: TextStyle(
-        fontSize: 13,
-        fontWeight: FontWeight.w500,
-        color: AppColors.textPrimary.withValues(alpha: 0.7),
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+      decoration: BoxDecoration(
+        color: AppColors.softBackground,
+        border: Border.all(color: AppColors.border, width: 0.5),
+      ),
+      child: const Text(
+        'AYLIK ₺59.99  ·  YILLIK ₺449.99',
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+          color: AppColors.textPrimary,
+          letterSpacing: 1.0,
+        ),
       ),
     );
   }
@@ -224,25 +204,27 @@ class _PaywallBottomSheetContent extends StatelessWidget {
   Widget _buildFeatures(List<String> features) {
     return Column(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: features
           .map(
             (f) => Padding(
-              padding: const EdgeInsets.only(bottom: 6),
+              padding: const EdgeInsets.only(bottom: 12),
               child: Row(
-                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
-                    Icons.check_circle_rounded,
+                  const Icon(
+                    Icons.check,
                     size: 16,
-                    color: AppColors.primary.withValues(alpha: 0.9),
+                    color: AppColors.textPrimary,
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    f,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.textPrimary.withValues(alpha: 0.85),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      f,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w300,
+                        color: AppColors.textPrimary,
+                      ),
                     ),
                   ),
                 ],
@@ -254,24 +236,26 @@ class _PaywallBottomSheetContent extends StatelessWidget {
   }
 
   Widget _buildCtaButton(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: Material(
-        color: AppColors.primary,
-        borderRadius: BorderRadius.circular(14),
-        child: InkWell(
-          onTap: onUpgrade,
-          borderRadius: BorderRadius.circular(14),
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            alignment: Alignment.center,
-            child: const Text(
-              'Premium\'a geç',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
-              ),
+    return BouncingWidget(
+      child: SizedBox(
+        width: double.infinity,
+        child: ElevatedButton(
+          onPressed: onUpgrade,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.textPrimary,
+            foregroundColor: AppColors.background,
+            elevation: 0,
+            padding: const EdgeInsets.symmetric(vertical: 18),
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.zero,
+            ),
+          ),
+          child: const Text(
+            'PREMIUM\'A GEÇ',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 2.0,
             ),
           ),
         ),
@@ -282,7 +266,8 @@ class _PaywallBottomSheetContent extends StatelessWidget {
   Widget _buildRestoreButton(BuildContext context) {
     return TextButton(
       style: TextButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 4),
+        foregroundColor: AppColors.textSecondary,
+        padding: const EdgeInsets.symmetric(vertical: 8),
         minimumSize: Size.zero,
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
@@ -293,11 +278,12 @@ class _PaywallBottomSheetContent extends StatelessWidget {
           Navigator.pop(context);
         }
       },
-      child: Text(
+      child: const Text(
         'Satın alımları geri yükle',
         style: TextStyle(
           fontSize: 12,
-          color: AppColors.textPrimary.withValues(alpha: 0.5),
+          fontWeight: FontWeight.w300,
+          decoration: TextDecoration.underline,
         ),
       ),
     );
@@ -306,17 +292,18 @@ class _PaywallBottomSheetContent extends StatelessWidget {
   Widget _buildDismissButton() {
     return TextButton(
       style: TextButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 4),
+        foregroundColor: AppColors.textSecondary,
+        padding: const EdgeInsets.symmetric(vertical: 8),
         minimumSize: Size.zero,
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
       onPressed: onDismiss,
-      child: Text(
-        'Şimdi değil',
+      child: const Text(
+        'ŞİMDİ DEĞİL',
         style: TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w500,
-          color: AppColors.textPrimary.withValues(alpha: 0.5),
+          fontSize: 12,
+          fontWeight: FontWeight.w400,
+          letterSpacing: 1.0,
         ),
       ),
     );

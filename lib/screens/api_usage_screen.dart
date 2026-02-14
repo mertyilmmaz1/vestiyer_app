@@ -104,7 +104,7 @@ class _ApiUsageScreenState extends State<ApiUsageScreen>
                                 height: 60,
                                 decoration: BoxDecoration(
                                   color: AppColors.textPrimary.withValues(alpha: 0.05),
-                                  borderRadius: BorderRadius.circular(30),
+                                  borderRadius: BorderRadius.zero,
                                   border: Border.all(
                                     color: AppColors.textPrimary.withValues(alpha: 0.1),
                                     width: 1,
@@ -135,8 +135,8 @@ class _ApiUsageScreenState extends State<ApiUsageScreen>
                               margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                               padding: const EdgeInsets.all(24),
                               decoration: BoxDecoration(
-                                color: AppColors.tertiary,
-                                borderRadius: BorderRadius.circular(24),
+                                color: AppColors.softBackground,
+                                borderRadius: BorderRadius.zero,
                                 border: Border.all(
                                   color: AppColors.textPrimary.withValues(alpha: 0.1),
                                   width: 1,
@@ -158,7 +158,7 @@ class _ApiUsageScreenState extends State<ApiUsageScreen>
                                     '\$${_totalCost.toStringAsFixed(2)}',
                                     style: const TextStyle(
                                       fontSize: 36,
-                                      fontWeight: FontWeight.w700,
+                                      fontWeight: FontWeight.w400,
                                       color: AppColors.textPrimary,
                                       letterSpacing: -0.5,
                                     ),
@@ -187,8 +187,8 @@ class _ApiUsageScreenState extends State<ApiUsageScreen>
                                   return Container(
                                     margin: const EdgeInsets.only(bottom: 16),
                                     decoration: BoxDecoration(
-                                      color: AppColors.tertiary,
-                                      borderRadius: BorderRadius.circular(24),
+                                      color: AppColors.softBackground,
+                                      borderRadius: BorderRadius.zero,
                                       border: Border.all(
                                         color: AppColors.textPrimary.withValues(alpha: 0.1),
                                         width: 1,
@@ -200,12 +200,12 @@ class _ApiUsageScreenState extends State<ApiUsageScreen>
                                       collapsedBackgroundColor: Colors.transparent,
                                       backgroundColor: Colors.transparent,
                                       shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(24),
+                                        borderRadius: BorderRadius.zero,
                                       ),
                                       title: Text(
                                         'Model: ${usage.model}',
                                         style: const TextStyle(
-                                          fontWeight: FontWeight.w600,
+                                          fontWeight: FontWeight.w400,
                                           color: AppColors.textPrimary,
                                           fontSize: 16,
                                         ),
@@ -273,7 +273,7 @@ class _ApiUsageScreenState extends State<ApiUsageScreen>
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
       decoration: BoxDecoration(
         color: AppColors.textPrimary.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.zero,
         border: Border.all(
           color: AppColors.textPrimary.withValues(alpha: 0.1),
           width: 1,
@@ -307,12 +307,12 @@ class _ApiUsageScreenState extends State<ApiUsageScreen>
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.tertiary,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero),
         title: const Text(
           'API Kullanımını Sıfırla',
           style: TextStyle(
             fontSize: 18,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w400,
             color: AppColors.textPrimary,
           ),
         ),

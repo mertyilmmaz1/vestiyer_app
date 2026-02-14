@@ -30,6 +30,22 @@ class MockFirebaseAuthService extends FirebaseAuthService {
   }
 
   @override
+  Future<void> signInWithGoogle() async {
+    mockSignedInNotifier.value = true;
+  }
+
+  @override
+  Future<SocialSignInResult> signInWithApple() async {
+    mockSignedInNotifier.value = true;
+    return SocialSignInResult(
+      uid: mockUserId,
+      email: 'mock@example.com',
+      firstName: 'Mock',
+      lastName: 'User',
+    );
+  }
+
+  @override
   Future<void> signOut() async {
     mockSignedInNotifier.value = false;
   }

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:vestiyer_nodejs/core/product/extensions/context_extension.dart';
+import 'package:vestiyer_nodejs/core/product/navigation/editorial_page_route.dart';
 import 'package:vestiyer_nodejs/core/product/theme/app_colors.dart';
 import 'package:vestiyer_nodejs/core/product/widget/design/vestiyer_card.dart';
 import 'package:vestiyer_nodejs/core/product/widget/design/vestiyer_divider.dart';
@@ -12,10 +13,9 @@ import 'package:vestiyer_nodejs/core/product/widget/design/vestiyer_primary_butt
 import 'package:vestiyer_nodejs/core/product/widget/design/vestiyer_text_field.dart';
 
 import '../models/user.dart' as app_user;
-import '../providers/subscription_provider.dart';
-import '../providers/wardrobe_provider.dart';
 import '../services/firebase_auth_service.dart';
 import '../services/firestore_service_base.dart';
+import '../main.dart';
 import 'legal/privacy_policy_screen.dart';
 import 'legal/terms_of_service_screen.dart';
 
@@ -73,35 +73,60 @@ class _LoginScreenState extends State<LoginScreen> {
         }
         return;
       }
-      app_user.User? profile = await firestore.getUserProfile(uid);
-      profile ??= app_user.User(
-        id: uid,
-        email: _emailController.text.trim(),
-        firstName: '',
-        lastName: '',
-        createdAt: DateTime.now(),
-        isActive: true,
-        isPremium: false,
-      );
+      await firestore.getUserProfile(uid);
       if (!mounted) return;
-      context.read<WardrobeProvider>().setCurrentUserId(uid);
-      context.read<SubscriptionProvider>().setCurrentUser(profile);
-      // AuthWrapper StreamBuilder auth state ile _AuthenticatedHome (bottom nav) gösterecek
+      _navigateToHome();
     } on FirebaseAuthException catch (e) {
+      log('Giriş hatası: ${e.code} ${e.message}');
       if (mounted) {
+        final message = _authErrorMessage(e.code, e.message, isLogin: true);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.message ?? 'Giriş yapılamadı')),
+          SnackBar(
+              content: Text(message), duration: const Duration(seconds: 4)),
         );
       }
     } catch (e) {
       log('Giriş hatası: $e');
       if (mounted) {
+        final msg = '$e'.contains('expired') || '$e'.contains('malformed')
+            ? 'Oturum bilgisi geçersiz. Uygulamayı kapatıp yeniden açın veya şifrenizi kontrol edin.'
+            : 'Giriş yapılamadı. E-posta ve şifrenizi kontrol edin.';
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Giriş yapılamadı: $e')),
+          SnackBar(content: Text(msg), duration: const Duration(seconds: 4)),
         );
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  /// Firebase Auth hata kodunu Türkçe kullanıcı mesajına çevirir.
+  static String _authErrorMessage(String code, String? rawMessage,
+      {required bool isLogin}) {
+    switch (code) {
+      case 'invalid-credential':
+      case 'invalid-email':
+        return 'E-posta veya şifre hatalı. Lütfen kontrol edin.';
+      case 'wrong-password':
+        return 'Şifre hatalı. Tekrar deneyin.';
+      case 'user-not-found':
+        return isLogin
+            ? 'Bu e-posta ile kayıtlı hesap bulunamadı. Önce kayıt olun.'
+            : 'Hata oluştu. Tekrar deneyin.';
+      case 'user-disabled':
+        return 'Bu hesap devre dışı bırakılmış. Destek ile iletişime geçin.';
+      case 'too-many-requests':
+        return 'Çok fazla deneme. Lütfen biraz bekleyip tekrar deneyin.';
+      case 'network-request-failed':
+        return 'İnternet bağlantınızı kontrol edin.';
+      default:
+        final lower = (rawMessage ?? '').toLowerCase();
+        if (lower.contains('expired') || lower.contains('malformed')) {
+          return 'Oturum bilgisi geçersiz. E-posta ve şifrenizi kontrol edin; sorun sürerse uygulamayı kapatıp yeniden açın.';
+        }
+        return rawMessage?.isNotEmpty == true
+            ? rawMessage!
+            : 'Giriş yapılamadı.';
     }
   }
 
@@ -130,19 +155,8 @@ class _LoginScreenState extends State<LoginScreen> {
         _firstNameController.text.trim(),
         _lastNameController.text.trim(),
       );
-      final profile = app_user.User(
-        id: uid,
-        email: _emailController.text.trim(),
-        firstName: _firstNameController.text.trim(),
-        lastName: _lastNameController.text.trim(),
-        createdAt: DateTime.now(),
-        isActive: true,
-        isPremium: false,
-      );
       if (!mounted) return;
-      context.read<WardrobeProvider>().setCurrentUserId(uid);
-      context.read<SubscriptionProvider>().setCurrentUser(profile);
-      // AuthWrapper StreamBuilder auth state ile _AuthenticatedHome (bottom nav) gösterecek
+      _navigateToHome();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -153,15 +167,20 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } on FirebaseAuthException catch (e) {
       if (mounted) {
+        final message = _authErrorMessage(e.code, e.message, isLogin: false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.message ?? 'Kayıt yapılamadı')),
+          SnackBar(
+              content: Text(message), duration: const Duration(seconds: 4)),
         );
       }
     } catch (e) {
       log('Kayıt hatası: $e');
       if (mounted) {
+        final msg = '$e'.contains('expired') || '$e'.contains('malformed')
+            ? 'Kayıt sırasında hata. Lütfen uygulamayı kapatıp yeniden deneyin.'
+            : 'Kayıt yapılamadı. E-posta ve şifrenizi kontrol edin.';
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Kayıt yapılamadı: $e')),
+          SnackBar(content: Text(msg), duration: const Duration(seconds: 4)),
         );
       }
     } finally {
@@ -196,6 +215,124 @@ class _LoginScreenState extends State<LoginScreen> {
     });
   }
 
+  /// Shared flow after successful Google or Apple sign-in: load or create profile, set providers.
+  Future<void> _onSocialSignInSuccess({
+    required String uid,
+    required String? email,
+    String? firstName,
+    String? lastName,
+  }) async {
+    final firestore = context.read<FirestoreServiceBase>();
+    app_user.User? profile = await firestore.getUserProfile(uid);
+    final emailStr = email ?? '';
+    final firstNameStr = firstName ?? '';
+    final lastNameStr = lastName ?? '';
+    if (profile == null) {
+      await firestore.setUserProfile(
+        uid,
+        emailStr,
+        firstNameStr,
+        lastNameStr,
+      );
+      profile = app_user.User(
+        id: uid,
+        email: emailStr.isEmpty ? '' : emailStr,
+        firstName: firstNameStr,
+        lastName: lastNameStr,
+        createdAt: DateTime.now(),
+        isActive: true,
+        isPremium: false,
+      );
+    }
+    if (!mounted) return;
+    _navigateToHome();
+  }
+
+  void _navigateToHome() {
+    if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      EditorialPageRoute(page: const AuthWrapper()),
+      (route) => false,
+    );
+  }
+
+  Future<void> _signInWithGoogle() async {
+    setState(() => _isLoading = true);
+    try {
+      final authService = context.read<FirebaseAuthService>();
+      await authService.signInWithGoogle();
+      final uid = authService.currentUserId;
+      if (uid == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Google ile giriş tamamlanamadı.')),
+          );
+        }
+        return;
+      }
+      final user = authService.currentFirebaseUser;
+      final email = user?.email;
+      final displayName = user?.displayName ?? '';
+      final parts = displayName.split(' ');
+      final firstName = parts.isNotEmpty ? parts.first : '';
+      final lastName = parts.length > 1 ? parts.sublist(1).join(' ') : '';
+      await _onSocialSignInSuccess(
+        uid: uid,
+        email: email,
+        firstName: firstName.isNotEmpty ? firstName : null,
+        lastName: lastName.isNotEmpty ? lastName : null,
+      );
+      if (!mounted) return;
+      _navigateToHome();
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message ?? 'Google ile giriş yapılamadı')),
+        );
+      }
+    } catch (e) {
+      log('Google giriş hatası: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Google ile giriş yapılamadı: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _signInWithApple() async {
+    setState(() => _isLoading = true);
+    try {
+      final authService = context.read<FirebaseAuthService>();
+      final result = await authService.signInWithApple();
+      await _onSocialSignInSuccess(
+        uid: result.uid,
+        email: result.email,
+        firstName: result.firstName,
+        lastName: result.lastName,
+      );
+      if (!mounted) return;
+      _navigateToHome();
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message ?? 'Apple ile giriş yapılamadı')),
+        );
+      }
+    } catch (e) {
+      log('Apple giriş hatası: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Apple ile giriş yapılamadı: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -214,10 +351,11 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   Center(
                     child: Text(
-                      'Vestiyer',
+                      'VESTIYER',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                             color: AppColors.textPrimary,
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w400,
+                            letterSpacing: 4.0,
                           ),
                     ),
                   ),
@@ -227,8 +365,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       'Kıyafet dolabınızı yapay zeka ile yönetin.',
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.textPrimary
-                                .withValues(alpha: 0.4),
+                            color: AppColors.textPrimary.withValues(alpha: 0.4),
                             fontWeight: FontWeight.w400,
                           ),
                     ),
@@ -244,13 +381,14 @@ class _LoginScreenState extends State<LoginScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            _isRegistering ? 'Kayıt Ol' : 'Giriş Yap',
+                            _isRegistering ? 'KAYIT OL' : 'GİRİŞ YAP',
                             style: Theme.of(context)
                                 .textTheme
                                 .headlineSmall
                                 ?.copyWith(
                                   color: AppColors.textPrimary,
-                                  fontWeight: FontWeight.w700,
+                                  fontWeight: FontWeight.w400,
+                                  letterSpacing: 1.5,
                                 ),
                           ),
                           const SizedBox(height: 2),
@@ -275,8 +413,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               textCapitalization: TextCapitalization.words,
                               onFieldSubmitted: (_) =>
                                   _lastNameFocusNode.requestFocus(),
-                              validator: (v) =>
-                                  (v == null || v.isEmpty) ? 'Lütfen adınızı girin' : null,
+                              validator: (v) => (v == null || v.isEmpty)
+                                  ? 'Lütfen adınızı girin'
+                                  : null,
                             ),
                             const SizedBox(height: 16),
                             VestiyerTextField(
@@ -287,8 +426,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               textCapitalization: TextCapitalization.words,
                               onFieldSubmitted: (_) =>
                                   _emailFocusNode.requestFocus(),
-                              validator: (v) =>
-                                  (v == null || v.isEmpty) ? 'Lütfen soyadınızı girin' : null,
+                              validator: (v) => (v == null || v.isEmpty)
+                                  ? 'Lütfen soyadınızı girin'
+                                  : null,
                             ),
                             const SizedBox(height: 16),
                           ],
@@ -303,8 +443,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             onFieldSubmitted: _isRegistering
                                 ? (_) => _passwordFocusNode.requestFocus()
                                 : null,
-                            validator: (v) =>
-                                (v == null || v.isEmpty) ? 'Lütfen e-posta adresinizi girin' : null,
+                            validator: (v) => (v == null || v.isEmpty)
+                                ? 'Lütfen e-posta adresinizi girin'
+                                : null,
                           ),
                           const SizedBox(height: 16),
                           VestiyerTextField(
@@ -340,7 +481,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        _isRegistering ? 'Zaten hesabınız var mı? ' : 'Hesabınız yok mu? ',
+                        _isRegistering
+                            ? 'Zaten hesabınız var mı? '
+                            : 'Hesabınız yok mu? ',
                         style: TextStyle(
                           color: AppColors.textPrimary.withValues(alpha: 0.7),
                           fontSize: 14,
@@ -349,11 +492,12 @@ class _LoginScreenState extends State<LoginScreen> {
                       GestureDetector(
                         onTap: _toggleRegister,
                         child: Text(
-                          _isRegistering ? 'Giriş Yap' : 'Kayıt Ol',
+                          _isRegistering ? 'GİRİŞ YAP' : 'KAYIT OL',
                           style: const TextStyle(
                             color: AppColors.primary,
                             fontSize: 14,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w400,
+                            letterSpacing: 0.5,
                           ),
                         ),
                       ),
@@ -364,19 +508,15 @@ class _LoginScreenState extends State<LoginScreen> {
                   SizedBox(height: context.dynamicHeight(0.025)),
                   _buildSocialButton(
                     label: 'Google ile devam et',
-                    onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Google ile giriş henüz desteklenmiyor')),
-                    ),
-                    enabled: false,
+                    onTap: _signInWithGoogle,
+                    enabled: !_isLoading,
                     icon: Icons.g_mobiledata,
                   ),
                   const SizedBox(height: 16),
                   _buildSocialButton(
                     label: 'Apple ile devam et',
-                    onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Apple ile giriş henüz desteklenmiyor')),
-                    ),
-                    enabled: false,
+                    onTap: _signInWithApple,
+                    enabled: !_isLoading,
                     icon: Icons.apple,
                   ),
                   SizedBox(height: context.dynamicHeight(0.035)),
@@ -384,8 +524,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: GestureDetector(
                       onTap: () {
                         Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => const PrivacyPolicyScreen(),
+                          EditorialPageRoute(
+                            page: const PrivacyPolicyScreen(),
                           ),
                         );
                       },
@@ -407,8 +547,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: GestureDetector(
                       onTap: () {
                         Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => const TermsOfServiceScreen(),
+                          EditorialPageRoute(
+                            page: const TermsOfServiceScreen(),
                           ),
                         );
                       },
@@ -447,11 +587,10 @@ class _LoginScreenState extends State<LoginScreen> {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 18),
         decoration: BoxDecoration(
-          color: AppColors.tertiary,
-          borderRadius: BorderRadius.circular(24),
+          color: AppColors.softBackground,
           border: Border.all(
-            color: AppColors.textPrimary.withValues(alpha: 0.1),
-            width: 1,
+            color: AppColors.border,
+            width: 0.5,
           ),
         ),
         child: Row(
@@ -464,11 +603,14 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(width: 12),
             Text(
-              label,
+              label.toUpperCase(),
               style: TextStyle(
-                fontWeight: FontWeight.w500,
-                color: enabled ? AppColors.textSecondary : AppColors.textSecondary.withValues(alpha: 0.5),
-                fontSize: 14,
+                fontWeight: FontWeight.w400,
+                color: enabled
+                    ? AppColors.textSecondary
+                    : AppColors.textSecondary.withValues(alpha: 0.5),
+                fontSize: 13,
+                letterSpacing: 1.0,
               ),
             ),
           ],

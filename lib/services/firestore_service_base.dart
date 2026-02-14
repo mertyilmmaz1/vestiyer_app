@@ -9,6 +9,9 @@ abstract class FirestoreServiceBase {
   Future<app_user.User?> getUserProfile(String uid);
   Future<void> updateUserProfile(String uid, Map<String, dynamic> updates);
 
+  /// Saves user style profile (Style DNA from onboarding).
+  Future<void> setUserStyleProfile(String uid, Map<String, dynamic> styleProfile);
+
   Future<Clothing?> addClothing(String userId, Map<String, dynamic> data);
   Future<void> setClothing(String userId, String clothingId, Map<String, dynamic> data);
   Future<Clothing?> getClothing(String userId, String clothingId);
