@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vestiyer_nodejs/core/product/navigation/editorial_page_route.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -21,7 +22,6 @@ import '../services/hive_cache_service.dart';
 import '../services/firestore_service_base.dart';
 import '../utils/mock_data_helper.dart';
 import '../widgets/vestiyer_page_header.dart';
-import '../providers/tutorial_provider.dart';
 import '../main.dart';
 import 'login_screen.dart';
 
@@ -65,19 +65,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _logout() async {
     try {
       final authService = context.read<FirebaseAuthService>();
-      final uid = authService.currentUserId;
       final cache = context.read<HiveCacheService?>();
-      if (cache != null && uid != null) {
-        await cache.invalidateUser(uid);
-        await cache.invalidateClothing(uid);
-        await cache.invalidateCombinations(uid);
+
+      // Clear SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('onboarding_completed');
+      await prefs.remove('has_seen_new_intro');
+
+      if (cache != null) {
+        await cache.clearAll(); // Clear EVERYTHING
       }
+
       await authService.signOut();
+
       if (!mounted) return;
+
+      // Reset providers
       context.read<WardrobeProvider>().setCurrentUserId(null);
       context.read<SubscriptionProvider>().setCurrentUser(null);
-      await context.read<TutorialProvider>().setCurrentUserId(null);
+
+      // Reset static state
       resetAuthenticatedHomeState();
+
       if (mounted) {
         Navigator.of(context).pushAndRemoveUntil(
           EditorialPageRoute(page: const LoginScreen()),

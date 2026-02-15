@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
@@ -7,10 +8,47 @@ import '../models/user.dart';
 import '../models/clothing.dart';
 import '../models/combination.dart';
 import '../models/api_response.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class VestiyerApiService {
   // Production URL for live app
   static const String baseUrl = 'http://vestiyerapp.com';
+
+  String get _segmentServiceUrl =>
+      dotenv.env['SEGMENT_SERVICE_URL'] ?? 'http://vestiyerapp.com:8000';
+  String? get _segmentApiKey => dotenv.env['SEGMENT_SERVICE_API_KEY'];
+
+  // ── VPS availability cache ──────────────────────────────────────
+  bool _vpsAvailable = true;
+  DateTime? _lastVpsCheck;
+  static const _vpsCacheDuration = Duration(minutes: 5);
+  static const _vpsHealthTimeout = Duration(seconds: 5);
+
+  /// Check if VPS is reachable. Caches result for 5 minutes.
+  Future<bool> isVpsAvailable({bool forceCheck = false}) async {
+    if (!forceCheck &&
+        _lastVpsCheck != null &&
+        DateTime.now().difference(_lastVpsCheck!) < _vpsCacheDuration) {
+      return _vpsAvailable;
+    }
+    try {
+      final response = await http
+          .get(Uri.parse('$_segmentServiceUrl/health'))
+          .timeout(_vpsHealthTimeout);
+      _vpsAvailable = response.statusCode == 200;
+    } catch (e) {
+      debugPrint('VPS health check failed: $e');
+      _vpsAvailable = false;
+    }
+    _lastVpsCheck = DateTime.now();
+    debugPrint('VPS availability: $_vpsAvailable');
+    return _vpsAvailable;
+  }
+
+  /// Reset VPS cache (e.g. after a failure) so next call re-checks.
+  void resetVpsCache() {
+    _lastVpsCheck = null;
+  }
 
   // Development URL - uncomment for local testing
   // static const String baseUrl = 'http://localhost:3000';
@@ -488,7 +526,8 @@ class VestiyerApiService {
         }),
       );
 
-      debugPrint('GET COMBINATION CLOTHING DETAILS API Response: ${response.body}');
+      debugPrint(
+          'GET COMBINATION CLOTHING DETAILS API Response: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -546,5 +585,124 @@ class VestiyerApiService {
       if (e is ApiException) rethrow;
       throw ApiException('Network error: $e');
     }
+  }
+
+  /// Segment image via VPS. Returns null if VPS is unavailable, output is
+  /// invalid, or processing fails — the caller should fall back to the
+  /// original image for Firebase analysis.
+  Future<Uint8List?> segmentImage(String imageUrl) async {
+    // Quick VPS availability check (cached for 5 min)
+    final vpsOk = await isVpsAvailable();
+    if (!vpsOk) {
+      debugPrint(
+          'VPS is unavailable (cached). Skipping segmentation, using original image.');
+      return null;
+    }
+
+    try {
+      debugPrint('Segmenting image via VPS: $_segmentServiceUrl');
+      debugPrint('Image URL for segmentation: $imageUrl');
+      final response = await http
+          .post(
+            Uri.parse('$_segmentServiceUrl/segment'),
+            headers: {
+              'Content-Type': 'application/json',
+              if (_segmentApiKey != null) 'X-API-Key': _segmentApiKey!,
+            },
+            body: json.encode({'imageUrl': imageUrl}),
+          )
+          .timeout(const Duration(seconds: 60));
+
+      debugPrint('Segment Service Response: ${response.statusCode}');
+
+      if (response.statusCode != 200) {
+        debugPrint(
+            'Segment Service HTTP Error: ${response.statusCode} - ${response.body}');
+        _markVpsDown();
+        return null;
+      }
+
+      // ── 1. Parse JSON response ─────────────────────────────────────
+      final dynamic data;
+      try {
+        data = json.decode(response.body);
+      } catch (e) {
+        debugPrint('Segment Service: JSON parse error: $e');
+        _markVpsDown();
+        return null;
+      }
+
+      if (data['success'] != true || data['imageBase64'] == null) {
+        debugPrint('Segment Service: unexpected response fields: ${data.keys}');
+        _markVpsDown();
+        return null;
+      }
+
+      // ── 2. Decode base64 ───────────────────────────────────────────
+      String base64String = data['imageBase64'] as String;
+      if (base64String.contains(',')) {
+        base64String = base64String.split(',').last;
+      }
+
+      if (base64String.isEmpty) {
+        debugPrint('Segment Service: empty base64 string');
+        _markVpsDown();
+        return null;
+      }
+
+      final Uint8List imageBytes;
+      try {
+        imageBytes = base64Decode(base64String);
+      } catch (e) {
+        debugPrint('Segment Service: base64 decode error: $e');
+        _markVpsDown();
+        return null;
+      }
+
+      // ── 3. Validate image data ─────────────────────────────────────
+      // Minimum size check: a valid segmented PNG should be > 1 KB
+      if (imageBytes.length < 1024) {
+        debugPrint(
+            'Segment Service: image too small (${imageBytes.length} bytes), likely corrupt');
+        return null; // Don't mark VPS down — it replied, image was just bad
+      }
+
+      // PNG header check: first 8 bytes = 137 80 78 71 13 10 26 10
+      const pngHeader = [137, 80, 78, 71, 13, 10, 26, 10];
+      if (imageBytes.length >= 8) {
+        bool validPng = true;
+        for (int i = 0; i < 8; i++) {
+          if (imageBytes[i] != pngHeader[i]) {
+            validPng = false;
+            break;
+          }
+        }
+        if (!validPng) {
+          debugPrint(
+              'Segment Service: invalid PNG header, data may be corrupt');
+          return null;
+        }
+      }
+
+      debugPrint(
+          'Segment Service: valid PNG received (${imageBytes.length} bytes)');
+      return imageBytes;
+    } on TimeoutException {
+      debugPrint('Segment Service: request timed out (60s)');
+      _markVpsDown();
+      return null;
+    } catch (e) {
+      debugPrint('Segment Service Exception: $e');
+      _markVpsDown();
+      return null;
+    }
+  }
+
+  /// Mark VPS as unavailable for the cache duration.
+  void _markVpsDown() {
+    _vpsAvailable = false;
+    _lastVpsCheck = DateTime.now();
+    debugPrint(
+        'VPS marked as down — will skip for ${_vpsCacheDuration.inMinutes} min');
   }
 }

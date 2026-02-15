@@ -54,31 +54,31 @@ class VestiyerTextField extends StatelessWidget {
         filled: true,
         fillColor: AppColors.inputBackground,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.zero,
           borderSide: BorderSide(
             color: AppColors.textPrimary.withValues(alpha: 0.1),
           ),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.zero,
           borderSide: BorderSide(
             color: AppColors.textPrimary.withValues(alpha: 0.1),
           ),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.zero,
           borderSide: const BorderSide(
             color: AppColors.primary,
-            width: 1.5,
+            width: 1.0,
           ),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.zero,
           borderSide: const BorderSide(color: AppColors.error),
         ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 20,
-          vertical: 16,
+          vertical: 18,
         ),
       ),
     );

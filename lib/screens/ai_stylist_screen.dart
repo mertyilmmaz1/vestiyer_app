@@ -8,8 +8,6 @@ import 'package:vestiyer_nodejs/core/product/theme/app_colors.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:vestiyer_nodejs/utils/clothing_formatter.dart';
 import 'package:carousel_slider/carousel_slider.dart';
-
-import 'package:vestiyer_nodejs/providers/tutorial_provider.dart';
 import '../models/clothing.dart';
 import '../models/combination.dart';
 import '../providers/wardrobe_provider.dart';
@@ -26,7 +24,7 @@ import '../widgets/staggered_slide_fade.dart';
 class AIStylistScreen extends StatefulWidget {
   const AIStylistScreen({super.key});
 
-  /// GlobalKey for the "KOMBİN OLUŞTUR" button — used by tutorial coach mark.
+  /// GlobalKey for the "KOMBİN OLUŞTUR" button.
   static final GlobalKey generateButtonKey = GlobalKey();
 
   @override
@@ -85,18 +83,11 @@ class _AIStylistScreenState extends State<AIStylistScreen> {
   }
 
   Future<void> _generateOutfitSuggestion() async {
-    final tutorialProvider = context.read<TutorialProvider>();
     final subscriptionProvider =
         Provider.of<SubscriptionProvider>(context, listen: false);
 
-    // If in tutorial aiPreview step and sample not yet used, allow bypass
-    final isTutorialBypass =
-        tutorialProvider.currentStep == TutorialStep.aiPreview &&
-            !subscriptionProvider.isTutorialSampleUsed;
-
     if (!subscriptionProvider.isPremium &&
-        !subscriptionProvider.hasDailyFreeCombinationLeft &&
-        !isTutorialBypass) {
+        !subscriptionProvider.hasDailyFreeCombinationLeft) {
       await PaywallWidget.showPaywall(
         context,
         type: PaywallType.featureGated,
@@ -141,11 +132,6 @@ class _AIStylistScreenState extends State<AIStylistScreen> {
         userId,
         occasion: selectedOccasion,
       );
-
-      if (isTutorialBypass) {
-        await subscriptionProvider.useTutorialSample();
-        await tutorialProvider.completeStep(TutorialStep.aiPreview);
-      }
 
       if (!mounted) return;
 

@@ -8,6 +8,7 @@ import '../models/clothing.dart';
 import '../services/cloud_functions_service.dart';
 import '../services/firestore_service_base.dart';
 import '../services/firebase_storage_service.dart';
+import '../services/vestiyer_api_service.dart';
 
 class WardrobeProvider with ChangeNotifier {
   final List<Clothing> _items = [];
@@ -18,7 +19,10 @@ class WardrobeProvider with ChangeNotifier {
   String? _currentUserId;
   Map<String, dynamic>? _lastResponse;
 
-  WardrobeProvider(this._firestore, this._storage, this._functions);
+  WardrobeProvider(
+      this._firestore, this._storage, this._functions, this._apiService);
+
+  final VestiyerApiService _apiService;
 
   List<Clothing> get items => List.unmodifiable(_items);
   bool get isLoading => _isLoading;
@@ -68,23 +72,79 @@ class WardrobeProvider with ChangeNotifier {
       notifyListeners();
 
       final compressedImage = await _compressImage(imageFile);
-      final imageUrl = await _storage.uploadClothingImage(
+
+      // 1. Upload original image
+      final originalImageUrl = await _storage.uploadClothingImage(
         _currentUserId!,
         compressedImage,
       );
+
+      // 2. Segment image via VPS
+      String finalAnalysisUrl = originalImageUrl;
+      String? segmentedImageUrl;
+
+      try {
+        final segmentedBytes = await _apiService.segmentImage(originalImageUrl);
+        if (segmentedBytes != null) {
+          final filename =
+              'segmented_${DateTime.now().millisecondsSinceEpoch}.png';
+          segmentedImageUrl = await _storage.uploadClothingImageBytes(
+            _currentUserId!,
+            segmentedBytes,
+            filename,
+          );
+          finalAnalysisUrl = segmentedImageUrl;
+          debugPrint(
+              'VPS Segmentation successful. Analysis will use: $finalAnalysisUrl');
+        } else {
+          debugPrint(
+              'VPS Segmentation returned null. Falling back to original image.');
+        }
+      } catch (e) {
+        debugPrint(
+            'VPS Segmentation failed: $e. Falling back to original image.');
+      }
+
       await compressedImage.delete();
 
+      // 3. Analyze clothing using the (hopefully) segmented image
       final result = await _functions.analyzeClothing(
         _currentUserId!,
-        imageUrl,
+        finalAnalysisUrl, // Use segmented image for analysis
         title: title,
       );
 
       final clothingId = result['clothingId'] as String?;
       final lowConfidence = result['lowConfidence'] as bool? ?? false;
+
       if (clothingId != null) {
+        // 4. Update the clothing item with original image URL if we have a segmented one
+        // Because the analysis function probably saved finalAnalysisUrl as main imageUrl
+        // We want to keep track of the original too if possible,
+        // OR just rely on the segmented one being the main one.
+        // If we have a segmented image, we might want to update the document
+        // to set 'segmentedImageUrl' or ensure 'imageUrl' is the segmented one.
+
+        // Let's ensure the document has the correct structure
+        Map<String, dynamic> updates = {};
+        if (segmentedImageUrl != null) {
+          // If we successfully segmented, the 'imageUrl' in Firestore is already 'segmentedImageUrl'
+          // because we passed it to analyzeClothing.
+          // We might want to store originalImageUrl somewhere?
+          // Existing Clothing model has 'imagePath'.
+          // Let's store the original URL in a field if we want to keep it.
+          // For now, let's just make sure segmentedImageUrl is set correctly in our model
+          updates['segmentedImageUrl'] = segmentedImageUrl;
+          updates['originalImageUrl'] = originalImageUrl; // Saving specifically
+        }
+
+        if (updates.isNotEmpty) {
+          await _firestore.updateClothing(_currentUserId!, clothingId, updates);
+        }
+
         final clothing =
             await _firestore.getClothing(_currentUserId!, clothingId);
+
         if (clothing != null) {
           _items.insert(0, clothing);
           _lastResponse = {

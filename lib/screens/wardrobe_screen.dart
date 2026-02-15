@@ -16,10 +16,18 @@ import '../widgets/bouncing_widget.dart';
 import '../widgets/staggered_slide_fade.dart';
 
 class WardrobeScreen extends StatefulWidget {
-  const WardrobeScreen({super.key, this.showBackButton = true});
+  const WardrobeScreen({
+    super.key,
+    this.showBackButton = true,
+    this.onKombinPressed,
+  });
 
   /// When false (e.g. when used as bottom nav tab), back button is hidden.
   final bool showBackButton;
+
+  /// Callback to execute when "KOMBİN" FAB is pressed.
+  /// If provided, this overrides the default navigation behavior.
+  final VoidCallback? onKombinPressed;
 
   @override
   State<WardrobeScreen> createState() => _WardrobeScreenState();
@@ -492,24 +500,28 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
       child: BouncingWidget(
         child: FloatingActionButton.extended(
           onPressed: () {
-            Navigator.push(
-              context,
-              PageRouteBuilder(
-                pageBuilder: (_, __, ___) => const AIStylistScreen(),
-                transitionsBuilder: (_, animation, __, child) {
-                  return SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(1, 0),
-                      end: Offset.zero,
-                    ).animate(CurvedAnimation(
-                      parent: animation,
-                      curve: Curves.easeOutQuint,
-                    )),
-                    child: child,
-                  );
-                },
-              ),
-            );
+            if (widget.onKombinPressed != null) {
+              widget.onKombinPressed!();
+            } else {
+              Navigator.push(
+                context,
+                PageRouteBuilder(
+                  pageBuilder: (_, __, ___) => const AIStylistScreen(),
+                  transitionsBuilder: (_, animation, __, child) {
+                    return SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(1, 0),
+                        end: Offset.zero,
+                      ).animate(CurvedAnimation(
+                        parent: animation,
+                        curve: Curves.easeOutQuint,
+                      )),
+                      child: child,
+                    );
+                  },
+                ),
+              );
+            }
           },
           backgroundColor: AppColors.softBackground,
           elevation: 0,

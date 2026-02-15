@@ -15,6 +15,7 @@ from PIL import Image
 from rembg import remove, new_session
 
 app = FastAPI(title="Vestiyer Segment Service")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
 API_KEY = os.environ.get("SEGMENT_API_KEY", "")
 REMBG_MODEL = os.environ.get("REMBG_MODEL", "u2net")  # u2net, u2netp, isnet-general-use
@@ -99,6 +100,7 @@ async def segment(
     request: Request,
     x_api_key: Optional[str] = Header(None),
 ):
+    import time
     verify_api_key(x_api_key)
 
     body = await request.json()
@@ -106,15 +108,26 @@ async def segment(
     if not image_url or not isinstance(image_url, str):
         raise HTTPException(status_code=400, detail="imageUrl required")
 
+    logging.info(f"Segment request received. URL length: {len(image_url)}")
+
     try:
+        t0 = time.time()
         image_bytes = download_image(image_url)
+        dl_ms = int((time.time() - t0) * 1000)
+        logging.info(f"Image downloaded: {len(image_bytes)} bytes in {dl_ms}ms")
     except Exception as e:
+        logging.error(f"Image download failed: {e}")
         raise HTTPException(status_code=400, detail=f"Failed to fetch image: {e}")
 
     try:
+        t0 = time.time()
         result_png = remove_background_and_crop(image_bytes)
+        proc_ms = int((time.time() - t0) * 1000)
+        logging.info(f"Background removal done: {len(result_png)} bytes in {proc_ms}ms")
     except Exception as e:
+        logging.error(f"Background removal failed: {e}")
         raise HTTPException(status_code=500, detail=f"Background removal failed: {e}")
 
     b64 = base64.b64encode(result_png).decode("utf-8")
+    logging.info(f"Segment complete. Base64 length: {len(b64)}")
     return {"success": True, "imageBase64": f"data:image/png;base64,{b64}"}

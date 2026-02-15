@@ -9,9 +9,11 @@ import '../models/user.dart' as app_user;
 /// Hive-backed cache for Firestore read-through. Reduces redundant Firebase reads.
 /// Box name: [boxName]. Keys: user_uid, clothing_userId, combinations_userId, etc.
 class HiveCacheService {
-  HiveCacheService({this.boxName = 'firestore_cache', this.userProfileTtlMinutes = 15});
+  HiveCacheService(
+      {this.boxName = 'firestore_cache', this.userProfileTtlMinutes = 15});
 
   final String boxName;
+
   /// TTL for user profile cache (e.g. premium status). Null = no expiry.
   final int userProfileTtlMinutes;
 
@@ -29,7 +31,8 @@ class HiveCacheService {
 
   Box<String> get _b {
     final b = _box;
-    if (b == null) throw StateError('HiveCacheService not initialized. Call init() first.');
+    if (b == null)
+      throw StateError('HiveCacheService not initialized. Call init() first.');
     return b;
   }
 
@@ -43,7 +46,8 @@ class HiveCacheService {
       final cachedAt = map['cachedAt'] as String?;
       if (userProfileTtlMinutes > 0 && cachedAt != null) {
         final at = DateTime.tryParse(cachedAt);
-        if (at != null && DateTime.now().difference(at).inMinutes > userProfileTtlMinutes) {
+        if (at != null &&
+            DateTime.now().difference(at).inMinutes > userProfileTtlMinutes) {
           _b.delete('$_prefixUser$uid');
           return null;
         }
@@ -58,10 +62,12 @@ class HiveCacheService {
   }
 
   Future<void> setUserProfile(String uid, app_user.User user) async {
-    await _b.put('$_prefixUser$uid', jsonEncode({
-      'data': user.toJson(),
-      'cachedAt': DateTime.now().toIso8601String(),
-    }));
+    await _b.put(
+        '$_prefixUser$uid',
+        jsonEncode({
+          'data': user.toJson(),
+          'cachedAt': DateTime.now().toIso8601String(),
+        }));
   }
 
   Future<void> invalidateUser(String uid) async {
@@ -92,9 +98,8 @@ class HiveCacheService {
   Future<void> invalidateClothing(String userId) async {
     await _b.delete('$_prefixClothing$userId');
     final prefix = '$_prefixClothingItem${userId}_';
-    final keysToRemove = _b.keys
-        .where((k) => k.toString().startsWith(prefix))
-        .toList();
+    final keysToRemove =
+        _b.keys.where((k) => k.toString().startsWith(prefix)).toList();
     for (final k in keysToRemove) {
       await _b.delete(k);
     }
@@ -106,15 +111,18 @@ class HiveCacheService {
     final raw = _b.get('$_prefixClothingItem${userId}_$clothingId');
     if (raw == null) return null;
     try {
-      return Clothing.fromJson(Map<String, dynamic>.from(jsonDecode(raw) as Map));
+      return Clothing.fromJson(
+          Map<String, dynamic>.from(jsonDecode(raw) as Map));
     } catch (_) {
       _b.delete('$_prefixClothingItem${userId}_$clothingId');
       return null;
     }
   }
 
-  Future<void> setClothing(String userId, String clothingId, Clothing item) async {
-    await _b.put('$_prefixClothingItem${userId}_$clothingId', jsonEncode(item.toJson()));
+  Future<void> setClothing(
+      String userId, String clothingId, Clothing item) async {
+    await _b.put(
+        '$_prefixClothingItem${userId}_$clothingId', jsonEncode(item.toJson()));
   }
 
   Future<void> invalidateClothingItem(String userId, String clothingId) async {
@@ -123,7 +131,8 @@ class HiveCacheService {
 
   // ----- Combinations (default params: limit 50, isFavorite null) -----
 
-  List<Combination>? getCombinations(String userId, {int limit = 50, bool? isFavorite}) {
+  List<Combination>? getCombinations(String userId,
+      {int limit = 50, bool? isFavorite}) {
     final key = _combinationsKey(userId, limit: limit, isFavorite: isFavorite);
     final raw = _b.get(key);
     if (raw == null) return null;
@@ -150,12 +159,15 @@ class HiveCacheService {
 
   Future<void> invalidateCombinations(String userId) async {
     final prefix = '$_prefixCombinations$userId';
-    final keysToRemove = _b.keys
-        .where((k) => k.toString().startsWith(prefix))
-        .toList();
+    final keysToRemove =
+        _b.keys.where((k) => k.toString().startsWith(prefix)).toList();
     for (final k in keysToRemove) {
       await _b.delete(k);
     }
+  }
+
+  Future<void> clearAll() async {
+    await _b.clear();
   }
 
   String _combinationsKey(String userId, {int limit = 50, bool? isFavorite}) {

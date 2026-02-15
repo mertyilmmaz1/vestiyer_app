@@ -11,7 +11,7 @@ import 'core/product/theme/app_colors.dart';
 import 'core/product/theme/app_theme.dart';
 import 'core/product/theme/app_typography.dart';
 import 'providers/subscription_provider.dart';
-import 'providers/tutorial_provider.dart';
+
 import 'providers/wardrobe_provider.dart';
 import 'models/user.dart' as app_user;
 import 'screens/ai_stylist_screen.dart';
@@ -30,12 +30,13 @@ import 'services/firebase_auth_service.dart';
 import 'services/firebase_storage_service.dart';
 import 'services/firestore_service.dart';
 import 'services/firestore_service_base.dart';
+import 'services/vestiyer_api_service.dart';
 import 'services/hive_cache_service.dart';
 import 'services/mock/mock_cloud_functions_service.dart';
 import 'services/mock/mock_firebase_auth_service.dart';
 import 'services/mock/mock_firebase_storage_service.dart';
-import 'services/tutorial_coach_service.dart';
 import 'services/mock/mock_firestore_service.dart';
+import 'widgets/intro_dialog.dart';
 
 HiveCacheService? _hiveCache;
 
@@ -79,6 +80,9 @@ class MyApp extends StatelessWidget {
               ? MockCloudFunctionsService()
               : CloudFunctionsService(),
         ),
+        Provider<VestiyerApiService>(
+          create: (_) => VestiyerApiService(),
+        ),
         Provider<HiveCacheService?>(
           create: (_) => _hiveCache,
         ),
@@ -87,6 +91,7 @@ class MyApp extends StatelessWidget {
             context.read<FirestoreServiceBase>(),
             context.read<FirebaseStorageService>(),
             context.read<CloudFunctionsService>(),
+            context.read<VestiyerApiService>(),
           ),
         ),
         ChangeNotifierProvider<SubscriptionProvider>(
@@ -94,9 +99,6 @@ class MyApp extends StatelessWidget {
             context.read<FirebaseAuthService>(),
             context.read<FirestoreServiceBase>(),
           ),
-        ),
-        ChangeNotifierProvider<TutorialProvider>(
-          create: (context) => TutorialProvider(),
         ),
       ],
       child: MaterialApp(
@@ -177,14 +179,21 @@ class _SplashScreenWrapperState extends State<SplashScreenWrapper> {
     final uid = auth.currentUserId;
     if (uid == null) return;
     final firestore = context.read<FirestoreServiceBase>();
-    final profile = await firestore.getUserProfile(uid);
-    if (!mounted) return;
-    context.read<WardrobeProvider>().setCurrentUserId(uid);
-    context.read<SubscriptionProvider>().setCurrentUser(profile);
-    await context.read<TutorialProvider>().setCurrentUserId(uid);
-    await revenueCatLogIn(uid);
-    if (!mounted) return;
-    _AuthenticatedHome.markPreInitialized();
+    try {
+      final profile = await firestore
+          .getUserProfile(uid)
+          .timeout(const Duration(seconds: 5));
+      if (!mounted) return;
+      context.read<WardrobeProvider>().setCurrentUserId(uid);
+      context.read<SubscriptionProvider>().setCurrentUser(profile);
+      await revenueCatLogIn(uid);
+      if (!mounted) return;
+      _AuthenticatedHome.markPreInitialized();
+    } catch (e) {
+      debugPrint('Error initializing authenticated user: $e');
+      // If error or timeout, we still want to show the app,
+      // but maybe without pre-initialization.
+    }
   }
 
   @override
@@ -323,17 +332,15 @@ class _AuthenticatedHomeState extends State<_AuthenticatedHome> {
 
   final _uploadButtonKey = GlobalKey();
   final _aiTabKey = GlobalKey();
-  final _coachService = TutorialCoachService();
-
-  /// Track the last step we showed a coach mark for to avoid re-showing.
-  TutorialStep? _lastShownCoachStep;
 
   @override
   void initState() {
     super.initState();
     if (_AuthenticatedHome._preInitialized) {
       _initialized = true;
-      _scheduleTutorialCheck();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        IntroDialog.show(context);
+      });
       return;
     }
     _initUser();
@@ -341,7 +348,6 @@ class _AuthenticatedHomeState extends State<_AuthenticatedHome> {
 
   @override
   void dispose() {
-    _coachService.dismiss();
     super.dispose();
   }
 
@@ -350,85 +356,28 @@ class _AuthenticatedHomeState extends State<_AuthenticatedHome> {
     final uid = auth.currentUserId;
     if (uid == null) return;
     final firestore = context.read<FirestoreServiceBase>();
-    final profile = await firestore.getUserProfile(uid);
-    if (!mounted) return;
-    context.read<WardrobeProvider>().setCurrentUserId(uid);
-    context.read<SubscriptionProvider>().setCurrentUser(profile);
-    await context.read<TutorialProvider>().setCurrentUserId(uid);
-    await revenueCatLogIn(uid);
-    if (!mounted) return;
-    setState(() => _initialized = true);
-    _scheduleTutorialCheck();
-  }
-
-  void _scheduleTutorialCheck() {
-    // Wait for the first frame to complete so GlobalKeys are attached.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    try {
+      final profile = await firestore
+          .getUserProfile(uid)
+          .timeout(const Duration(seconds: 5));
       if (!mounted) return;
-      _maybeShowTutorial();
-    });
-  }
-
-  void _maybeShowTutorial() {
-    final tp = context.read<TutorialProvider>();
-    if (!tp.shouldShowOverlay) return;
-    if (tp.currentStep == _lastShownCoachStep) return;
-
-    final step = tp.currentStep;
-    GlobalKey? targetKey;
-
-    switch (step) {
-      case TutorialStep.welcome:
-        targetKey = _uploadButtonKey;
-        break;
-      case TutorialStep.uploading:
-        targetKey = _uploadButtonKey;
-        break;
-      case TutorialStep.reached5Items:
-        targetKey = _aiTabKey;
-        break;
-      case TutorialStep.aiPreview:
-        targetKey = AIStylistScreen.generateButtonKey;
-        // Ensure AI tab is selected so the button is visible.
-        if (_currentIndex != 2) {
-          setState(() => _currentIndex = 2);
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) _maybeShowTutorial();
-          });
-          return;
-        }
-        break;
-      case TutorialStep.completed:
-        return;
+      context.read<WardrobeProvider>().setCurrentUserId(uid);
+      context.read<SubscriptionProvider>().setCurrentUser(profile);
+      await revenueCatLogIn(uid);
+    } catch (e) {
+      debugPrint('Error in _initUser: $e');
     }
 
-    _lastShownCoachStep = step;
-    _coachService.showForStep(
-      context: context,
-      step: step,
-      targetKey: targetKey,
-      onDismiss: () {
-        tp.dismissOverlay();
-      },
-      onSkip: () async {
-        await tp.skipTutorial();
-      },
-      onContinue: () async {
-        await tp.completeStep(step);
-      },
-    );
+    if (!mounted) return;
+    setState(() => _initialized = true);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) IntroDialog.show(context);
+    });
   }
 
   void _onTabTapped(int index) {
     setState(() => _currentIndex = index);
-
-    // Tutorial: user manually navigates to AI STİLİST → advance to aiPreview
-    final tutorialProvider =
-        Provider.of<TutorialProvider>(context, listen: false);
-    if (tutorialProvider.currentStep == TutorialStep.reached5Items &&
-        index == 2) {
-      tutorialProvider.completeStep(TutorialStep.reached5Items);
-    }
   }
 
   void _openUpload() {
@@ -449,14 +398,6 @@ class _AuthenticatedHomeState extends State<_AuthenticatedHome> {
       {'label': 'AI STİLİST', 'index': 2},
       {'label': 'PROFİL', 'index': 3},
     ];
-
-    // Watch tutorial provider to react to step changes.
-    context.watch<TutorialProvider>();
-
-    // Schedule a coach mark check after this build completes.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _maybeShowTutorial();
-    });
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -497,12 +438,6 @@ class _AuthenticatedHomeState extends State<_AuthenticatedHome> {
                       size: 24,
                     ),
                     onPressed: () {
-                      // Tutorial: user taps + → advance welcome to uploading
-                      final tp =
-                          Provider.of<TutorialProvider>(context, listen: false);
-                      if (tp.currentStep == TutorialStep.welcome) {
-                        tp.completeStep(TutorialStep.welcome);
-                      }
                       _openUpload();
                     },
                   ),
@@ -564,7 +499,10 @@ class _AuthenticatedHomeState extends State<_AuthenticatedHome> {
                 children: [
                   HomeScreen(
                       onSelectTab: (i) => setState(() => _currentIndex = i)),
-                  const WardrobeScreen(showBackButton: false),
+                  WardrobeScreen(
+                    showBackButton: false,
+                    onKombinPressed: () => _onTabTapped(2),
+                  ),
                   const AIStylistScreen(),
                   const ProfileScreen(showBackButton: false),
                 ],

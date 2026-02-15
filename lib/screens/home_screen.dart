@@ -4,7 +4,6 @@ import 'package:vestiyer_nodejs/core/product/navigation/editorial_page_route.dar
 import 'package:vestiyer_nodejs/core/product/theme/app_colors.dart';
 import 'package:vestiyer_nodejs/core/product/theme/app_spacing.dart';
 import 'package:vestiyer_nodejs/core/product/theme/app_typography.dart';
-import 'package:vestiyer_nodejs/providers/tutorial_provider.dart';
 import 'upload_screen.dart';
 import 'package:provider/provider.dart';
 import '../providers/subscription_provider.dart';
@@ -109,12 +108,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _openAssistantChat() async {
     final subscriptionProvider = context.read<SubscriptionProvider>();
-    final tutorialProvider = context.read<TutorialProvider>();
-    final isTutorialBypass =
-        tutorialProvider.currentStep == TutorialStep.aiPreview &&
-            !subscriptionProvider.isTutorialSampleUsed;
-
-    if (!subscriptionProvider.isPremium && !isTutorialBypass) {
+    if (!subscriptionProvider.isPremium) {
       await PaywallWidget.showPaywall(
         context,
         type: PaywallType.featureGated,
@@ -122,11 +116,6 @@ class _HomeScreenState extends State<HomeScreen> {
             'Kişisel Stil Asistanı ile moda sorularına yapay zeka yanıtları al. Premium ile hemen başla.',
       );
       return;
-    }
-
-    if (isTutorialBypass) {
-      await subscriptionProvider.useTutorialSample();
-      await tutorialProvider.completeStep(TutorialStep.aiPreview);
     }
 
     final text = _assistantController.text.trim();
@@ -142,19 +131,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final wardrobeProvider = Provider.of<WardrobeProvider>(context);
     final items = wardrobeProvider.items;
     final count = items.length;
-
-    // ─── TUTORIAL TRIGGERS ───
-    final tutorialProvider =
-        Provider.of<TutorialProvider>(context, listen: false);
-    if (tutorialProvider.isInitialized && tutorialProvider.isActive) {
-      if (tutorialProvider.currentStep == TutorialStep.uploading &&
-          count >= 5) {
-        // Use a postframe callback to avoid updating state during build
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          tutorialProvider.setStep(TutorialStep.reached5Items);
-        });
-      }
-    }
 
     final subtitle = count == 0
         ? 'Kıyafet dolabınızı yapay zeka ile yönetin'

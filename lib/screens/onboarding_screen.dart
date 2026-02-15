@@ -15,37 +15,16 @@ class OnboardingScreen extends StatefulWidget {
   State<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen>
-    with TickerProviderStateMixin {
+class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
   static const int _totalPages = 4;
   static const _prefsKey = 'onboarding_completed';
 
-  late AnimationController _fadeController;
-  late Animation<double> _fadeAnim;
-  late Animation<Offset> _slideAnim;
-
   @override
   void initState() {
     super.initState();
-    _fadeController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 800),
-    );
-    _fadeAnim = CurvedAnimation(
-      parent: _fadeController,
-      curve: Curves.easeOut,
-    );
-    _slideAnim = Tween<Offset>(
-      begin: const Offset(0, 0.06),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _fadeController,
-      curve: Curves.easeOutCubic,
-    ));
-    _fadeController.forward();
   }
 
   Future<void> _completeOnboarding() async {
@@ -59,12 +38,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
   void _onPageChanged(int index) {
     setState(() => _currentPage = index);
-    _fadeController.forward(from: 0);
   }
 
   @override
   void dispose() {
-    _fadeController.dispose();
     _pageController.dispose();
     super.dispose();
   }
@@ -131,8 +108,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 onPageChanged: _onPageChanged,
                 children: [
                   _EditorialSlide(
-                    fadeAnim: _fadeAnim,
-                    slideAnim: _slideAnim,
+                    active: _currentPage == 0,
                     number: '01',
                     title: 'KIYAFET\nYÜKLE',
                     subtitle:
@@ -140,8 +116,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     demo: _UploadDemoWidget(active: _currentPage == 0),
                   ),
                   _EditorialSlide(
-                    fadeAnim: _fadeAnim,
-                    slideAnim: _slideAnim,
+                    active: _currentPage == 1,
                     number: '02',
                     title: 'DİJİTAL\nDOLABIN',
                     subtitle:
@@ -149,8 +124,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     demo: _WardrobeGridDemoWidget(active: _currentPage == 1),
                   ),
                   _EditorialSlide(
-                    fadeAnim: _fadeAnim,
-                    slideAnim: _slideAnim,
+                    active: _currentPage == 2,
                     number: '03',
                     title: 'AI\nSTİLİST',
                     subtitle:
@@ -158,8 +132,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     demo: _AIStylistDemoWidget(active: _currentPage == 2),
                   ),
                   _EditorialSlide(
-                    fadeAnim: _fadeAnim,
-                    slideAnim: _slideAnim,
+                    active: _currentPage == 3,
                     number: '04',
                     title: 'GARDROP\nANALİZİ',
                     subtitle:
@@ -218,29 +191,81 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 }
 
 // ─── Editorial Slide Layout ───
-class _EditorialSlide extends StatelessWidget {
+class _EditorialSlide extends StatefulWidget {
   const _EditorialSlide({
-    required this.fadeAnim,
-    required this.slideAnim,
+    required this.active,
     required this.number,
     required this.title,
     required this.subtitle,
     required this.demo,
   });
 
-  final Animation<double> fadeAnim;
-  final Animation<Offset> slideAnim;
+  final bool active;
   final String number;
   final String title;
   final String subtitle;
   final Widget demo;
 
   @override
+  State<_EditorialSlide> createState() => _EditorialSlideState();
+}
+
+class _EditorialSlideState extends State<_EditorialSlide>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _fadeController;
+  late Animation<double> _fadeAnim;
+  late Animation<Offset> _slideAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _fadeController = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 800));
+
+    _fadeAnim = CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeOut,
+    );
+
+    _slideAnim = Tween<Offset>(
+      begin: const Offset(0, 0.06),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeOutCubic,
+    ));
+
+    if (widget.active) {
+      _playAnimation();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _EditorialSlide oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.active && !oldWidget.active) {
+      _playAnimation();
+    }
+  }
+
+  Future<void> _playAnimation() async {
+    if (mounted && widget.active) {
+      _fadeController.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return FadeTransition(
-      opacity: fadeAnim,
+      opacity: _fadeAnim,
       child: SlideTransition(
-        position: slideAnim,
+        position: _slideAnim,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 32),
           child: Column(
@@ -249,7 +274,7 @@ class _EditorialSlide extends StatelessWidget {
               const SizedBox(height: 40),
               // Number
               Text(
-                number,
+                widget.number,
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w300,
@@ -267,7 +292,7 @@ class _EditorialSlide extends StatelessWidget {
               const SizedBox(height: 24),
               // Title — large editorial
               Text(
-                title,
+                widget.title,
                 style: const TextStyle(
                   fontSize: 38,
                   fontWeight: FontWeight.w300,
@@ -279,7 +304,7 @@ class _EditorialSlide extends StatelessWidget {
               const SizedBox(height: 20),
               // Subtitle
               Text(
-                subtitle,
+                widget.subtitle,
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w300,
@@ -292,7 +317,7 @@ class _EditorialSlide extends StatelessWidget {
               // Demo area
               SizedBox(
                 height: 200,
-                child: Center(child: demo),
+                child: Center(child: widget.demo),
               ),
               const Spacer(),
             ],
@@ -332,7 +357,14 @@ class _UploadDemoWidgetState extends State<_UploadDemoWidget>
   @override
   void didUpdateWidget(_UploadDemoWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.active && !_mainController.isAnimating) {
+    if (widget.active && !oldWidget.active) {
+      _startAnimation();
+    }
+  }
+
+  Future<void> _startAnimation() async {
+    await Future.delayed(const Duration(milliseconds: 400));
+    if (mounted && widget.active) {
       _mainController.forward(from: 0);
     }
   }
@@ -350,7 +382,7 @@ class _UploadDemoWidgetState extends State<_UploadDemoWidget>
         !_mainController.isAnimating &&
         _mainController.value == 0) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (widget.active && mounted) _mainController.forward(from: 0);
+        if (widget.active && mounted) _startAnimation();
       });
     }
     return AnimatedBuilder(
@@ -536,7 +568,14 @@ class _WardrobeGridDemoWidgetState extends State<_WardrobeGridDemoWidget>
   @override
   void didUpdateWidget(_WardrobeGridDemoWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.active && !_fadeController.isAnimating) {
+    if (widget.active && !oldWidget.active) {
+      _startAnimation();
+    }
+  }
+
+  Future<void> _startAnimation() async {
+    await Future.delayed(const Duration(milliseconds: 400));
+    if (mounted && widget.active) {
       _fadeController.forward(from: 0);
     }
   }
@@ -553,7 +592,7 @@ class _WardrobeGridDemoWidgetState extends State<_WardrobeGridDemoWidget>
         !_fadeController.isAnimating &&
         _fadeController.value == 0) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (widget.active && mounted) _fadeController.forward(from: 0);
+        if (widget.active && mounted) _startAnimation();
       });
     }
     return AnimatedBuilder(
@@ -633,7 +672,14 @@ class _AIStylistDemoWidgetState extends State<_AIStylistDemoWidget>
   @override
   void didUpdateWidget(_AIStylistDemoWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.active && !_controller.isAnimating) {
+    if (widget.active && !oldWidget.active) {
+      _startAnimation();
+    }
+  }
+
+  Future<void> _startAnimation() async {
+    await Future.delayed(const Duration(milliseconds: 400));
+    if (mounted && widget.active) {
       _controller.forward(from: 0);
     }
   }
@@ -648,7 +694,7 @@ class _AIStylistDemoWidgetState extends State<_AIStylistDemoWidget>
   Widget build(BuildContext context) {
     if (widget.active && !_controller.isAnimating && _controller.value == 0) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (widget.active && mounted) _controller.forward(from: 0);
+        if (widget.active && mounted) _startAnimation();
       });
     }
     return AnimatedBuilder(
@@ -799,7 +845,14 @@ class _AnalysisDemoWidgetState extends State<_AnalysisDemoWidget>
   @override
   void didUpdateWidget(_AnalysisDemoWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.active && !_controller.isAnimating) {
+    if (widget.active && !oldWidget.active) {
+      _startAnimation();
+    }
+  }
+
+  Future<void> _startAnimation() async {
+    await Future.delayed(const Duration(milliseconds: 400));
+    if (mounted && widget.active) {
       _controller.forward(from: 0);
     }
   }
@@ -814,7 +867,7 @@ class _AnalysisDemoWidgetState extends State<_AnalysisDemoWidget>
   Widget build(BuildContext context) {
     if (widget.active && !_controller.isAnimating && _controller.value == 0) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (widget.active && mounted) _controller.forward(from: 0);
+        if (widget.active && mounted) _startAnimation();
       });
     }
     return AnimatedBuilder(

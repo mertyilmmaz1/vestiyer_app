@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:vestiyer_nodejs/core/product/constants/firestore_collections.dart';
 import '../models/clothing.dart';
 import '../models/combination.dart';
@@ -16,8 +17,8 @@ class FirestoreService extends FirestoreServiceBase {
   // ---------- User profile ----------
 
   @override
-  Future<void> setUserProfile(String uid, String email, String firstName,
-      String lastName) async {
+  Future<void> setUserProfile(
+      String uid, String email, String firstName, String lastName) async {
     await _firestore.collection('users').doc(uid).set({
       'email': email,
       'firstName': firstName,
@@ -47,7 +48,8 @@ class FirestoreService extends FirestoreServiceBase {
   }
 
   @override
-  Future<void> updateUserProfile(String uid, Map<String, dynamic> updates) async {
+  Future<void> updateUserProfile(
+      String uid, Map<String, dynamic> updates) async {
     await _firestore.collection('users').doc(uid).update(updates);
   }
 
@@ -56,7 +58,8 @@ class FirestoreService extends FirestoreServiceBase {
       String uid, Map<String, dynamic> styleProfile) async {
     final payload = Map<String, dynamic>.from(styleProfile);
     if (payload['completedAt'] is DateTime) {
-      payload['completedAt'] = Timestamp.fromDate(payload['completedAt'] as DateTime);
+      payload['completedAt'] =
+          Timestamp.fromDate(payload['completedAt'] as DateTime);
     }
     await _firestore.collection('users').doc(uid).set({
       'styleProfile': payload,
@@ -67,7 +70,8 @@ class FirestoreService extends FirestoreServiceBase {
   // ---------- Clothing ----------
 
   @override
-  Future<Clothing?> addClothing(String userId, Map<String, dynamic> data) async {
+  Future<Clothing?> addClothing(
+      String userId, Map<String, dynamic> data) async {
     data['createdAt'] = FieldValue.serverTimestamp();
     data['updatedAt'] = FieldValue.serverTimestamp();
     final ref = await _firestore
@@ -129,31 +133,49 @@ class FirestoreService extends FirestoreServiceBase {
         .orderBy('createdAt', descending: true);
 
     final snapshot = await q.get();
+    debugPrint(
+        '[FirestoreService] getAllClothing fetched ${snapshot.docs.length} docs for user $userId');
+
     final list = <Clothing>[];
     for (final doc in snapshot.docs) {
       final data = Map<String, dynamic>.from(doc.data());
       data['_id'] = doc.id;
       data['userId'] = userId;
       _convertTimestamps(data, ['createdAt', 'updatedAt']);
-      final item = Clothing.fromJson(data);
-      if (season != null &&
-          season != 'all' &&
-          item.advancedAnalysis?.season?.toLowerCase() != season.toLowerCase() &&
-          item.advancedAnalysis?.season?.toLowerCase() != 'all-season') {
-        continue;
+
+      try {
+        final item = Clothing.fromJson(data);
+
+        bool include = true;
+        if (season != null &&
+            season != 'all' &&
+            item.advancedAnalysis?.season?.toLowerCase() !=
+                season.toLowerCase() &&
+            item.advancedAnalysis?.season?.toLowerCase() != 'all-season') {
+          include = false;
+        }
+        if (category != null &&
+            category != 'all' &&
+            item.category.toLowerCase() != category.toLowerCase()) {
+          include = false;
+        }
+        if (style != null &&
+            style != 'all' &&
+            item.advancedAnalysis?.style?.toLowerCase() !=
+                style.toLowerCase()) {
+          include = false;
+        }
+
+        if (include) {
+          list.add(item);
+        }
+      } catch (e) {
+        debugPrint(
+            '[FirestoreService] Error parsing clothing item ${doc.id}: $e');
       }
-      if (category != null &&
-          category != 'all' &&
-          item.category.toLowerCase() != category.toLowerCase()) {
-        continue;
-      }
-      if (style != null &&
-          style != 'all' &&
-          item.advancedAnalysis?.style?.toLowerCase() != style.toLowerCase()) {
-        continue;
-      }
-      list.add(item);
     }
+    debugPrint(
+        '[FirestoreService] getAllClothing returning ${list.length} items after filtering');
     return list;
   }
 
@@ -220,8 +242,7 @@ class FirestoreService extends FirestoreServiceBase {
       for (var i = 0; i < (out['clothingItems'] as List).length; i++) {
         final item = (out['clothingItems'] as List)[i];
         if (item is Map) {
-          (out['clothingItems'] as List)[i] =
-              Map<String, dynamic>.from(item);
+          (out['clothingItems'] as List)[i] = Map<String, dynamic>.from(item);
         }
       }
     }
@@ -425,8 +446,7 @@ class FirestoreService extends FirestoreServiceBase {
     return data;
   }
 
-  void _convertTimestamps(
-      Map<String, dynamic> data, List<String> keys) {
+  void _convertTimestamps(Map<String, dynamic> data, List<String> keys) {
     for (final k in keys) {
       if (data[k] == null) continue;
       final v = data[k];

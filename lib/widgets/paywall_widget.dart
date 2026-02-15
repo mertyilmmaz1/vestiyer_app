@@ -38,7 +38,7 @@ class PaywallWidget extends StatelessWidget {
 
     if (!context.mounted) return;
     final navigator = Navigator.of(context);
-    final barrierDismissible = type == PaywallType.featureGated;
+    final barrierDismissible = true; // Hep kapatılabilir olmalı
 
     await showModalBottomSheet<void>(
       context: context,
