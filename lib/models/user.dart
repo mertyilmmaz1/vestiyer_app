@@ -30,8 +30,8 @@ class User {
     return User(
       id: json['_id'] ?? json['id'] ?? '',
       email: json['email'] ?? '',
-      firstName: json['firstName'],
-      lastName: json['lastName'],
+      firstName: json['firstName'] ?? '',
+      lastName: json['lastName'] ?? '',
       profileImage: json['profileImage'],
       createdAt: User._dateFromJson(json['createdAt']),
       lastLogin: json['lastLogin'] != null

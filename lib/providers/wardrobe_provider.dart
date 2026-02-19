@@ -8,6 +8,7 @@ import '../models/clothing.dart';
 import '../services/cloud_functions_service.dart';
 import '../services/firestore_service_base.dart';
 import '../services/firebase_storage_service.dart';
+import '../services/local_segmentation_service.dart';
 import '../services/vestiyer_api_service.dart';
 
 class WardrobeProvider with ChangeNotifier {
@@ -23,6 +24,8 @@ class WardrobeProvider with ChangeNotifier {
       this._firestore, this._storage, this._functions, this._apiService);
 
   final VestiyerApiService _apiService;
+  final LocalSegmentationService _localSegmentation =
+      LocalSegmentationService();
 
   List<Clothing> get items => List.unmodifiable(_items);
   bool get isLoading => _isLoading;
@@ -62,7 +65,7 @@ class WardrobeProvider with ChangeNotifier {
     }
   }
 
-  Future<void> addClothingItem(File imageFile, {String? title}) async {
+  Future<Clothing?> addClothingItem(File imageFile, {String? title}) async {
     if (_currentUserId == null) {
       throw Exception('Kullanıcı girişi yapılmamış');
     }
@@ -73,70 +76,97 @@ class WardrobeProvider with ChangeNotifier {
 
       final compressedImage = await _compressImage(imageFile);
 
-      // 1. Upload original image
-      final originalImageUrl = await _storage.uploadClothingImage(
+      String? originalImageUrl;
+      String finalAnalysisUrl;
+      String? segmentedImageUrl;
+      String segmentationSource = 'none';
+
+      // 1) Try on-device segmentation first
+      try {
+        final localSegmentedBytes = await _localSegmentation
+            .segmentFromBytes(await compressedImage.readAsBytes());
+        if (localSegmentedBytes != null) {
+          final localFilename =
+              'segmented_local_${DateTime.now().millisecondsSinceEpoch}.png';
+          segmentedImageUrl = await _storage.uploadClothingImageBytes(
+            _currentUserId!,
+            localSegmentedBytes,
+            localFilename,
+          );
+          finalAnalysisUrl = segmentedImageUrl;
+          segmentationSource = 'local';
+          debugPrint(
+              'Local segmentation successful. Analysis will use: $finalAnalysisUrl');
+        } else {
+          debugPrint(
+              'Local segmentation returned null. Falling back to VPS segmentation.');
+          finalAnalysisUrl = '';
+        }
+      } catch (e) {
+        debugPrint(
+            'Local segmentation failed: $e. Falling back to VPS segmentation.');
+        finalAnalysisUrl = '';
+      }
+
+      // 2) Upload original image (always keep a source image)
+      originalImageUrl = await _storage.uploadClothingImage(
         _currentUserId!,
         compressedImage,
       );
 
-      // 2. Segment image via VPS
-      String finalAnalysisUrl = originalImageUrl;
-      String? segmentedImageUrl;
-
-      try {
-        final segmentedBytes = await _apiService.segmentImage(originalImageUrl);
-        if (segmentedBytes != null) {
-          final filename =
-              'segmented_${DateTime.now().millisecondsSinceEpoch}.png';
-          segmentedImageUrl = await _storage.uploadClothingImageBytes(
-            _currentUserId!,
-            segmentedBytes,
-            filename,
-          );
-          finalAnalysisUrl = segmentedImageUrl;
+      // 3) If local failed, try VPS segmentation
+      if (segmentedImageUrl == null) {
+        finalAnalysisUrl = originalImageUrl;
+        try {
+          final segmentedBytes =
+              await _apiService.segmentImage(originalImageUrl);
+          if (segmentedBytes != null) {
+            final filename =
+                'segmented_vps_${DateTime.now().millisecondsSinceEpoch}.png';
+            segmentedImageUrl = await _storage.uploadClothingImageBytes(
+              _currentUserId!,
+              segmentedBytes,
+              filename,
+            );
+            finalAnalysisUrl = segmentedImageUrl;
+            segmentationSource = 'vps';
+            debugPrint(
+                'VPS segmentation successful. Analysis will use: $finalAnalysisUrl');
+          } else {
+            debugPrint(
+                'VPS segmentation returned null. Falling back to original image.');
+          }
+        } catch (e) {
           debugPrint(
-              'VPS Segmentation successful. Analysis will use: $finalAnalysisUrl');
-        } else {
-          debugPrint(
-              'VPS Segmentation returned null. Falling back to original image.');
+              'VPS segmentation failed: $e. Falling back to original image.');
         }
-      } catch (e) {
-        debugPrint(
-            'VPS Segmentation failed: $e. Falling back to original image.');
+      }
+
+      if (segmentedImageUrl == null) {
+        finalAnalysisUrl = originalImageUrl;
       }
 
       await compressedImage.delete();
 
-      // 3. Analyze clothing using the (hopefully) segmented image
+      // 4) Analyze clothing without server-side segmentation (prevents duplicate work)
       final result = await _functions.analyzeClothing(
         _currentUserId!,
-        finalAnalysisUrl, // Use segmented image for analysis
+        finalAnalysisUrl,
         title: title,
+        skipServerSegmentation: true,
+        segmentationApplied: segmentedImageUrl != null,
       );
 
       final clothingId = result['clothingId'] as String?;
       final lowConfidence = result['lowConfidence'] as bool? ?? false;
 
       if (clothingId != null) {
-        // 4. Update the clothing item with original image URL if we have a segmented one
-        // Because the analysis function probably saved finalAnalysisUrl as main imageUrl
-        // We want to keep track of the original too if possible,
-        // OR just rely on the segmented one being the main one.
-        // If we have a segmented image, we might want to update the document
-        // to set 'segmentedImageUrl' or ensure 'imageUrl' is the segmented one.
-
-        // Let's ensure the document has the correct structure
-        Map<String, dynamic> updates = {};
-        if (segmentedImageUrl != null) {
-          // If we successfully segmented, the 'imageUrl' in Firestore is already 'segmentedImageUrl'
-          // because we passed it to analyzeClothing.
-          // We might want to store originalImageUrl somewhere?
-          // Existing Clothing model has 'imagePath'.
-          // Let's store the original URL in a field if we want to keep it.
-          // For now, let's just make sure segmentedImageUrl is set correctly in our model
-          updates['segmentedImageUrl'] = segmentedImageUrl;
-          updates['originalImageUrl'] = originalImageUrl; // Saving specifically
-        }
+        Map<String, dynamic> updates = {
+          'originalImageUrl': originalImageUrl,
+          'segmentationSource': segmentationSource,
+          'segmentationSkipped': segmentedImageUrl == null,
+          if (segmentedImageUrl != null) 'segmentedImageUrl': segmentedImageUrl,
+        };
 
         if (updates.isNotEmpty) {
           await _firestore.updateClothing(_currentUserId!, clothingId, updates);
@@ -154,8 +184,10 @@ class WardrobeProvider with ChangeNotifier {
             if (lowConfidence) 'lowConfidence': true,
           };
           notifyListeners();
+          return clothing;
         }
       }
+      return null;
     } catch (e) {
       debugPrint('HATA - Kıyafet eklenirken hata oluştu: $e');
       rethrow;
@@ -298,5 +330,34 @@ Sezon: ${item.advancedAnalysis?.season ?? 'Belirtilmemiş'}
 Detaylar: ${item.advancedAnalysis?.details ?? 'Belirtilmemiş'}
 -------------------''';
     }).join('\n\n');
+  }
+
+  /// Returns a structured summary of the wardrobe for AI analysis.
+  Map<String, dynamic> getWardrobeSummary() {
+    return {
+      'totalItems': _items.length,
+      'categories': getCategoryStats(),
+      'seasons': getSeasonStats(),
+      'styles': _items.fold<Map<String, int>>({}, (stats, item) {
+        String style = item.advancedAnalysis?.style ?? 'unknown';
+        stats[style] = (stats[style] ?? 0) + 1;
+        return stats;
+      }),
+      'colors': _items.fold<Map<String, int>>({}, (stats, item) {
+        for (var color in item.colors) {
+          stats[color] = (stats[color] ?? 0) + 1;
+        }
+        return stats;
+      }),
+      'items': _items
+          .map((item) => {
+                'id': item.id,
+                'category': item.category,
+                'style': item.advancedAnalysis?.style,
+                'season': item.advancedAnalysis?.season,
+                'colors': item.colors,
+              })
+          .toList(),
+    };
   }
 }

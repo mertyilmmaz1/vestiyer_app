@@ -12,22 +12,73 @@ const {
   PATTERN_VALUES
 } = require('./categoryTaxonomy');
 
+
+
+const SHOPPING_SUGGESTIONS_SCHEMA = {
+  type: 'object',
+  properties: {
+    missingEssensials: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          item: { type: 'string', description: 'Eksik olan temel parça (örn: Beyaz Blazer)' },
+          reason: { type: 'string', description: 'Neden bu parçaya ihtiyaç var?' },
+          compatibility: { type: 'string', description: 'Mevcut hangi parçalarla uyumlu?' }
+        },
+        required: ['item', 'reason', 'compatibility'],
+        additionalProperties: false
+      },
+      description: 'Dolapta eksik olan ve kombinleri tamamlayacak temel parçalar.'
+    },
+    complementarySuggestions: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          item: { type: 'string', description: 'Mevcut bir parçayı tamamlayacak yeni bir öneri' },
+          completes: { type: 'string', description: 'Dolaptaki hangi parçayı tamamlıyor?' },
+          styleTip: { type: 'string', description: 'Stil tüyosu' }
+        },
+        required: ['item', 'completes', 'styleTip'],
+        additionalProperties: false
+      },
+      description: 'Mevcut parçaların potansiyelini artıracak tamamlayıcı öneriler.'
+    },
+    seasonalEssentials: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          item: { type: 'string', description: 'Mevsimlik temel parça' },
+          reason: { type: 'string', description: 'Bu mevsim için neden önemli?' }
+        },
+        required: ['item', 'reason'],
+        additionalProperties: false
+      },
+      description: 'Mevcut mevsime özel mutlaka olması gereken parçalar.'
+    }
+  },
+  required: ['missingEssensials', 'complementarySuggestions', 'seasonalEssentials'],
+  additionalProperties: false
+};
+
 const STEP1_SCHEMA = {
   type: 'object',
   properties: {
     mainGroup: {
       type: 'string',
       enum: MAIN_GROUPS,
-      description: 'Ana grup'
+      description: 'Ana grup. ' + MAIN_GROUPS.join(', ') + ' arasından seç.'
     },
     category: {
       type: 'string',
-      description: 'Kategori'
+      description: 'Kategori. Ana grup ile uyumlu olmalı.'
     },
     material: {
       type: 'string',
       enum: MATERIALS,
-      description: 'Materyal'
+      description: 'Materyal. ' + MATERIALS.join(', ') + ' arasından seç.'
     },
     pattern: {
       type: 'string',
@@ -39,12 +90,21 @@ const STEP1_SCHEMA = {
       enum: FIT_VALUES,
       description: 'Fit'
     },
+    colors: {
+      type: 'array',
+      items: { type: 'string' },
+      description: 'Kıyafetin baskın renkleri (max 3). Türkçe renk isimleri kullan (örn: Lacivert, Kiremit, Haki, Bej).'
+    },
+    mainColorHex: {
+      type: 'string',
+      description: 'Ana rengin yaklaşık HEX kodu (örn: #000080).'
+    },
     confidence: {
       type: 'number',
       description: 'Güven skoru 0-1'
     }
   },
-  required: ['mainGroup', 'category', 'material', 'pattern', 'fit', 'confidence'],
+  required: ['mainGroup', 'category', 'material', 'pattern', 'fit', 'colors', 'mainColorHex', 'confidence'],
   additionalProperties: false
 };
 
@@ -54,38 +114,52 @@ const STEP2_SCHEMA = {
     style: {
       type: 'array',
       items: { type: 'string' },
-      description: 'Stil listesi'
+      description: 'Stil listesi. (casual, formal, spor, klasik, vintage, minimal, sokak_stili, business)'
     },
     season: {
       type: 'array',
       items: { type: 'string' },
-      description: 'Sezon listesi'
+      description: 'Sezon listesi. (ilkbahar, yaz, sonbahar, kis, tum_yil, mevsimsiz)'
     },
     details: {
       type: 'string',
-      description: 'Detaylar'
+      description: 'Kıyafetin detaylı açıklaması. Kullanıcıya gösterilecek şık ve açıklayıcı bir metin.'
     }
   },
   required: ['style', 'season', 'details'],
   additionalProperties: false
 };
 
-const STEP1_PROMPT = `Bu kıyafetin SADECE görsel özelliklerini analiz et.
-Kurallar:
-- Görsel arka plansız veya beyaz arka planlı kıyafet içerir. SADECE kıyafeti analiz et; arka plan, oda, yatak, duvar, aksesuar vb. yok say.
-- Tahmin yapma. Görünmeyen şeyi yazma.
-- mainGroup: ${MAIN_GROUPS.join(', ')} seç.
-- category: Ana grup içindeki detay kategori (örn: gomlek, tisort, pantolon, kot).
-- material: ${MATERIALS.join(', ')} seç.
-- pattern: ${PATTERN_VALUES.join(', ')} seç.
-- fit: ${FIT_VALUES.join(', ')} seç.
-- confidence: 0-1 arası güven skoru.`;
+const STEP1_PROMPT = `Bu kıyafetin 'Vestiyer' uygulaması için profesyonel analizini yap.
+Görseli incele ve aşağıdaki özelliklerini çıkar:
+1. **Ana Grup ve Kategori**: Listeden en uygun olanı seç.
+2. **Renkler**: En baskın rengi ve varsa 2 yan rengi belirle. Renk isimleri konusunda hassas ol (örn: sadece 'Mavi' deme, 'Saks Mavisi' veya 'Bebek Mavisi' gibi detay ver).
+3. **Materyal ve Desen**: Kumaş türünü ve desenini analiz et.
+4. **Fit**: Kıyafetin kesimini belirle.
 
-const STEP2_PROMPT = (step1Output) => `Aşağıdaki teknik özelliklere göre stil ve sezon çıkar.
-Teknik özellikler: ${JSON.stringify(step1Output)}
-style: casual, formal, spor, klasik, vintage, minimal vb. (array)
-season: ilkbahar, yaz, sonbahar, kis, tum_yil (array)
-details: Kısa detay açıklaması (1-2 cümle).`;
+Not: Sadece kıyafete odaklan, arka planı yok say.`;
+
+const STEP2_PROMPT = (step1Output) => `Bu kıyafetin teknik özellikleri: ${JSON.stringify(step1Output)}
+
+Bu özelliklere dayanarak:
+1. **Stil**: Hangi tarza uygun? (örn: Casual, Business, Streetwear)
+2. **Sezon**: Hangi mevsimlerde giyilir?
+3. **Detaylar**: Kullanıcıya hitap eden, kıyafeti öven ve kombin tüyosu içeren kısa ama etkili bir açıklama yaz (1-2 cümle, kısa ve net).
+Kurallar:
+- Genel ve tekrar eden kalıp cümlelerden kaçın (örn: sürekli "X tarzına uygun").
+- Somut anlat: parça tipi + renk + materyal/fit bilgisini kullan.
+- En az bir pratik eşleştirme önerisi ver (ör: hangi alt/ayakkabı ile iyi gider).`;
+
+const SHOPPING_SUGGESTIONS_SYSTEM = `Sen profesyonel bir stilist ve gardırop danışmanısın. 
+Kullanıcının gardırop özetini ve stil tercihlerini analiz ederek, dolabındaki eksiklikleri tespit et ve alışveriş önerileri sun.
+
+ÖNERİ KURALLARI:
+1. Kullanıcının mevcut parçalarını 'çöpe at' veya 'değiştir' deme. Tam tersine, mevcut parçaların değerini artıracak önerilerde bulun.
+2. 'Eksik Temel Parçalar' kısmında, her dolapta olması gereken ve kombin yapmayı kolaylaştıracak ürünleri öner.
+3. 'Tamamlayıcı Öneriler' kısmında, kullanıcının dolabındaki spesifik bir parçayı (örn: 'Lacivert Kot Pantolon') baz alarak onu neyle daha şık hale getirebileceğini söyle.
+4. 'Mevsimlik Temel Parçalar' kısmında, güncel mevsime (varsa) veya genel mevsime göre öneri ver.
+5. Kullanıcıya ürün linki veya fiyat verme, sadece ürün türü ve stil tüyosu ver.
+6. Dil: Türkçe. Üslup: Profesyonel, zarif ve heveslendirici.`;
 
 function getCombinationName(n) {
   const names = { 1: 'Günlük Kombin', 2: 'İş Kombini', 3: 'Özel Kombin' };
@@ -104,6 +178,7 @@ function mapUsageToOccasion(usage) {
 }
 
 async function analyzeClothingFromUrl(openai, imageUrl, backendColors = null) {
+  // Step 1: Visual Analysis & Categorization
   const response1 = await openai.chat.completions.create({
     model: 'gpt-4o',
     messages: [
@@ -131,9 +206,10 @@ async function analyzeClothingFromUrl(openai, imageUrl, backendColors = null) {
   try {
     step1 = JSON.parse(step1Content);
   } catch (e) {
-    throw new Error('Analiz yanıtı işlenemedi.');
+    throw new Error('Analiz (Adım 1) yanıtı işlenemedi.');
   }
 
+  // Step 2: Styling & Description
   const response2 = await openai.chat.completions.create({
     model: 'gpt-4o',
     messages: [
@@ -161,6 +237,7 @@ async function analyzeClothingFromUrl(openai, imageUrl, backendColors = null) {
     step2 = { style: ['casual'], season: ['tum_yil'], details: '' };
   }
 
+  // Normalization
   const mainGroup = normalizeMainGroup(step1.mainGroup);
   const category = normalizeCategory(mainGroup, step1.category);
   const material = normalizeMaterial(step1.material);
@@ -168,11 +245,28 @@ async function analyzeClothingFromUrl(openai, imageUrl, backendColors = null) {
   const fit = normalizeFit(step1.fit);
   const confidence = Math.max(0, Math.min(1, Number(step1.confidence) || 0.8));
 
-  const colorsWithDominance = backendColors && backendColors.length > 0
-    ? backendColors
-    : [{ name: 'belirsiz', dominance: 1 }];
+  // Color selection: Prefer AI detected colors, fallback to backend (k-means) if explicit match needed,
+  // but AI is generally better at naming.
+  let colors = [];
+  let colorsWithDominance = [];
 
-  const colors = colorsWithDominance.map(c => c.name);
+  if (step1.colors && step1.colors.length > 0) {
+    colors = step1.colors;
+    // Mock dominance for AI colors since GPT doesn't return percentages easily in this schema
+    colorsWithDominance = colors.map((c, i) => ({
+      name: c,
+      dominance: i === 0 ? 0.7 : 0.15, // Dummy values
+      hex: i === 0 ? (step1.mainColorHex || null) : null
+    }));
+  } else if (backendColors && backendColors.length > 0) {
+    // Fallback to k-means
+    colorsWithDominance = backendColors;
+    colors = backendColors.map(c => c.name);
+  } else {
+    colors = ['Belirsiz'];
+    colorsWithDominance = [{ name: 'belirsiz', dominance: 1 }];
+  }
+
   const colorStr = colors.join(', ');
 
   const style = Array.isArray(step2.style) ? step2.style : ['casual'];
@@ -195,13 +289,13 @@ async function analyzeClothingFromUrl(openai, imageUrl, backendColors = null) {
       detaylar: details
     },
     category: firestoreCategory,
-    colors,
+    colors, // Array<String>
     colorsWithDominance,
     confidence,
     advancedAnalysis: {
       mainGroup,
       category,
-      color: colorStr,
+      color: colorStr, // Primary color for backwards compatibility
       material,
       style: style.join(', '),
       season: season.join(', '),
@@ -252,8 +346,14 @@ const COMBINATION_SYSTEM = `Sen bir profesyonel stilistsin. Kullanıcının gard
 - Aynı kategoriden birden fazla kıyafet KULLANMA. Her kıyafeti SADECE BİR kombinde kullan (ID'ler tekrarlanmamalı).
 
 2. UYUM: Renk, stil, sezon ve materyal uyumuna dikkat et.
+3. AÇIKLAMA KALİTESİ:
+- Her kombin açıklaması en fazla 2 cümle olmalı.
+- Açıklama genel stil etiketi tekrarı yapmasın (örn: sürekli "bohem tarzına uygun").
+- Açıklama seçilen parçaları somut olarak anlatsın: parça tipi + renk + varsa materyal.
+- Açıklamada mutlaka "neden bu parçalar birlikte iyi çalışıyor" bilgisi yer alsın (siluet, kontrast, doku, denge vb.).
+- 3 kombinin açıklama cümle başlangıçları ve anlatım açısı birbirinden farklı olsun.
 
-3. ÇIKTI FORMATI (SADECE bu formatı kullan):
+4. ÇIKTI FORMATI (SADECE bu formatı kullan):
 KOMBİN 1:
 ID: [dış giyim ID - varsa]
 ID: [üst giyim ID]
@@ -264,7 +364,8 @@ KULLANIM: [Giyilebileceği ortamlar]
 TAMAMLAYICILAR: [Aksesuar önerileri]
 SEZON: [Uygun mevsim(ler)]
 
-Lütfen 3 FARKLI KOMBİN oluştur: Günlük (Casual), İş/Ofis (Formal), Spor veya Özel Durum.`;
+Lütfen mümkünse TAM 3 FARKLI KOMBİN oluştur: Günlük (Casual), İş/Ofis (Formal), Spor veya Özel Durum.
+Eğer parça sayısı yetmiyorsa yine en iyi alternatifleri üret ve eksikliği KULLANIM alanında kısaca belirt.`;
 
 function formatUserProfileForPrompt(userProfile) {
   if (!userProfile || typeof userProfile !== 'object') return '';
@@ -313,7 +414,15 @@ Detaylar: ${adv.details || 'Belirtilmemiş'}
       { role: 'system', content: COMBINATION_SYSTEM },
       {
         role: 'user',
-        content: `Mevcut Kıyafetlerim:\n${descriptions}${occasionHint}${profileHint ? '\n' + profileHint : ''}\n\nLütfen bu kıyafetlerle 3 FARKLI KOMBİN oluştur. Eğer bir kategoride yeterli kıyafet yoksa belirt ve mevcut parçalarla uygun kombinler oluştur.`
+        content: `Mevcut Kıyafetlerim:\n${descriptions}${occasionHint}${profileHint ? '\n' + profileHint : ''}
+
+Lütfen bu kıyafetlerle 3 FARKLI KOMBİN oluştur.
+Ek zorunlu kurallar:
+- AÇIKLAMA kısmı 2 cümleyi geçmesin.
+- "X tarzına uygun" gibi kalıp ifadeleri 3 kombinde tekrar etme.
+- Her açıklamada seçilen parçaları (renk + parça türü) belirt ve uyum nedenini anlat.
+- Üç açıklama birbirinden farklı yazılsın, aynı cümle şablonunu kopyalama.
+- Eğer bir kategoride yeterli kıyafet yoksa mevcut parçalarla en iyi alternatifi ver ve bunu KULLANIM satırında kısa belirt.`
       }
     ],
     temperature: 0.2,
@@ -530,7 +639,15 @@ async function selectAndDescribeCombinations(openai, candidates, occasion, userP
 
   const occasionHint = occasion ? ` Kullanıcı ${occasion} ortamı için kombin istiyor.` : '';
   const profileHint = formatUserProfileForPrompt(userProfile);
-  const systemContent = `Sen bir profesyonel stilistsin. Verilen kombin adaylarından en uyumlu olanları seç ve her biri için kısa açıklama yaz.${occasionHint}${profileHint ? ' ' + profileHint : ''}`;
+  const systemContent = `Sen bir profesyonel stilistsin. Verilen kombin adaylarından en uyumlu olanları seç ve her biri için kısa açıklama yaz.${occasionHint}${profileHint ? ' ' + profileHint : ''}
+Kurallar:
+- Mümkünse 3 kombin seç.
+- aciklama alanı en fazla 2 cümle olsun.
+- aciklama, "bohem tarzına uygun" benzeri kalıp tekrarları yapmasın.
+- aciklama içinde seçilen parçaları somut anlat (renk/parça) ve kombin mantığını belirt.
+- 3 kombinin anlatım dili birbirinden farklı olsun.`;
+
+  const targetCount = Math.min(3, candidates.length);
 
   const response = await openai.chat.completions.create({
     model: 'gpt-4o-mini',
@@ -541,7 +658,14 @@ async function selectAndDescribeCombinations(openai, candidates, occasion, userP
       },
       {
         role: 'user',
-        content: `Kombin adayları:\n${candidateDesc}\n\nHer aday için index (0'dan başlayarak), aciklama (max 2 cümle), kullanim, tamamlayicilar ve sezon döndür. En fazla ${Math.min(3, candidates.length)} kombin seç.`
+        content: `Kombin adayları:\n${candidateDesc}
+
+Her aday için index (0'dan başlayarak), aciklama (max 2 cümle), kullanim, tamamlayicilar ve sezon döndür.
+En fazla ${targetCount} kombin seç.
+aciklama yazım kuralları:
+- Genel stil etiketi tekrarı yapma.
+- Somut parça uyumu anlat (ör: beyaz gömlek + lacivert pantolon dengesi).
+- Her kombin açıklamasında farklı bir anlatım açısı kullan.`
       }
     ],
     response_format: {
@@ -563,7 +687,37 @@ async function selectAndDescribeCombinations(openai, candidates, occasion, userP
     parsed = { combinations: [] };
   }
 
-  const combinations = (parsed.combinations || []).slice(0, 3).map((desc, i) => {
+  const seenIndexes = new Set();
+  const normalized = [];
+  for (const desc of (parsed.combinations || [])) {
+    const idx = typeof desc.index === 'number' ? desc.index : -1;
+    if (idx < 0 || idx >= candidates.length || seenIndexes.has(idx)) continue;
+    seenIndexes.add(idx);
+    normalized.push(desc);
+    if (normalized.length >= targetCount) break;
+  }
+
+  // Fallback: model 3'ten az seçim döndürürse, kalan adaylardan tamamla.
+  if (normalized.length < targetCount) {
+    for (let idx = 0; idx < candidates.length && normalized.length < targetCount; idx++) {
+      if (seenIndexes.has(idx)) continue;
+      seenIndexes.add(idx);
+      const candidate = candidates[idx];
+      const partNames = (candidate.items || [])
+        .map((it) => it.title || it.category || 'parça')
+        .slice(0, 3)
+        .join(', ');
+      normalized.push({
+        index: idx,
+        aciklama: `${partNames} birlikte dengeli bir görünüm oluşturur. Parça oranları ve renk geçişleri kombini tutarlı hale getirir.`,
+        kullanim: occasion || 'Günlük kullanım',
+        tamamlayicilar: 'Minimal takı veya sade çanta',
+        sezon: 'all-season'
+      });
+    }
+  }
+
+  const combinations = normalized.map((desc, i) => {
     const idx = typeof desc.index === 'number' ? desc.index : i;
     const candidate = candidates[idx];
     const items = candidate && candidate.items ? candidate.items.map(idField) : [];
@@ -624,12 +778,56 @@ Stil: ${adv.style || 'Belirtilmemiş'}`;
   };
 }
 
+async function getShoppingSuggestions(openai, wardrobeSummary, userProfile = null) {
+  const summaryStr = formatWardrobeSummaryForPrompt(wardrobeSummary);
+  const profileHint = formatUserProfileForPrompt(userProfile);
+
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
+    messages: [
+      { role: 'system', content: SHOPPING_SUGGESTIONS_SYSTEM },
+      {
+        role: 'user',
+        content: `İşte kullanıcının gardırop özeti: ${summaryStr}\n${profileHint}\n\nLütfen bu verilere dayanarak alışveriş önerileri oluştur.`
+      }
+    ],
+    response_format: {
+      type: 'json_schema',
+      json_schema: {
+        name: 'shopping_suggestions',
+        strict: true,
+        schema: SHOPPING_SUGGESTIONS_SCHEMA
+      }
+    },
+    temperature: 0.5,
+    max_tokens: 1000
+  });
+
+  const content = response.choices[0].message.content;
+  let parsed;
+  try {
+    parsed = JSON.parse(content);
+  } catch (e) {
+    throw new Error('Alışveriş önerileri yanıtı işlenemedi.');
+  }
+
+  return {
+    success: true,
+    suggestions: parsed,
+    usage: {
+      prompt_tokens: response.usage?.prompt_tokens || 0,
+      completion_tokens: response.usage?.completion_tokens || 0
+    }
+  };
+}
+
 module.exports = {
   analyzeClothingFromUrl,
   generateCombinations,
   selectAndDescribeCombinations,
   generateStylingAdvice,
   getStyleAdvice,
+  getShoppingSuggestions, // Added
   detectChatIntent,
   mapMainGroupToCategory: mapMainGroupToFirestore,
   parseOutfits

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:vestiyer_nodejs/core/product/theme/app_colors.dart';
 import '../../widgets/vestiyer_page_header.dart';
 
@@ -21,76 +22,107 @@ class PrivacyPolicyScreen extends StatelessWidget {
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildSection(
-              'Giriş',
-              'Bu gizlilik politikası, Vestiyer uygulamasının kullanıcı verilerini nasıl topladığını, '
-                  'kullandığını ve koruduğunu açıklar. Uygulamamızı kullanarak bu politikayı kabul etmiş olursunuz.',
-            ),
-            _buildSection(
-              'Toplanan Veriler',
-              '• Hesap Bilgileri: E-posta adresi, ad ve soyad\n'
-                  '• Profil Bilgileri: Profil fotoğrafı, kullanıcı adı\n'
-                  '• Dolap İçeriği: Yüklenen ürün fotoğrafları ve açıklamaları\n'
-                  '• Kullanım Verileri: Uygulama içi aktiviteler, tercihler\n'
-                  '• Cihaz Bilgileri: İşletim sistemi, uygulama versiyonu',
-            ),
-            _buildSection(
-              'Veri Kullanımı',
-              'Topladığımız verileri aşağıdaki amaçlar için kullanırız:\n\n'
-                  '• Hesabınızı oluşturmak ve yönetmek\n'
-                  '• Uygulama özelliklerini sağlamak\n'
-                  '• Kullanıcı deneyimini iyileştirmek\n'
-                  '• Güvenliği sağlamak\n'
-                  '• Yasal yükümlülükleri yerine getirmek',
-            ),
-            _buildSection(
-              'Veri Güvenliği',
-              'Verilerinizi korumak için endüstri standardı güvenlik önlemleri kullanıyoruz. '
-                  'Veriler şifrelenerek saklanır ve düzenli olarak yedeklenir.',
-            ),
-            _buildSection(
-              'Üçüncü Taraf Hizmetleri',
-              'Uygulamamız aşağıdaki üçüncü taraf hizmetlerini kullanabilir:\n\n'
-                  '• Google Sign-In\n'
-                  '• Facebook Login\n'
-                  '• Apple Sign-In\n'
-                  '• Firebase Analytics\n'
-                  '• Cloud Firestore',
-            ),
-            _buildSection(
-              'Kullanıcı Hakları',
-              'Kullanıcılar şu haklara sahiptir:\n\n'
-                  '• Verilerine erişim\n'
-                  '• Veri düzeltme\n'
-                  '• Veri silme\n'
-                  '• Veri taşıma\n'
-                  '• İtiraz hakkı',
-            ),
-            _buildSection(
-              'İletişim',
-              'Gizlilik politikamızla ilgili sorularınız için support@vestiyer.com '
-                  'adresinden bizimle iletişime geçebilirsiniz.',
-            ),
-            _buildSection(
-              'Güncellemeler',
-              'Bu gizlilik politikası periyodik olarak güncellenebilir. Önemli değişiklikler '
-                  'olduğunda kullanıcılarımızı bilgilendireceğiz.',
-            ),
-            const SizedBox(height: 20),
-            Text(
-              'Son Güncelleme: ${DateTime.now().day}.${DateTime.now().month}.${DateTime.now().year}',
-              style: TextStyle(
-                color: AppColors.textPrimary.withValues(alpha: 0.5),
-                fontSize: 12,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildSection(
+                      'Giriş',
+                      'Bu gizlilik politikası, Vestiyer uygulamasının kullanıcı verilerini nasıl topladığını, '
+                          'kullandığını ve koruduğunu açıklar. Uygulamamızı kullanarak bu politikayı kabul etmiş olursunuz.',
+                    ),
+                    _buildSection(
+                      'Toplanan Veriler',
+                      '• Hesap Bilgileri: E-posta adresi, ad ve soyad\n'
+                          '• Profil Bilgileri: Profil fotoğrafı, kullanıcı adı\n'
+                          '• Dolap İçeriği: Yüklenen ürün fotoğrafları ve açıklamaları\n'
+                          '• Kullanım Verileri: Uygulama içi aktiviteler, tercihler\n'
+                          '• Cihaz Bilgileri: İşletim sistemi, uygulama versiyonu',
+                    ),
+                    _buildSection(
+                      'Veri Kullanımı',
+                      'Topladığımız verileri aşağıdaki amaçlar için kullanırız:\n\n'
+                          '• Hesabınızı oluşturmak ve yönetmek\n'
+                          '• Uygulama özelliklerini sağlamak\n'
+                          '• Kullanıcı deneyimini iyileştirmek\n'
+                          '• Güvenliği sağlamak\n'
+                          '• Yasal yükümlülükleri yerine getirmek',
+                    ),
+                    _buildSection(
+                      'Veri Güvenliği',
+                      'Verilerinizi korumak için endüstri standardı güvenlik önlemleri kullanıyoruz. '
+                          'Veriler şifrelenerek saklanır ve düzenli olarak yedeklenir.',
+                    ),
+                    _buildSection(
+                      'Üçüncü Taraf Hizmetleri',
+                      'Uygulamamız aşağıdaki üçüncü taraf hizmetlerini kullanabilir:\n\n'
+                          '• Google Sign-In\n'
+                          '• Facebook Login\n'
+                          '• Apple Sign-In\n'
+                          '• Firebase Analytics\n'
+                          '• Cloud Firestore',
+                    ),
+                    _buildSection(
+                      'Kullanıcı Hakları',
+                      'Kullanıcılar şu haklara sahiptir:\n\n'
+                          '• Verilerine erişim\n'
+                          '• Veri düzeltme\n'
+                          '• Veri silme\n'
+                          '• Veri taşıma\n'
+                          '• İtiraz hakkı',
+                    ),
+                    _buildSection(
+                      'İletişim',
+                      'Gizlilik politikamızla ilgili sorularınız için support@vestiyer.com '
+                          'adresinden bizimle iletişime geçebilirsiniz.',
+                    ),
+                    _buildSection(
+                      'Güncellemeler',
+                      'Bu gizlilik politikası periyodik olarak güncellenebilir. Önemli değişiklikler '
+                          'olduğunda kullanıcılarımızı bilgilendireceğiz.',
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      'Son Güncelleme: ${DateTime.now().day}.${DateTime.now().month}.${DateTime.now().year}',
+                      style: TextStyle(
+                        color: AppColors.textPrimary.withValues(alpha: 0.5),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ],
-        ),
-      ),
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    const url = 'https://vestiyerapp.com/privacy-policy';
+                    final uri = Uri.parse(url);
+                    if (await canLaunchUrl(uri)) {
+                      await launchUrl(uri,
+                          mode: LaunchMode.externalApplication);
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'Tarayıcıda Aç',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
               ),
+            ),
           ],
         ),
       ),

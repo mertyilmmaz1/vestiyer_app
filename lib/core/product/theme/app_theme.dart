@@ -79,6 +79,13 @@ class AppTheme {
           color: AppColors.border,
           thickness: 0.5,
         ),
+        snackBarTheme: SnackBarThemeData(
+          backgroundColor: AppColors.black,
+          contentTextStyle: AppTypography.body.copyWith(color: Colors.white),
+          shape: const RoundedRectangleBorder(),
+          behavior: SnackBarBehavior.floating,
+          elevation: 0,
+        ),
         textTheme: AppTypography.textTheme,
       );
 

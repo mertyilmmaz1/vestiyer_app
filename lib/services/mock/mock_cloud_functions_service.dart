@@ -3,7 +3,10 @@ import '../cloud_functions_service.dart';
 /// Mock Cloud Functions: returns fake data without calling Firebase.
 class MockCloudFunctionsService extends CloudFunctionsService {
   @override
-  Future<Map<String, dynamic>> analyzeClothing(String userId, String imageUrl, {String? title}) async {
+  Future<Map<String, dynamic>> analyzeClothing(String userId, String imageUrl,
+      {bool segmentationApplied = false,
+      bool skipServerSegmentation = false,
+      String? title}) async {
     await Future.delayed(const Duration(milliseconds: 500));
     return {
       'success': true,
@@ -41,18 +44,24 @@ class MockCloudFunctionsService extends CloudFunctionsService {
     await Future.delayed(const Duration(milliseconds: 400));
     return {
       'success': true,
-      'response': 'Mock stil önerisi: Bu kombinasyon günlük kullanım için uygundur.',
+      'response':
+          'Mock stil önerisi: Bu kombinasyon günlük kullanım için uygundur.',
     };
   }
 
   @override
-  Future<Map<String, dynamic>> managePremiumStatus(String userId, Map<String, dynamic> payload) async {
+  Future<Map<String, dynamic>> managePremiumStatus(
+      String userId, Map<String, dynamic> payload) async {
     return {'success': true};
   }
 
   @override
   Future<Map<String, dynamic>> checkSegmentServiceHealth() async {
     await Future.delayed(const Duration(milliseconds: 100));
-    return {'ok': false, 'configured': false, 'error': 'Mock modda VPS yapılandırılmadı'};
+    return {
+      'ok': false,
+      'configured': false,
+      'error': 'Mock modda VPS yapılandırılmadı'
+    };
   }
 }

@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vestiyer — Geleceğin Gardırop Deneyimi</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600&family=Outfit:wght@100;200;300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --background: #FFFFFF;
+            --soft-bg: #F8F8F8;
+            --black: #000000;
+            --grey-text: #666666;
+            --border: #e2e2e7;
+            --container: 1400px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--background);
+            color: var(--black);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        h1, h2, h3, h4, .logo {
+            font-family: 'Outfit', sans-serif;
+            word-spacing: -2px;
+        }
+
+        /* --- Components --- */
+        .container {
+            max-width: var(--container);
+            margin: 0 auto;
+            padding: 0 5%;
+        }
+
+        .label {
+            display: block;
+            font-size: 10px;
+            letter-spacing: 5px;
+            text-transform: uppercase;
+            color: var(--grey-text);
+            margin-bottom: 25px;
+            font-weight: 500;
+        }
+
+        .btn-black {
+            display: inline-block;
+            padding: 22px 60px;
+            background-color: var(--black);
+            color: white;
+            text-decoration: none;
+            font-size: 11px;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            font-weight: 600;
+            transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+        }
+
+        .btn-black:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+
+        /* --- Header --- */
+        header {
+            padding: 25px 0;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(30px) saturate(180%);
+            z-index: 2000;
+            border-bottom: 0.5px solid var(--border);
+        }
+
+        header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-weight: 500;
+            font-size: 18px;
+            letter-spacing: 8px;
+            text-transform: uppercase;
+            text-decoration: none;
+            color: var(--black);
+        }
+
+        nav a {
+            text-decoration: none;
+            color: var(--black);
+            font-size: 10px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-left: 40px;
+            font-weight: 500;
+        }
+
+        /* --- Hero --- */
+        .hero {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            background-color: #fff;
+            padding-top: 80px;
+        }
+
+        .hero-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 80px;
+            align-items: center;
+        }
+
+        .hero h1 {
+            font-size: clamp(45px, 10vw, 110px);
+            font-weight: 100;
+            letter-spacing: -6px;
+            line-height: 0.85;
+            margin-bottom: 40px;
+        }
+
+        .hero-desc {
+            font-size: 20px;
+            font-weight: 300;
+            color: var(--grey-text);
+            max-width: 550px;
+            margin-bottom: 50px;
+        }
+
+        .hero-image {
+            height: 80vh;
+            overflow: hidden;
+            border: 0.5px solid var(--border);
+        }
+
+        .hero-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            filter: grayscale(100%);
+        }
+
+        /* --- Application Journey --- */
+        section {
+            padding: 160px 0;
+        }
+
+        .journey-step {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 120px;
+            align-items: center;
+            margin-bottom: 160px;
+        }
+
+        .journey-step:last-child {
+            margin-bottom: 0;
+        }
+
+        .journey-image {
+            aspect-ratio: 4/5;
+            overflow: hidden;
+            border: 0.5px solid var(--border);
+        }
+
+        .journey-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .journey-text h2 {
+            font-size: 48px;
+            font-weight: 200;
+            letter-spacing: -2px;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+        }
+
+        .journey-text p {
+            font-size: 18px;
+            margin-bottom: 25px;
+            font-weight: 300;
+            color: var(--grey-text);
+        }
+
+        .feature-bullets {
+            list-style: none;
+            margin-top: 40px;
+        }
+
+        .feature-bullets li {
+            font-size: 14px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            font-weight: 500;
+        }
+
+        .feature-bullets li::before {
+            content: "";
+            width: 20px;
+            height: 1px;
+            background: var(--black);
+            margin-right: 20px;
+        }
+
+        /* --- Boutique Showroom Section --- */
+        .showroom {
+            background-color: var(--soft-bg);
+            text-align: center;
+            padding: 200px 0;
+        }
+
+        .showroom-content {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        /* --- Footer --- */
+        footer {
+            padding: 120px 0 60px;
+            background: #000;
+            color: #fff;
+        }
+
+        .footer-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            gap: 100px;
+        }
+
+        .footer-bottom {
+            margin-top: 100px;
+            padding-top: 40px;
+            border-top: 0.1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #555;
+        }
+
+        /* --- Responsive --- */
+        @media (max-width: 1000px) {
+            .hero-grid { grid-template-columns: 1fr; }
+            .hero-image { display: none; }
+            .journey-step { grid-template-columns: 1fr; gap: 60px; }
+            .journey-image { order: -1; }
+            .footer-grid { grid-template-columns: 1fr; gap: 50px; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <a href="/" class="logo">Vestiyer</a>
+            <nav>
+                <a href="#how">Yolculuk</a>
+                <a href="#stylist">AI Stilist</a>
+                <a href="mailto:destek@vestiyerapp.com">İletişim</a>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <!-- Hero -->
+        <section class="hero">
+            <div class="container">
+                <div class="hero-grid">
+                    <div class="hero-text">
+                        <span class="label">Dijital Stil Laboratuvarı</span>
+                        <h1>Modern Akış,<br>Kusursuz Stil</h1>
+                        <p class="hero-desc">Vestiyer, gardırobunuzu saniyeler içinde anlar ve size özel bir stüdyo deneyimi sunar. Taramadan kombine, her adımda teknoloji ve estetiğin uyumu.</p>
+                        <a href="#how" class="btn-black">Yolculuğu Başlat</a>
+                    </div>
+                    <div class="hero-image">
+                        <img src="/static/vestiyer_editorial.png" alt="Editorial View">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Journey Section -->
+        <section id="how">
+            <div class="container">
+                <span class="label">Uygulama Deneyimi</span>
+                
+                <!-- Step 1: Scanning -->
+                <div class="journey-step">
+                    <div class="journey-image">
+                        <img src="/static/fabric_detail.png" alt="Scanning Process">
+                    </div>
+                    <div class="journey-text">
+                        <span class="label">ADIM 01</span>
+                        <h2>Derin Tarama ve<br>Dijitalleşme</h2>
+                        <p>Vestiyer, kıyafetinizi bir fotoğraf karesinden ayırır. Gelişmiş "Enterprise Segment" teknolojimiz, arka planı temizleyerek parçanın sadece formuna ve dokusuna odaklanır.</p>
+                        <p>Yapay zeka, kumaşın türünü, rengini ve stil kimliğini milisaniyeler içinde teşhis eder ve dijital envanterinize işler.</p>
+                        <ul class="feature-bullets">
+                            <li>Milimetrik Kenar Algılama</li>
+                            <li>Doku ve Kumaş Tanımlama</li>
+                            <li>Otomatik Kategorizasyon</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Step 2: Analysis -->
+                <div class="journey-step" style="direction: rtl;">
+                    <div class="journey-image" style="direction: ltr;">
+                        <img src="/static/boutique_interior.png" alt="AI Analysis">
+                    </div>
+                    <div class="journey-text" style="direction: ltr;">
+                        <span class="label">ADIM 02</span>
+                        <h2>Stil DNA ve<br>Gardırop Analizi</h2>
+                        <p>Dijitalleşen parçalarınız bir envanterden fazlasıdır. Vestiyer, gardırobunuzdaki genel renk paletini, stil ağırlıklarını ve eksik parçaları analiz ederek size özel bir "Stil DNA'sı" oluşturur.</p>
+                        <p>Dolabınızdaki her parça bir veri noktasına dönüşür, böylece stilinizi bilinçli bir titizlikle inşa edebilirsiniz.</p>
+                        <ul class="feature-bullets">
+                            <li>Renk Teorisi Analizi</li>
+                            <li>Stil Ağırlık Dağılımı</li>
+                            <li>Smart Inventory Tracking</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Step 3: Styling -->
+                <div class="journey-step" id="stylist">
+                    <div class="journey-image">
+                        <img src="/static/hero.png" alt="Styling Advice">
+                    </div>
+                    <div class="journey-text">
+                        <span class="label">ADIM 03</span>
+                        <h2>Kişiselleştirilmiş<br>Akıllı Kombinler</h2>
+                        <p>AI Stilistiniz her sabah sizin için hazır. Hava durumunu, gideceğiniz yeri ve ruh halinizi birleştirerek dolabınızdaki en uyumlu parçaları bir araya getirir.</p>
+                        <p>Editoryal bir bakış açısıyla hazırlanan bu kombinler, sadece kıyafetleri değil, günün bağlamını da şıklığa dahil eder.</p>
+                        <ul class="feature-bullets">
+                            <li>Hava Durumu Entegrasyonu</li>
+                            <li>Bağlamsal (Ajanda) Öneriler</li>
+                            <li>Mood-Based Styling</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Boutique Philosophy -->
+        <section class="showroom">
+            <div class="container">
+                <div class="showroom-content">
+                    <span class="label">Boutique Experience</span>
+                    <h2>Her Dolap Bir Butik,<br>Her Kullanıcı Bir Küratör</h2>
+                    <p style="margin-top: 30px; font-size: 20px; font-weight: 200;">Vestiyer, teknolojiyi bir gürültü olarak değil, sessiz bir estetik güç olarak kullanır. Uygulama içerisindeki akış, bir butik mağazada geziniyormuşçasına rafine ve akıcıdır.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA -->
+        <section style="text-align: center; padding: 180px 0;">
+            <div class="container">
+                <h2 style="font-weight: 100;">Geleceğin Gardırobuna<br>Adım Atın</h2>
+                <a href="#" class="btn-black" style="margin-top: 40px;">Uygulamayı Keşfet</a>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-info">
+                    <div class="logo" style="margin-bottom: 40px;">Vestiyer</div>
+                    <p style="color: #666; font-weight: 300;">Modern insanın stil yolculuğunu dijital estetikle buluşturuyoruz. Sessiz lüks, gelişmiş teknoloji.</p>
+                </div>
+                <div class="footer-links">
+                    <h5 class="label" style="color: #444;">Hukuki</h5>
+                    <a href="/privacy-policy" style="display: block; color: #fff; text-decoration: none; margin-bottom: 15px; font-weight: 200;">Gizlilik Politikası</a>
+                    <a href="/terms-of-service" style="display: block; color: #fff; text-decoration: none; margin-bottom: 15px; font-weight: 200;">Kullanıcı Sözleşmesi</a>
+                </div>
+                <div class="footer-links">
+                    <h5 class="label" style="color: #444;">İletişim</h5>
+                    <a href="mailto:destek@vestiyerapp.com" style="display: block; color: #fff; text-decoration: none; margin-bottom: 15px; font-weight: 200;">destek@vestiyerapp.com</a>
+                    <a href="#" style="display: block; color: #fff; text-decoration: none; margin-bottom: 15px; font-weight: 200;">Instagram</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <div>&copy; 2026 VESTIYER. TÜM HAKLARI SAKLIDIR.</div>
+                <div>VESTIYER DESIGN & DEV LABS</div>
+            </div>
+        </div>
+    </footer>
+
+</body>
+</html>

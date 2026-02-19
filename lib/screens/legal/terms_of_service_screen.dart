@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:vestiyer_nodejs/core/product/theme/app_colors.dart';
 import '../../widgets/vestiyer_page_header.dart';
 
@@ -21,79 +22,110 @@ class TermsOfServiceScreen extends StatelessWidget {
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildSection(
-              'Kabul Edilen Şartlar',
-              'Bu kullanım şartları, Vestiyer uygulamasını kullanımınızı düzenler. '
-                  'Uygulamayı kullanarak bu şartları kabul etmiş olursunuz.',
-            ),
-            _buildSection(
-              'Hesap Oluşturma',
-              '• 18 yaşından büyük olmalısınız\n'
-                  '• Doğru ve güncel bilgiler sağlamalısınız\n'
-                  '• Hesap güvenliğinizden siz sorumlusunuz\n'
-                  '• Hesabınızı başkalarıyla paylaşmamalısınız',
-            ),
-            _buildSection(
-              'Kullanıcı Sorumlulukları',
-              'Aşağıdaki içeriklerin paylaşılması yasaktır:\n\n'
-                  '• Yasa dışı ürünler\n'
-                  '• Sahte ürünler\n'
-                  '• Uygunsuz içerik\n'
-                  '• Spam veya yanıltıcı içerik\n'
-                  '• Başkalarının haklarını ihlal eden içerik',
-            ),
-            _buildSection(
-              'Ürün Listeleme Kuralları',
-              '• Ürünler doğru kategoride listelenmelidir\n'
-                  '• Fotoğraflar ürünü net göstermelidir\n'
-                  '• Fiyatlar makul ve gerçekçi olmalıdır\n'
-                  '• Ürün açıklamaları doğru ve detaylı olmalıdır',
-            ),
-            _buildSection(
-              'Alım-Satım İşlemleri',
-              '• Tüm işlemler uygulama üzerinden yapılmalıdır\n'
-                  '• Uygulama dışı işlemlerden Vestiyer sorumlu değildir\n'
-                  '• Ödeme ve kargo süreçleri belirtilen şekilde yürütülmelidir\n'
-                  '• İade süreçleri belirlenen politikalara uygun olmalıdır',
-            ),
-            _buildSection(
-              'Fikri Mülkiyet',
-              'Vestiyer\'in tüm hakları saklıdır. Uygulama içeriği, logo ve tasarımlar '
-                  'izinsiz kullanılamaz ve kopyalanamaz.',
-            ),
-            _buildSection(
-              'Hesap Askıya Alma',
-              'Aşağıdaki durumlarda hesabınız askıya alınabilir:\n\n'
-                  '• Kullanım şartlarının ihlali\n'
-                  '• Sahte ürün satışı\n'
-                  '• Uygunsuz davranış\n'
-                  '• Dolandırıcılık',
-            ),
-            _buildSection(
-              'Sorumluluk Reddi',
-              'Vestiyer, kullanıcılar arasındaki işlemlerden doğan sorunlardan '
-                  'doğrudan sorumlu değildir. Ancak sorunların çözümü için destek sağlar.',
-            ),
-            _buildSection(
-              'Değişiklikler',
-              'Bu kullanım şartları periyodik olarak güncellenebilir. Değişiklikler '
-                  'hakkında kullanıcılar bilgilendirilecektir.',
-            ),
-            const SizedBox(height: 20),
-            Text(
-              'Son Güncelleme: ${DateTime.now().day}.${DateTime.now().month}.${DateTime.now().year}',
-              style: TextStyle(
-                color: AppColors.textPrimary.withValues(alpha: 0.5),
-                fontSize: 12,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildSection(
+                      'Kabul Edilen Şartlar',
+                      'Bu kullanım şartları, Vestiyer uygulamasını kullanımınızı düzenler. '
+                          'Uygulamayı kullanarak bu şartları kabul etmiş olursunuz.',
+                    ),
+                    _buildSection(
+                      'Hesap Oluşturma',
+                      '• 18 yaşından büyük olmalısınız\n'
+                          '• Doğru ve güncel bilgiler sağlamalısınız\n'
+                          '• Hesap güvenliğinizden siz sorumlusunuz\n'
+                          '• Hesabınızı başkalarıyla paylaşmamalısınız',
+                    ),
+                    _buildSection(
+                      'Kullanıcı Sorumlulukları',
+                      'Aşağıdaki içeriklerin paylaşılması yasaktır:\n\n'
+                          '• Yasa dışı ürünler\n'
+                          '• Sahte ürünler\n'
+                          '• Uygunsuz içerik\n'
+                          '• Spam veya yanıltıcı içerik\n'
+                          '• Başkalarının haklarını ihlal eden içerik',
+                    ),
+                    _buildSection(
+                      'Ürün Listeleme Kuralları',
+                      '• Ürünler doğru kategoride listelenmelidir\n'
+                          '• Fotoğraflar ürünü net göstermelidir\n'
+                          '• Fiyatlar makul ve gerçekçi olmalıdır\n'
+                          '• Ürün açıklamaları doğru ve detaylı olmalıdır',
+                    ),
+                    _buildSection(
+                      'Alım-Satım İşlemleri',
+                      '• Tüm işlemler uygulama üzerinden yapılmalıdır\n'
+                          '• Uygulama dışı işlemlerden Vestiyer sorumlu değildir\n'
+                          '• Ödeme ve kargo süreçleri belirtilen şekilde yürütülmelidir\n'
+                          '• İade süreçleri belirlenen politikalara uygun olmalıdır',
+                    ),
+                    _buildSection(
+                      'Fikri Mülkiyet',
+                      'Vestiyer\'in tüm hakları saklıdır. Uygulama içeriği, logo ve tasarımlar '
+                          'izinsiz kullanılamaz ve kopyalanamaz.',
+                    ),
+                    _buildSection(
+                      'Hesap Askıya Alma',
+                      'Aşağıdaki durumlarda hesabınız askıya alınabilir:\n\n'
+                          '• Kullanım şartlarının ihlali\n'
+                          '• Sahte ürün satışı\n'
+                          '• Uygunsuz davranış\n'
+                          '• Dolandırıcılık',
+                    ),
+                    _buildSection(
+                      'Sorumluluk Reddi',
+                      'Vestiyer, kullanıcılar arasındaki işlemlerden doğan sorunlardan '
+                          'doğrudan sorumlu değildir. Ancak sorunların çözümü için destek sağlar.',
+                    ),
+                    _buildSection(
+                      'Değişiklikler',
+                      'Bu kullanım şartları periyodik olarak güncellenebilir. Değişiklikler '
+                          'hakkında kullanıcılar bilgilendirilecektir.',
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      'Son Güncelleme: ${DateTime.now().day}.${DateTime.now().month}.${DateTime.now().year}',
+                      style: TextStyle(
+                        color: AppColors.textPrimary.withValues(alpha: 0.5),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ],
-        ),
-      ),
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    const url = 'https://vestiyerapp.com/terms-of-service';
+                    final uri = Uri.parse(url);
+                    if (await canLaunchUrl(uri)) {
+                      await launchUrl(uri,
+                          mode: LaunchMode.externalApplication);
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'Tarayıcıda Aç',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
               ),
+            ),
           ],
         ),
       ),

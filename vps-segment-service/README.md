@@ -56,7 +56,7 @@ sudo systemctl start segment-service
 - `GET /health` – Sağlık kontrolü (API key gerekmez). Response: `{ "status": "ok" }`
 - `POST /segment` – Body: `{ "imageUrl": "https://..." }` Header: `X-API-Key`
 
-Response: `{ "success": true, "imageBase64": "data:image/png;base64,..." }`
+Response: `image/png` (binary PNG bytes)
 
 ## VPS sağlık kontrolü
 

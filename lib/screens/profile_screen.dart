@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vestiyer_nodejs/core/product/navigation/editorial_page_route.dart';
@@ -11,6 +12,8 @@ import 'package:vestiyer_nodejs/core/product/theme/app_colors.dart';
 import 'package:vestiyer_nodejs/core/product/theme/app_typography.dart';
 import 'package:vestiyer_nodejs/core/product/widget/design/vestiyer_primary_button.dart';
 import 'package:vestiyer_nodejs/core/product/widget/design/vestiyer_text_field.dart';
+import 'package:vestiyer_nodejs/core/product/utils/scaffold_messenger_helper.dart';
+import 'package:vestiyer_nodejs/core/product/utils/error_message_helper.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:image/image.dart' as img;
 import 'package:path_provider/path_provider.dart';
@@ -42,6 +45,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final ImagePicker _imagePicker = ImagePicker();
   bool _isLoading = false;
   bool _isUploadingProfileImage = false;
+
+  bool get _canShowTestPremiumButton =>
+      kDebugMode ||
+      (Platform.isIOS &&
+          dotenv.env['SHOW_TEST_PREMIUM_BUTTON']?.toLowerCase() == 'true');
 
   @override
   void initState() {
@@ -95,9 +103,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Çıkış yapılırken hata oluştu: $e')),
-        );
+        ScaffoldMessenger.of(context)
+            .showError('Çıkış yapılırken hata oluştu: $e');
       }
     }
   }
@@ -147,9 +154,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final File file = File(picked.path);
       if (!await file.exists()) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Seçilen dosya bulunamadı')),
-          );
+          ScaffoldMessenger.of(context).showError('Seçilen dosya bulunamadı');
         }
         setState(() => _isUploadingProfileImage = false);
         return;
@@ -174,18 +179,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final updatedUser = await firestore.getUserProfile(uid);
       if (mounted && updatedUser != null) {
         subscriptionProvider.setCurrentUser(updatedUser);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Profil fotoğrafı güncellendi'),
-            backgroundColor: AppColors.primary,
-          ),
-        );
+        ScaffoldMessenger.of(context)
+            .showSuccess('Profil fotoğrafı güncellendi');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Profil fotoğrafı yüklenemedi: $e')),
-        );
+        ScaffoldMessenger.of(context)
+            .showError('Profil fotoğrafı yüklenemedi: $e');
       }
     } finally {
       if (mounted) setState(() => _isUploadingProfileImage = false);
@@ -256,19 +256,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         if (updatedUser != null) {
           context.read<SubscriptionProvider>().setCurrentUser(updatedUser);
         }
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Profil güncellendi'),
-            backgroundColor: AppColors.primary,
-          ),
-        );
+        ScaffoldMessenger.of(context).showSuccess('Profil güncellendi');
         Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Güncelleme başarısız: $e')),
-        );
+        ScaffoldMessenger.of(context).showError('Güncelleme başarısız: $e');
       }
     } finally {
       if (mounted) {
@@ -475,6 +468,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ),
                               ),
                             ],
+                            if (_canShowTestPremiumButton) ...[
+                              const SizedBox(height: 16),
+                              SizedBox(
+                                width: double.infinity,
+                                height: 44,
+                                child: OutlinedButton(
+                                  onPressed: _isLoading ? null : _togglePremium,
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: AppColors.primary,
+                                    side: const BorderSide(
+                                        color: AppColors.primary, width: 0.5),
+                                    shape: const RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.zero,
+                                    ),
+                                  ),
+                                  child: Consumer<SubscriptionProvider>(
+                                    builder: (context, sub, child) {
+                                      return Text(sub.isPremium
+                                          ? 'Premium\'u İptal Et (Test)'
+                                          : 'Premium Ol (Test)');
+                                    },
+                                  ),
+                                ),
+                              ),
+                            ],
                           ],
                         );
                       },
@@ -489,12 +507,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  Future<void> _togglePremium() async {
+    final subProvider = context.read<SubscriptionProvider>();
+    final user = subProvider.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showError('Önce giriş yapın');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      final firestore = context.read<FirestoreServiceBase>();
+      final newStatus = !subProvider.isPremium;
+
+      await firestore.updateUserProfile(user.id, {'isPremium': newStatus});
+
+      final updatedUser = await firestore.getUserProfile(user.id);
+      if (mounted && updatedUser != null) {
+        subProvider.setCurrentUser(updatedUser);
+        ScaffoldMessenger.of(context).showSuccess(
+          newStatus ? 'Premium mod aktif edildi' : 'Premium mod pasif edildi',
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showError('Hata: $e');
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   Future<void> _loadSampleData() async {
     final uid = context.read<SubscriptionProvider>().currentUser?.id ??
         context.read<WardrobeProvider>().currentUserId;
     if (uid == null) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Önce giriş yapın')));
+      ScaffoldMessenger.of(context).showError('Önce giriş yapın');
       return;
     }
     setState(() => _isLoading = true);
@@ -525,16 +573,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
       if (mounted) {
         context.read<WardrobeProvider>().loadClothingItems();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content:
-                  Text('${list.length} kıyafet ve örnek kombinler eklendi.')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSuccess('${list.length} kıyafet ve örnek kombinler eklendi.');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Hata: $e')));
+        ScaffoldMessenger.of(context).showError(
+          ErrorMessageHelper.getUserFriendlyMessage(e),
+        );
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);

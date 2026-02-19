@@ -12,6 +12,7 @@ import '../widgets/paywall_widget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'wardrobe_analysis_screen.dart';
 import 'assistant_chat_screen.dart';
+import '../models/clothing.dart';
 import '../widgets/home_page_header.dart';
 import '../widgets/assistant_card.dart';
 import '../widgets/circle_feature_grid.dart';
@@ -21,8 +22,10 @@ import '../constants/style_dna_constants.dart';
 import 'clothing_detail_screen.dart';
 import 'outfit_suggestions_screen.dart';
 import 'premium_screen.dart';
+import 'ai_stylist_screen.dart';
 import '../widgets/bouncing_widget.dart';
 import '../widgets/staggered_slide_fade.dart';
+import 'shopping_suggestions_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
@@ -124,6 +127,20 @@ class _HomeScreenState extends State<HomeScreen> {
     ));
   }
 
+  Future<void> _openShoppingSuggestions() async {
+    final subscriptionProvider = context.read<SubscriptionProvider>();
+    if (!subscriptionProvider.isPremium) {
+      await PaywallWidget.showPaywall(
+        context,
+        type: PaywallType.featureGated,
+        customMessage:
+            'ALIŞVERİŞ ÖNERİLERİ VE EKSİK PARÇA ANALİZİ İÇİN PREMİUM\'A GEÇİN.',
+      );
+      return;
+    }
+    _push(const ShoppingSuggestionsScreen());
+  }
+
   @override
   Widget build(BuildContext context) {
     final subscriptionProvider = Provider.of<SubscriptionProvider>(context);
@@ -131,6 +148,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final wardrobeProvider = Provider.of<WardrobeProvider>(context);
     final items = wardrobeProvider.items;
     final count = items.length;
+    final canShowDailyOutfitSuggestion = subscriptionProvider.isPremium &&
+        _hasEnoughClothesForDailyOutfit(items);
 
     final subtitle = count == 0
         ? 'Kıyafet dolabınızı yapay zeka ile yönetin'
@@ -158,10 +177,18 @@ class _HomeScreenState extends State<HomeScreen> {
                       _buildWardrobeCompletionCard(count, subscriptionProvider),
                 ),
 
+                if (canShowDailyOutfitSuggestion) ...[
+                  const SizedBox(height: AppSpacing.lg),
+                  StaggeredSlideFade(
+                    index: 2,
+                    child: _buildDailyOutfitSuggestionCard(),
+                  ),
+                ],
+
                 // ─── STİL ASİSTANI ───
                 const SizedBox(height: AppSpacing.lg),
                 StaggeredSlideFade(
-                  index: 2,
+                  index: 3,
                   child: AssistantCard(
                     showProBadge: subscriptionProvider.isPremium,
                     controller: _assistantController,
@@ -172,7 +199,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 // ─── ÖZELLİK GRID (Zara: kare ikonlar) ───
                 const SizedBox(height: AppSpacing.lg),
                 StaggeredSlideFade(
-                  index: 3,
+                  index: 4,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -180,6 +207,17 @@ class _HomeScreenState extends State<HomeScreen> {
                       const SizedBox(height: AppSpacing.lg),
                       CircleFeatureGrid(
                         items: [
+                          CircleFeatureItem(
+                            icon: HugeIcons.strokeRoundedMagicWand01,
+                            label: 'AI Stilist',
+                            onTap: () {
+                              if (widget.onSelectTab != null) {
+                                widget.onSelectTab!(2);
+                                return;
+                              }
+                              _push(const AIStylistScreen());
+                            },
+                          ),
                           CircleFeatureItem(
                             icon: HugeIcons.strokeRoundedAnalytics01,
                             label: 'Gardırop Analizi',
@@ -191,8 +229,24 @@ class _HomeScreenState extends State<HomeScreen> {
                             onTap: () => _push(const OutfitSuggestionsScreen()),
                           ),
                           CircleFeatureItem(
+                            icon: HugeIcons.strokeRoundedTask01,
+                            label: 'Stil Asistanı',
+                            onTap: _openAssistantChat,
+                          ),
+                          CircleFeatureItem(
+                            icon: HugeIcons.strokeRoundedImage01,
+                            label: 'Alışveriş Önerileri',
+                            onTap: _openShoppingSuggestions,
+                          ),
+                          CircleFeatureItem(
+                            icon: HugeIcons.strokeRoundedCamera01,
+                            label: 'Kıyafet Ekle',
+                            onTap: _openUpload,
+                          ),
+                          CircleFeatureItem(
                             icon: HugeIcons.strokeRoundedDiamond,
                             label: 'Premium',
+                            isHighlight: true,
                             onTap: () => _push(const PremiumScreen()),
                           ),
                         ],
@@ -203,14 +257,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
                 // ─── GİRİŞ KARTI ───
                 StaggeredSlideFade(
-                  index: 4,
+                  index: 5,
                   child: _buildIntroductionCard(context),
                 ),
 
                 // ─── GARDROP ŞERİDİ (Zara ürün grid stili) ───
                 const SizedBox(height: AppSpacing.lg),
                 StaggeredSlideFade(
-                  index: 5,
+                  index: 6,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -239,7 +293,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 // ─── İPUCU ───
                 const SizedBox(height: AppSpacing.lg),
                 StaggeredSlideFade(
-                  index: 6,
+                  index: 7,
                   child: _buildModernTipCard(context),
                 ),
 
@@ -342,7 +396,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
-              HugeIcon(
+              const HugeIcon(
                 icon: HugeIcons.strokeRoundedArrowRight01,
                 size: 16,
                 color: AppColors.textSecondary,
@@ -352,6 +406,122 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildDailyOutfitSuggestionCard() {
+    final theme = Theme.of(context);
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: const BoxDecoration(
+        color: AppColors.background,
+        border: Border(
+          top: BorderSide(color: AppColors.border, width: 0.5),
+          bottom: BorderSide(color: AppColors.border, width: 0.5),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'GÜNLÜK KOMBİN',
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: AppColors.textPrimary,
+              letterSpacing: 2.0,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Bugün için hazır kombin önerilerini tek dokunuşla al.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: AppColors.textSecondary,
+              height: 1.5,
+              fontWeight: FontWeight.w300,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: () {
+                if (widget.onSelectTab != null) {
+                  widget.onSelectTab!(2);
+                  return;
+                }
+                _push(const AIStylistScreen());
+              },
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.textPrimary,
+                side:
+                    const BorderSide(color: AppColors.textPrimary, width: 0.5),
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.zero,
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+              child: const Text(
+                'GÜNLÜK KOMBİN ÖNER',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w400,
+                  letterSpacing: 1.4,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  bool _hasEnoughClothesForDailyOutfit(List<Clothing> items) {
+    if (items.length < 3) return false;
+
+    bool hasTop = false;
+    bool hasBottom = false;
+    bool hasShoes = false;
+    bool hasDress = false;
+
+    for (final item in items) {
+      final category = item.category.toLowerCase().trim();
+      final mainGroup = (item.advancedAnalysis?.mainGroup ?? '')
+          .toLowerCase()
+          .replaceAll(' ', '_');
+
+      if (category == 'top' ||
+          category == 'ust' ||
+          category == 'üst' ||
+          category == 'tişört' ||
+          category == 'tisort' ||
+          category == 'gömlek' ||
+          category == 'gomlek' ||
+          category == 'kazak' ||
+          mainGroup.contains('ust_giyim') ||
+          mainGroup.contains('ustgiyim')) {
+        hasTop = true;
+      }
+      if (category == 'bottom' ||
+          category == 'alt' ||
+          category == 'pantolon' ||
+          category == 'etek' ||
+          mainGroup.contains('alt_giyim') ||
+          mainGroup.contains('altgiyim')) {
+        hasBottom = true;
+      }
+      if (category == 'shoes' ||
+          category == 'ayakkabı' ||
+          category == 'ayakkabi' ||
+          mainGroup.contains('ayakkabi')) {
+        hasShoes = true;
+      }
+      if (category == 'dress' ||
+          category == 'elbise' ||
+          mainGroup.contains('elbise')) {
+        hasDress = true;
+      }
+    }
+
+    return (hasTop && hasBottom && hasShoes) || (hasDress && hasShoes);
   }
 
   Widget _buildModernTipCard(BuildContext context) {
@@ -394,7 +564,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_hasSeenIntro) return const SizedBox.shrink();
     final theme = Theme.of(context);
     return Container(
-      margin: EdgeInsets.fromLTRB(
+      margin: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
         AppSpacing.lg,
         AppSpacing.lg,
@@ -427,7 +597,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 GestureDetector(
                   onTap: _setIntroSeen,
-                  child: HugeIcon(
+                  child: const HugeIcon(
                     icon: HugeIcons.strokeRoundedCancel01,
                     color: AppColors.textSecondary,
                     size: 18,

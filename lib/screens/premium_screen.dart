@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:vestiyer_nodejs/core/product/theme/app_colors.dart';
 
+import 'package:vestiyer_nodejs/core/product/utils/scaffold_messenger_helper.dart';
 import '../providers/subscription_provider.dart';
 import '../widgets/vestiyer_page_header.dart';
 import '../widgets/bouncing_widget.dart';
@@ -243,12 +244,8 @@ class _PremiumScreenState extends State<PremiumScreen> {
                                             .restorePurchases();
                                         if (!mounted) return;
                                         if (subscriptionProvider.isPremium) {
-                                          messenger.showSnackBar(
-                                            const SnackBar(
-                                              content: Text(
-                                                  'Satın alımlar geri yüklendi'),
-                                            ),
-                                          );
+                                          messenger.showSuccess(
+                                              'Satın alımlar geri yüklendi');
                                         }
                                       },
                                 child: Text(
@@ -300,21 +297,10 @@ class _PremiumScreenState extends State<PremiumScreen> {
     if (!mounted) return;
     setState(() => _purchaseInProgress = false);
     if (success) {
-      messenger.showSnackBar(
-        const SnackBar(
-            content: Text('Premium abonelik başarıyla aktif edildi')),
-      );
+      messenger.showSuccess('Premium abonelik başarıyla aktif edildi');
       navigator.pop();
     } else {
-      messenger.showSnackBar(
-        SnackBar(
-          content: const Text('Satın alma tamamlanamadı veya iptal edildi'),
-          action: SnackBarAction(
-            label: 'Tamam',
-            onPressed: () {},
-          ),
-        ),
-      );
+      messenger.showError('Satın alma tamamlanamadı veya iptal edildi');
     }
   }
 

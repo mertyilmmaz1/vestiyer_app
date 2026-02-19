@@ -80,12 +80,12 @@ cat > main.py << 'MAIN'
 """
 VPS Segment Service – Vestiyer garment background removal.
 """
-import base64
 import io
 import os
 from typing import Optional
 import httpx
 from fastapi import FastAPI, Header, HTTPException, Request
+from fastapi.responses import Response
 from PIL import Image
 from rembg import remove, new_session
 
@@ -165,8 +165,7 @@ async def segment(request: Request, x_api_key: Optional[str] = Header(None)):
         result_png = remove_background_and_crop(image_bytes)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Background removal failed: {e}")
-    b64 = base64.b64encode(result_png).decode("utf-8")
-    return {"success": True, "imageBase64": f"data:image/png;base64,{b64}"}
+    return Response(content=result_png, media_type="image/png")
 MAIN
 
 echo "[3/6] Python venv ve bağımlılıklar (birkaç dakika sürebilir)..."

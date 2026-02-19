@@ -26,23 +26,56 @@ class CircleFeatureGrid extends StatelessWidget {
   const CircleFeatureGrid({
     super.key,
     required this.items,
+    this.maxColumns = 3,
   });
 
   final List<CircleFeatureItem> items;
+  final int maxColumns;
 
   @override
   Widget build(BuildContext context) {
+    final rows = <List<CircleFeatureItem>>[];
+    for (var i = 0; i < items.length; i += maxColumns) {
+      final end =
+          (i + maxColumns > items.length) ? items.length : i + maxColumns;
+      rows.add(items.sublist(i, end));
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: items.map((item) {
-          return Expanded(
-            child: Padding(
-              padding: EdgeInsets.only(
-                right: item != items.last ? 16 : 0,
-              ),
-              child: _SquareFeatureCell(item: item),
+      child: Column(
+        children: rows.map((rowItems) {
+          final children = <Widget>[];
+          for (var i = 0; i < maxColumns; i++) {
+            if (i < rowItems.length) {
+              children.add(
+                Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      right: i != maxColumns - 1 ? 16 : 0,
+                    ),
+                    child: _SquareFeatureCell(item: rowItems[i]),
+                  ),
+                ),
+              );
+            } else {
+              children.add(
+                Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      right: i != maxColumns - 1 ? 16 : 0,
+                    ),
+                    child: const SizedBox.shrink(),
+                  ),
+                ),
+              );
+            }
+          }
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 20),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: children,
             ),
           );
         }).toList(),

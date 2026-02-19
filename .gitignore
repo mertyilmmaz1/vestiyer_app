@@ -11,8 +11,19 @@ pubspec.lock
 doc/api/
 
 # dotenv environment variables file (gizli anahtarlar – asla commit etmeyin)
+.env
 .env*
 !.env.example
+.env.local
+.env.*.local
+
+# Firebase – proje bazlı config (API anahtarları içerir)
+**/GoogleService-Info.plist
+**/google-services.json
+# Firebase Admin SDK (service account key) – asla commit etmeyin
+*-firebase-adminsdk-*.json
+serviceAccount*.json
+**/serviceAccount*.json
 
 # Cursor IDE
 .cursor/
@@ -30,10 +41,14 @@ ornek_*.md
 .vscode/
 !*.code-workspace
 
-# Android – yerel ayarlar ve derleme önbelleği
+# Android – yerel ayarlar, imza anahtarları ve derleme önbelleği
 **/android/.gradle/
 **/android/local.properties
 **/android/key.properties
+**/android/*.keystore
+**/android/*.jks
+*.keystore
+*.jks
 **/android/**/GeneratedPluginRegistrant.java
 **/android/captures/
 
@@ -60,3 +75,9 @@ coverage/
 
 .flutter-plugins
 .flutter-plugins-dependencies
+
+# Node (Firebase Functions) – bağımlılıklar yerel kurulur
+functions/node_modules/
+
+# VPS / deploy – şifre ve URL’ler .env’de tutulur
+# deploy_vps.sh script’i .env’den okur; .env commit edilmez

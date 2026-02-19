@@ -12,6 +12,7 @@ import 'package:vestiyer_nodejs/core/product/widget/design/vestiyer_divider.dart
 import 'package:vestiyer_nodejs/core/product/widget/design/vestiyer_primary_button.dart';
 import 'package:vestiyer_nodejs/core/product/widget/design/vestiyer_text_field.dart';
 
+import 'package:vestiyer_nodejs/core/product/utils/scaffold_messenger_helper.dart';
 import '../models/user.dart' as app_user;
 import '../services/firebase_auth_service.dart';
 import '../services/firestore_service_base.dart';
@@ -67,9 +68,7 @@ class _LoginScreenState extends State<LoginScreen> {
       final uid = authService.currentUserId;
       if (uid == null) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Giriş yapılamadı.')),
-          );
+          ScaffoldMessenger.of(context).showError('Giriş yapılamadı.');
         }
         return;
       }
@@ -80,10 +79,7 @@ class _LoginScreenState extends State<LoginScreen> {
       log('Giriş hatası: ${e.code} ${e.message}');
       if (mounted) {
         final message = _authErrorMessage(e.code, e.message, isLogin: true);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(message), duration: const Duration(seconds: 4)),
-        );
+        ScaffoldMessenger.of(context).showError(message);
       }
     } catch (e) {
       log('Giriş hatası: $e');
@@ -91,9 +87,7 @@ class _LoginScreenState extends State<LoginScreen> {
         final msg = '$e'.contains('expired') || '$e'.contains('malformed')
             ? 'Oturum bilgisi geçersiz. Uygulamayı kapatıp yeniden açın veya şifrenizi kontrol edin.'
             : 'Giriş yapılamadı. E-posta ve şifrenizi kontrol edin.';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(msg), duration: const Duration(seconds: 4)),
-        );
+        ScaffoldMessenger.of(context).showError(msg);
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -143,9 +137,7 @@ class _LoginScreenState extends State<LoginScreen> {
       final uid = authService.currentUserId;
       if (uid == null) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Kayıt yapılamadı.')),
-          );
+          ScaffoldMessenger.of(context).showError('Kayıt yapılamadı.');
         }
         return;
       }
@@ -158,20 +150,13 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
       _navigateToHome();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Kayıt başarılı! Hoş geldiniz!'),
-            duration: Duration(seconds: 3),
-          ),
-        );
+        ScaffoldMessenger.of(context)
+            .showSuccess('Kayıt başarılı! Hoş geldiniz!');
       }
     } on FirebaseAuthException catch (e) {
       if (mounted) {
         final message = _authErrorMessage(e.code, e.message, isLogin: false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(message), duration: const Duration(seconds: 4)),
-        );
+        ScaffoldMessenger.of(context).showError(message);
       }
     } catch (e) {
       log('Kayıt hatası: $e');
@@ -179,9 +164,7 @@ class _LoginScreenState extends State<LoginScreen> {
         final msg = '$e'.contains('expired') || '$e'.contains('malformed')
             ? 'Kayıt sırasında hata. Lütfen uygulamayı kapatıp yeniden deneyin.'
             : 'Kayıt yapılamadı. E-posta ve şifrenizi kontrol edin.';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(msg), duration: const Duration(seconds: 4)),
-        );
+        ScaffoldMessenger.of(context).showError(msg);
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -264,9 +247,8 @@ class _LoginScreenState extends State<LoginScreen> {
       final uid = authService.currentUserId;
       if (uid == null) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Google ile giriş tamamlanamadı.')),
-          );
+          ScaffoldMessenger.of(context)
+              .showError('Google ile giriş tamamlanamadı.');
         }
         return;
       }
@@ -286,16 +268,14 @@ class _LoginScreenState extends State<LoginScreen> {
       _navigateToHome();
     } on FirebaseAuthException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.message ?? 'Google ile giriş yapılamadı')),
-        );
+        ScaffoldMessenger.of(context)
+            .showError(e.message ?? 'Google ile giriş yapılamadı');
       }
     } catch (e) {
       log('Google giriş hatası: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Google ile giriş yapılamadı: $e')),
-        );
+        ScaffoldMessenger.of(context)
+            .showError('Google ile giriş yapılamadı: $e');
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -317,16 +297,14 @@ class _LoginScreenState extends State<LoginScreen> {
       _navigateToHome();
     } on FirebaseAuthException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.message ?? 'Apple ile giriş yapılamadı')),
-        );
+        ScaffoldMessenger.of(context)
+            .showError(e.message ?? 'Apple ile giriş yapılamadı');
       }
     } catch (e) {
       log('Apple giriş hatası: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Apple ile giriş yapılamadı: $e')),
-        );
+        ScaffoldMessenger.of(context)
+            .showError('Apple ile giriş yapılamadı: $e');
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);

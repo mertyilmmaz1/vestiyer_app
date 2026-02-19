@@ -11,6 +11,7 @@ const {
   selectAndDescribeCombinations,
   generateStylingAdvice,
   getStyleAdvice,
+  getShoppingSuggestions, // Added
   detectChatIntent
 } = require('./services/aiService');
 const { generateOutfitCandidates } = require('./services/combinationEngine');
@@ -68,7 +69,7 @@ exports.analyzeClothing = functions
   })
   .https.onCall(async (data, context) => {
     const uid = requireAuth(context);
-    const { userId, imageUrl, title } = data || {};
+    const { userId, imageUrl, title, skipServerSegmentation, segmentationApplied } = data || {};
     if (userId && userId !== uid) {
       throw new functions.https.HttpsError('permission-denied', 'Yetkisiz erişim.');
     }
@@ -82,22 +83,27 @@ exports.analyzeClothing = functions
       throw new functions.https.HttpsError('invalid-argument', qualityCheck.error || 'Görsel kalitesi yetersiz.');
     }
 
-    const segmentUrl =
-      process.env.SEGMENT_SERVICE_URL ||
-      (typeof functions.config().segment_service === 'object' && functions.config().segment_service?.url) ||
-      '';
-    const segmentKey =
-      process.env.SEGMENT_SERVICE_API_KEY ||
-      (typeof functions.config().segment_service === 'object' && functions.config().segment_service?.api_key) ||
-      '';
-    const segmentResult = segmentUrl && segmentUrl.startsWith('http')
-      ? await callVpsSegment(imageUrl, segmentUrl, segmentKey)
-      : { success: false };
+    const shouldRunServerSegmentation = skipServerSegmentation !== true;
+
+    let segmentResult = { success: false };
+    if (shouldRunServerSegmentation) {
+      const segmentUrl =
+        process.env.SEGMENT_SERVICE_URL ||
+        (typeof functions.config().segment_service === 'object' && functions.config().segment_service?.url) ||
+        '';
+      const segmentKey =
+        process.env.SEGMENT_SERVICE_API_KEY ||
+        (typeof functions.config().segment_service === 'object' && functions.config().segment_service?.api_key) ||
+        '';
+      segmentResult = segmentUrl && segmentUrl.startsWith('http')
+        ? await callVpsSegment(imageUrl, segmentUrl, segmentKey)
+        : { success: false };
+    }
 
     let imageForVision = imageUrl;
     let imageForColor = imageUrl;
     let segmentedImageUrl = null;
-    let segmentationSkipped = true;
+    let segmentationSkipped = segmentationApplied !== true;
 
     if (segmentResult.success && segmentResult.buffer) {
       try {
@@ -132,6 +138,7 @@ exports.analyzeClothing = functions
       imageUrl: finalImageUrl,
       imagePath: finalImageUrl,
       ...(segmentationSkipped && { segmentationSkipped: true }),
+      ...(segmentationApplied === true && { segmentationSource: 'client' }),
       colors,
       colorsWithDominance: result.colorsWithDominance || null,
       confidence,
@@ -270,40 +277,55 @@ exports.generateCombinations = functions
       combinationCount: (result.combinations || []).length
     });
 
-    const savedIds = [];
-    for (const combo of result.combinations) {
-      const clothingItemsForDoc = (combo.items || []).map((id) => ({
-        clothingId: id,
-        category: null,
-        isRequired: true
-      }));
-      const docRef = await db
-        .collection('users')
-        .doc(targetUserId)
-        .collection('combinations')
-        .add({
-          name: combo.name,
-          description: combo.description,
-          occasion: combo.occasion || 'casual',
-          season: combo.season || 'all-season',
-          clothingItems: clothingItemsForDoc,
-          isAIGenerated: true,
-          isFavorite: false,
-          timesWorn: 0,
-          tags: [],
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
-          updatedAt: admin.firestore.FieldValue.serverTimestamp()
-        });
-      savedIds.push({ id: docRef.id, name: combo.name });
-    }
-
     return {
       success: true,
       mode: engineResult.mode || 'full',
       message: 'Kombinler oluşturuldu.',
-      savedCombinations: savedIds,
+      combinations: result.combinations,
       totalItems: clothingItems.length,
       usedItems: clothingItems.length
+    };
+  });
+
+exports.saveCombination = functions
+  .runWith({ timeoutSeconds: 30 })
+  .https.onCall(async (data, context) => {
+    const uid = requireAuth(context);
+    const { userId, combination } = data || {};
+    const targetUserId = userId || uid;
+
+    if (!combination || !combination.items || combination.items.length === 0) {
+      throw new functions.https.HttpsError('invalid-argument', 'Kombin verisi eksik.');
+    }
+
+    const clothingItemsForDoc = (combination.items || []).map((id) => ({
+      clothingId: id,
+      category: null,
+      isRequired: true
+    }));
+
+    const docRef = await db
+      .collection('users')
+      .doc(targetUserId)
+      .collection('combinations')
+      .add({
+        name: combination.name || 'Yeni Kombin',
+        description: combination.description || '',
+        occasion: combination.occasion || 'casual',
+        season: combination.season || 'all-season',
+        clothingItems: clothingItemsForDoc,
+        isAIGenerated: true,
+        isFavorite: false,
+        timesWorn: 0,
+        tags: [],
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+
+    return {
+      success: true,
+      combinationId: docRef.id,
+      message: 'Kombin başarıyla kaydedildi.'
     };
   });
 
@@ -378,6 +400,46 @@ exports.getStyleAdvice = functions
     return {
       success: true,
       response: result.response
+    };
+  });
+
+exports.getShoppingSuggestions = functions
+  .runWith({ timeoutSeconds: 60, secrets: ['OPENAI_API_KEY'] })
+  .https.onCall(async (data, context) => {
+    const uid = requireAuth(context);
+    const { userId, wardrobeSummary } = data || {};
+    const targetUserId = userId || uid;
+
+    if (targetUserId !== uid) {
+      throw new functions.https.HttpsError('permission-denied', 'Yetkisiz erişim.');
+    }
+
+    const summary = wardrobeSummary && typeof wardrobeSummary === 'object' ? wardrobeSummary : null;
+
+    const userDoc = await db.collection('users').doc(targetUserId).get();
+    const userProfile = userDoc.exists && userDoc.data()?.styleProfile
+      ? userDoc.data().styleProfile
+      : null;
+
+    const result = await getShoppingSuggestions(
+      getOpenAIClient(),
+      summary,
+      userProfile
+    );
+
+    const cost = (result.usage.prompt_tokens * 0.00015) / 1000 + (result.usage.completion_tokens * 0.0006) / 1000;
+    await db.collection('users').doc(targetUserId).collection('api_usage').add({
+      operationType: 'shopping_suggestions',
+      model: 'gpt-4o-mini',
+      promptTokens: result.usage.prompt_tokens,
+      completionTokens: result.usage.completion_tokens,
+      cost: cost,
+      timestamp: admin.firestore.FieldValue.serverTimestamp()
+    });
+
+    return {
+      success: true,
+      suggestions: result.suggestions
     };
   });
 

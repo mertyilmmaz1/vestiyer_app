@@ -10,14 +10,12 @@ class HomePageHeader extends StatelessWidget {
     required this.firstName,
     required this.subtitle,
     this.avatarUrl,
-    this.onNotificationTap,
     this.onProfileTap,
   });
 
   final String? firstName;
   final String subtitle;
   final String? avatarUrl;
-  final VoidCallback? onNotificationTap;
   final VoidCallback? onProfileTap;
 
   @override

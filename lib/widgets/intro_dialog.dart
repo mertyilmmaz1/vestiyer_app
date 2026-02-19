@@ -12,8 +12,8 @@ class IntroDialog extends StatefulWidget {
 
   static Future<void> show(BuildContext context) async {
     final prefs = await SharedPreferences.getInstance();
-    // final hasSeen = prefs.getBool('has_seen_new_intro') ?? false;
-    // if (hasSeen) return;
+    final hasSeen = prefs.getBool('has_seen_new_intro') ?? false;
+    if (hasSeen) return;
 
     if (context.mounted) {
       await showGeneralDialog(

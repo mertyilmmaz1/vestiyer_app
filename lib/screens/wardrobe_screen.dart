@@ -10,6 +10,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'ai_stylist_screen.dart';
 import 'clothing_detail_screen.dart';
 import 'package:flutter/services.dart';
+import 'package:vestiyer_nodejs/core/product/utils/scaffold_messenger_helper.dart';
+import 'package:vestiyer_nodejs/core/product/utils/error_message_helper.dart';
 
 import 'package:vestiyer_nodejs/utils/clothing_formatter.dart';
 import '../widgets/bouncing_widget.dart';
@@ -80,11 +82,8 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
                 if (context.mounted) {
                   // Hata durumunda item'ı geri ekle
                   context.read<WardrobeProvider>().addItemLocally(item);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Hata: $e'),
-                      backgroundColor: AppColors.tertiary,
-                    ),
+                  ScaffoldMessenger.of(context).showError(
+                    ErrorMessageHelper.getUserFriendlyMessage(e),
                   );
                 }
               }
@@ -131,20 +130,13 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
               try {
                 await context.read<WardrobeProvider>().resetWardrobe();
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Dolap başarıyla sıfırlandı'),
-                      backgroundColor: AppColors.tertiary,
-                    ),
-                  );
+                  ScaffoldMessenger.of(context)
+                      .showSuccess('Dolap başarıyla sıfırlandı');
                 }
               } catch (e) {
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Hata: $e'),
-                      backgroundColor: AppColors.tertiary,
-                    ),
+                  ScaffoldMessenger.of(context).showError(
+                    ErrorMessageHelper.getUserFriendlyMessage(e),
                   );
                 }
               }
@@ -228,14 +220,8 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
                                               text: formattedItems));
                                           if (context.mounted) {
                                             ScaffoldMessenger.of(context)
-                                                .showSnackBar(
-                                              const SnackBar(
-                                                content: Text(
-                                                    'Kıyafet listesi kopyalandı'),
-                                                backgroundColor:
-                                                    AppColors.tertiary,
-                                              ),
-                                            );
+                                                .showSuccess(
+                                                    'Kıyafet listesi kopyalandı');
                                             Navigator.pop(context);
                                           }
                                         },
@@ -254,11 +240,8 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
                               }
                             } catch (e) {
                               if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Hata: $e'),
-                                    backgroundColor: AppColors.tertiary,
-                                  ),
+                                ScaffoldMessenger.of(context).showError(
+                                  ErrorMessageHelper.getUserFriendlyMessage(e),
                                 );
                               }
                             }

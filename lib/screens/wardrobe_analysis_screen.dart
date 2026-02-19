@@ -10,6 +10,9 @@ import '../providers/subscription_provider.dart';
 import '../services/firestore_service_base.dart';
 import '../widgets/vestiyer_page_header.dart';
 import 'premium_screen.dart';
+import 'shopping_suggestions_screen.dart';
+import '../widgets/paywall_widget.dart';
+import '../widgets/bouncing_widget.dart';
 import 'dart:async';
 
 class WardrobeAnalysisScreen extends StatefulWidget {
@@ -101,7 +104,9 @@ class _WardrobeAnalysisScreenState extends State<WardrobeAnalysisScreen> {
                   : 'Kış';
       final currentSeasonItems = items
           .where((c) =>
-              c.advancedAnalysis?.season?.toLowerCase().contains(currentSeason.toLowerCase()) ==
+              c.advancedAnalysis?.season
+                      ?.toLowerCase()
+                      .contains(currentSeason.toLowerCase()) ==
                   true ||
               c.advancedAnalysis?.season?.toLowerCase() == 'tüm sezon' ||
               c.advancedAnalysis?.season?.toLowerCase() == 'all-season')
@@ -273,7 +278,8 @@ class _WardrobeAnalysisScreenState extends State<WardrobeAnalysisScreen> {
               actions: [
                 if (_analysisData != null)
                   IconButton(
-                    icon: Icon(Icons.refresh, color: AppColors.textPrimary.withValues(alpha: 0.7)),
+                    icon: Icon(Icons.refresh,
+                        color: AppColors.textPrimary.withValues(alpha: 0.7)),
                     onPressed: _startAnalysis,
                     tooltip: 'Yeni Analiz',
                   ),
@@ -489,13 +495,15 @@ class _WardrobeAnalysisScreenState extends State<WardrobeAnalysisScreen> {
   }
 
   Widget _buildAnalysisResults() {
-    final statistics = Map<String, dynamic>.from(_analysisData!['statistics'] ?? {});
+    final statistics =
+        Map<String, dynamic>.from(_analysisData!['statistics'] ?? {});
     final recommendationsRaw = _analysisData!['recommendations'];
     final recommendations = recommendationsRaw is List
         ? recommendationsRaw.map((e) => e?.toString() ?? '').toList()
         : <String>[];
     final styleAnalysis = (_analysisData!['style_analysis'] ?? '').toString();
-    final seasonalAnalysis = (_analysisData!['seasonal_analysis'] ?? '').toString();
+    final seasonalAnalysis =
+        (_analysisData!['seasonal_analysis'] ?? '').toString();
 
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
@@ -537,12 +545,101 @@ class _WardrobeAnalysisScreenState extends State<WardrobeAnalysisScreen> {
 
           // Recommendations
           _buildRecommendationsCard(recommendations),
+
+          const SizedBox(height: 24),
+          _buildShoppingSuggestionsCard(),
+
           // Premium CTA for free users
           if (!Provider.of<SubscriptionProvider>(context).isPremium) ...[
             const SizedBox(height: 24),
             _buildPremiumCta(),
           ],
         ],
+      ),
+    );
+  }
+
+  Widget _buildShoppingSuggestionsCard() {
+    return BouncingWidget(
+      child: GestureDetector(
+        onTap: () async {
+          final subscriptionProvider =
+              Provider.of<SubscriptionProvider>(context, listen: false);
+
+          if (!subscriptionProvider.isPremium) {
+            await PaywallWidget.showPaywall(
+              context,
+              type: PaywallType.featureGated,
+              customMessage:
+                  'ALIŞVERİŞ ÖNERİLERİ VE EKSİK PARÇA ANALİZİ İÇİN PREMİUM\'A GEÇİN.',
+            );
+            return;
+          }
+
+          if (mounted) {
+            Navigator.push(
+              context,
+              EditorialPageRoute(
+                page: const ShoppingSuggestionsScreen(),
+              ),
+            );
+          }
+        },
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: AppColors.softBackground,
+            border: Border.all(
+              color: AppColors.textPrimary.withValues(alpha: 0.1),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.textPrimary.withValues(alpha: 0.05),
+                ),
+                child: const Icon(
+                  Icons.shopping_bag_outlined,
+                  color: AppColors.textPrimary,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'ALIŞVERİŞ ÖNERİLERİ',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w400,
+                        letterSpacing: 1.5,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Dolabındaki eksik parçaları tamamla',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textPrimary.withValues(alpha: 0.6),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.arrow_forward_ios,
+                size: 14,
+                color: AppColors.textPrimary,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -595,7 +692,7 @@ class _WardrobeAnalysisScreenState extends State<WardrobeAnalysisScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Kişisel Stil Planı ile eksik parça tespiti ve derin stil raporu',
+                    'Kişisel Stil Planı ile derin stil raporu ve sınırsız özellik',
                     style: TextStyle(
                       fontSize: 13,
                       color: AppColors.textPrimary.withValues(alpha: 0.7),
@@ -661,7 +758,8 @@ class _WardrobeAnalysisScreenState extends State<WardrobeAnalysisScreen> {
             child: LinearProgressIndicator(
               value: completionPercent / 100,
               backgroundColor: AppColors.divider,
-              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+              valueColor:
+                  const AlwaysStoppedAnimation<Color>(AppColors.primary),
               minHeight: 6,
             ),
           ),
@@ -695,8 +793,10 @@ class _WardrobeAnalysisScreenState extends State<WardrobeAnalysisScreen> {
           ),
           const SizedBox(height: 8),
           ...(statistics['category_counts'] is Map
-                      ? Map<String, dynamic>.from(statistics['category_counts'] as Map).entries
-                      : <MapEntry<String, dynamic>>[])
+                  ? Map<String, dynamic>.from(
+                          statistics['category_counts'] as Map)
+                      .entries
+                  : <MapEntry<String, dynamic>>[])
               .map((entry) => Padding(
                     padding: const EdgeInsets.symmetric(vertical: 2),
                     child: Row(

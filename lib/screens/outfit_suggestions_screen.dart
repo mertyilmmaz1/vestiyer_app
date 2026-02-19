@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:vestiyer_nodejs/core/product/navigation/editorial_page_route.dart';
 import 'package:vestiyer_nodejs/core/product/theme/app_colors.dart';
+import 'package:vestiyer_nodejs/core/product/utils/scaffold_messenger_helper.dart';
+import 'package:vestiyer_nodejs/core/product/utils/error_message_helper.dart';
 import 'package:vestiyer_nodejs/core/product/theme/app_spacing.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:vestiyer_nodejs/utils/clothing_formatter.dart';
@@ -94,8 +96,8 @@ class _OutfitSuggestionsScreenState extends State<OutfitSuggestionsScreen> {
         _isLoading = false;
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Kombinler yüklenirken hata oluştu: $e')),
+        ScaffoldMessenger.of(context).showError(
+          ErrorMessageHelper.getUserFriendlyMessage(e),
         );
       }
     } finally {
@@ -176,15 +178,13 @@ class _OutfitSuggestionsScreenState extends State<OutfitSuggestionsScreen> {
         'occasion': combination.occasion,
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Giyim kaydı eklendi')),
-        );
+        ScaffoldMessenger.of(context).showSuccess('Giyim kaydı eklendi');
         _loadSuggestions();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Kayıt eklenirken hata: $e')),
+        ScaffoldMessenger.of(context).showError(
+          ErrorMessageHelper.getUserFriendlyMessage(e),
         );
       }
     }

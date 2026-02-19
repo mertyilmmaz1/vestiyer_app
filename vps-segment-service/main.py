@@ -1,9 +1,8 @@
 """
 VPS Segment Service – Vestiyer garment background removal.
-POST /segment with imageUrl → returns base64 PNG with garment only (white bg).
+POST /segment with imageUrl → returns PNG bytes with garment only (white bg).
 """
 
-import base64
 import logging
 import io
 import os
@@ -11,14 +10,31 @@ from typing import Optional
 
 import httpx
 from fastapi import FastAPI, Header, HTTPException, Request
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, Response
 from PIL import Image
 from rembg import remove, new_session
 
 app = FastAPI(title="Vestiyer Segment Service")
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+@app.get("/")
+async def index():
+    return FileResponse('static/index.html')
+
+
+@app.get("/privacy-policy")
+async def privacy_policy():
+    return FileResponse('static/privacy-policy.html')
+
+@app.get("/terms-of-service")
+async def terms_of_service():
+    return FileResponse('static/terms-of-service.html')
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
 API_KEY = os.environ.get("SEGMENT_API_KEY", "")
-REMBG_MODEL = os.environ.get("REMBG_MODEL", "u2net")  # u2net, u2netp, isnet-general-use
+REMBG_MODEL = os.environ.get("REMBG_MODEL", "isnet-general-use")  # u2net, u2netp, isnet-general-use
 _rembg_session = new_session(REMBG_MODEL)
 MAX_IMAGE_SIZE = 1024
 OUTPUT_SIZE = 512
@@ -68,22 +84,38 @@ def remove_background_and_crop(image_bytes: bytes) -> bytes:
         )
         cropped = result
     else:
-        padding = 10
-        min_x = max(0, min_x - padding)
-        min_y = max(0, min_y - padding)
-        max_x = min(w, max_x + padding)
-        max_y = min(h, max_y + padding)
+        # Dynamic crop padding (e.g. 5% of object size) to avoid clipping edges
+        obj_w = max_x - min_x
+        obj_h = max_y - min_y
+        pad_x = int(obj_w * 0.05)
+        pad_y = int(obj_h * 0.05)
+
+        min_x = max(0, min_x - pad_x)
+        min_y = max(0, min_y - pad_y)
+        max_x = min(w, max_x + pad_x)
+        max_y = min(h, max_y + pad_y)
         cropped = result.crop((min_x, min_y, max_x, max_y))
 
-    # Resize to square (1:1), max OUTPUT_SIZE
+    # Resize to square (1:1), max OUTPUT_SIZE, with "Zoom Out" margin
+    # We want the object to fit within (OUTPUT_SIZE * 0.85) to appear zoomed out
     cw, ch = cropped.size
-    side = min(max(cw, ch), OUTPUT_SIZE)
-    new_img = Image.new("RGB", (side, side), (255, 255, 255))
-    cropped.thumbnail((side, side), Image.Resampling.LANCZOS)
-    ncw, nch = cropped.size
-    x_off = (side - ncw) // 2
-    y_off = (side - nch) // 2
-    new_img.paste(cropped, (x_off, y_off))
+    target_inner_size = int(OUTPUT_SIZE * 0.85)
+
+    # Scale factor to fit the object within the inner target box
+    scale = target_inner_size / max(cw, ch)
+    new_w = int(cw * scale)
+    new_h = int(ch * scale)
+
+    # Resize the cropped object
+    cropped_resized = cropped.resize((new_w, new_h), Image.Resampling.LANCZOS)
+
+    # Create final square canvas
+    new_img = Image.new("RGB", (OUTPUT_SIZE, OUTPUT_SIZE), (255, 255, 255))
+
+    # Paste centered
+    x_off = (OUTPUT_SIZE - new_w) // 2
+    y_off = (OUTPUT_SIZE - new_h) // 2
+    new_img.paste(cropped_resized, (x_off, y_off))
 
     buf = io.BytesIO()
     new_img.save(buf, format="PNG", optimize=True)
@@ -128,6 +160,5 @@ async def segment(
         logging.error(f"Background removal failed: {e}")
         raise HTTPException(status_code=500, detail=f"Background removal failed: {e}")
 
-    b64 = base64.b64encode(result_png).decode("utf-8")
-    logging.info(f"Segment complete. Base64 length: {len(b64)}")
-    return {"success": True, "imageBase64": f"data:image/png;base64,{b64}"}
+    logging.info(f"Segment complete. PNG bytes length: {len(result_png)}")
+    return Response(content=result_png, media_type="image/png")

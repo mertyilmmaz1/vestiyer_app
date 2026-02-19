@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vestiyer_nodejs/core/product/navigation/editorial_page_route.dart';
 import 'package:vestiyer_nodejs/core/product/theme/app_colors.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -13,7 +15,6 @@ import '../models/combination.dart';
 import '../providers/wardrobe_provider.dart';
 import '../providers/subscription_provider.dart';
 import '../services/cloud_functions_service.dart';
-import '../services/firestore_service_base.dart';
 import '../widgets/vestiyer_page_header.dart';
 import 'clothing_detail_screen.dart';
 import '../widgets/paywall_widget.dart';
@@ -32,10 +33,14 @@ class AIStylistScreen extends StatefulWidget {
 }
 
 class _AIStylistScreenState extends State<AIStylistScreen> {
+  static const String _cacheKeyPrefix = 'ai_stylist_state_v1_';
+
   bool _isLoading = false;
   String _error = '';
   List<Combination> _combinations = [];
   final List<List<Clothing>> _outfitItems = [];
+  final Set<String> _savingCombinationIds = <String>{};
+  final Set<String> _savedCombinationIds = <String>{};
   int _currentOutfitIndex = 0;
   String? _stylingAdvice;
   String? _stylingModeItemId;
@@ -58,6 +63,7 @@ class _AIStylistScreenState extends State<AIStylistScreen> {
   @override
   void initState() {
     super.initState();
+    _loadCachedSuggestions();
   }
 
   @override
@@ -80,6 +86,50 @@ class _AIStylistScreenState extends State<AIStylistScreen> {
 
   void _stopLoadingAnimation() {
     _messageTimer?.cancel();
+  }
+
+  Future<void> _loadCachedSuggestions() async {
+    final userId = context.read<WardrobeProvider>().currentUserId;
+    if (userId == null) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString('$_cacheKeyPrefix$userId');
+    if (raw == null || raw.isEmpty || !mounted) return;
+
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map<String, dynamic>) return;
+
+      final combinationsData = decoded['combinations'] as List<dynamic>? ?? [];
+      final cachedCombinations = combinationsData
+          .whereType<Map<String, dynamic>>()
+          .map(Combination.fromJson)
+          .toList();
+
+      setState(() {
+        _combinations = cachedCombinations;
+        _stylingAdvice = decoded['stylingAdvice'] as String?;
+        _stylingModeItemId = decoded['stylingModeItemId'] as String?;
+        _currentOutfitIndex = 0;
+        _organizeOutfitItems();
+      });
+    } catch (_) {
+      // Ignore malformed cache.
+    }
+  }
+
+  Future<void> _persistCurrentSuggestions() async {
+    final userId = context.read<WardrobeProvider>().currentUserId;
+    if (userId == null) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    final payload = <String, dynamic>{
+      'combinations': _combinations.map((e) => e.toJson()).toList(),
+      'stylingAdvice': _stylingAdvice,
+      'stylingModeItemId': _stylingModeItemId,
+      'updatedAt': DateTime.now().toIso8601String(),
+    };
+    await prefs.setString('$_cacheKeyPrefix$userId', jsonEncode(payload));
   }
 
   Future<void> _generateOutfitSuggestion() async {
@@ -112,17 +162,12 @@ class _AIStylistScreenState extends State<AIStylistScreen> {
     setState(() {
       _isLoading = true;
       _error = '';
-      _combinations.clear();
-      _outfitItems.clear();
-      _stylingAdvice = null;
-      _stylingModeItemId = null;
     });
 
     _startLoadingAnimation();
 
     if (!mounted) return;
     final functions = context.read<CloudFunctionsService>();
-    final firestore = context.read<FirestoreServiceBase>();
     final wardrobeProvider = context.read<WardrobeProvider>();
     final userId = wardrobeProvider.currentUserId;
     if (userId == null) throw Exception('Kullanıcı girişi yapılmamış');
@@ -146,26 +191,58 @@ class _AIStylistScreenState extends State<AIStylistScreen> {
         final advice = adviceData?['advice'] as String?;
         final itemId = adviceData?['itemId'] as String?;
         setState(() {
+          _combinations = [];
+          _outfitItems.clear();
+          _savingCombinationIds.clear();
+          _savedCombinationIds.clear();
           _stylingAdvice = advice ?? '';
           _stylingModeItemId = itemId;
+          _currentOutfitIndex = 0;
           _isLoading = false;
         });
+        await _persistCurrentSuggestions();
         return;
       }
 
-      final combinations = await firestore.getCombinations(userId);
-      if (!mounted) return;
+      final combinationsData = result['combinations'] as List<dynamic>?;
 
-      if (combinations.isNotEmpty) {
+      if (combinationsData != null && combinationsData.isNotEmpty) {
+        final List<Combination> newCombinations =
+            combinationsData.map((comboJson) {
+          final items = (comboJson['items'] as List<dynamic>? ?? [])
+              .map((id) => {'clothingId': id, 'isRequired': true})
+              .toList();
+
+          return Combination.fromJson({
+            ...Map<String, dynamic>.from(comboJson as Map),
+            'id':
+                'temp_${DateTime.now().millisecondsSinceEpoch}_${combinationsData.indexOf(comboJson)}',
+            'userId': userId,
+            'clothingItems': items,
+            'isAIGenerated': true,
+            'isFavorite': false,
+            'timesWorn': 0,
+            'tags': [],
+            'createdAt': DateTime.now().toIso8601String(),
+            'updatedAt': DateTime.now().toIso8601String(),
+          });
+        }).toList();
+
         if (!subscriptionProvider.isPremium) {
           await subscriptionProvider.useDailyFreeCombination();
         }
         if (!mounted) return;
         setState(() {
-          _combinations = combinations;
+          _combinations = newCombinations;
+          _savingCombinationIds.clear();
+          _savedCombinationIds.clear();
+          _stylingAdvice = null;
+          _stylingModeItemId = null;
+          _currentOutfitIndex = 0;
           _organizeOutfitItems();
           _isLoading = false;
         });
+        await _persistCurrentSuggestions();
       } else {
         setState(() {
           _error = 'YETERLİ KIYAFET BULUNAMADI. DAHA FAZLA PARÇA EKLEYİN.';
@@ -181,6 +258,51 @@ class _AIStylistScreenState extends State<AIStylistScreen> {
       }
     } finally {
       _stopLoadingAnimation();
+    }
+  }
+
+  Future<void> _saveCombination(Combination combination) async {
+    final userId = context.read<WardrobeProvider>().currentUserId;
+    if (userId == null) return;
+    if (_savingCombinationIds.contains(combination.id)) return;
+    if (_savedCombinationIds.contains(combination.id)) return;
+
+    setState(() {
+      _savingCombinationIds.add(combination.id);
+    });
+
+    try {
+      final functions = context.read<CloudFunctionsService>();
+      final result = await functions.saveCombination(userId, combination);
+
+      if (mounted) {
+        if (result['success'] == true) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('KOMBİN BAŞARIYLA KAYDEDİLDİ'),
+              backgroundColor: AppColors.textPrimary,
+            ),
+          );
+          setState(() {
+            _savedCombinationIds.add(combination.id);
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('KAYDETME SIRASINDA HATA OLUŞTU'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _savingCombinationIds.remove(combination.id);
+        });
+      }
     }
   }
 
@@ -456,6 +578,8 @@ class _AIStylistScreenState extends State<AIStylistScreen> {
             itemBuilder: (context, index, realIndex) {
               final combination = _combinations[index];
               final outfitClothing = _outfitItems[index];
+              final isSaving = _savingCombinationIds.contains(combination.id);
+              final isSaved = _savedCombinationIds.contains(combination.id);
 
               return Container(
                 margin: const EdgeInsets.symmetric(vertical: 24),
@@ -652,6 +776,43 @@ class _AIStylistScreenState extends State<AIStylistScreen> {
                               ),
                             ),
                           ],
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton(
+                              onPressed: (isSaving || isSaved)
+                                  ? null
+                                  : () => _saveCombination(combination),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColors.textPrimary,
+                                side: const BorderSide(
+                                    color: AppColors.textPrimary, width: 0.5),
+                                shape: const RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.zero),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 12),
+                              ),
+                              child: isSaving
+                                  ? const SizedBox(
+                                      height: 16,
+                                      width: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 1.5,
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                                AppColors.textPrimary),
+                                      ),
+                                    )
+                                  : Text(
+                                      isSaved ? 'KAYDEDİLDİ' : 'KAYDET',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w400,
+                                        letterSpacing: 1.5,
+                                      ),
+                                    ),
+                            ),
+                          ),
                         ],
                       ),
                     ),

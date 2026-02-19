@@ -421,16 +421,6 @@ class _AuthenticatedHomeState extends State<_AuthenticatedHome> {
                     ),
                   ),
                   IconButton(
-                    icon: const HugeIcon(
-                      icon: HugeIcons.strokeRoundedNotification01,
-                      color: AppColors.textPrimary,
-                      size: 24,
-                    ),
-                    onPressed: () {
-                      // Notification logic or screen
-                    },
-                  ),
-                  IconButton(
                     key: _uploadButtonKey,
                     icon: const HugeIcon(
                       icon: HugeIcons.strokeRoundedAdd01,

@@ -72,8 +72,11 @@ class SubscriptionProvider extends ChangeNotifier {
 
   bool get isTutorialSampleUsed => _isTutorialSampleUsed;
 
-  /// Premium status: test override OR RevenueCat entitlement.
-  bool get isPremium => _isTestPremiumEnabled || _isPremiumFromRevenueCat;
+  /// Premium status: test override OR RevenueCat entitlement OR database override.
+  bool get isPremium =>
+      _isTestPremiumEnabled ||
+      _isPremiumFromRevenueCat ||
+      (_currentUser?.isPremium ?? false);
 
   Future<void> useTutorialSample() async {
     _isTutorialSampleUsed = true;

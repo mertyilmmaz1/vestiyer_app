@@ -3,6 +3,8 @@ import 'package:vestiyer_nodejs/core/product/navigation/editorial_page_route.dar
 import 'package:image_picker/image_picker.dart';
 import 'package:vestiyer_nodejs/core/product/theme/app_colors.dart';
 import 'package:vestiyer_nodejs/core/product/widget/design/vestiyer_primary_button.dart';
+import 'package:vestiyer_nodejs/core/product/utils/scaffold_messenger_helper.dart';
+import 'package:vestiyer_nodejs/core/product/utils/error_message_helper.dart';
 import 'dart:io';
 import 'package:provider/provider.dart';
 import '../providers/wardrobe_provider.dart';
@@ -11,6 +13,14 @@ import '../widgets/paywall_widget.dart';
 import '../widgets/vestiyer_page_header.dart';
 import 'premium_screen.dart';
 import 'dart:async';
+import 'clothing_camera_screen.dart';
+import '../widgets/upload_guide_card.dart';
+import 'package:hugeicons/hugeicons.dart';
+import '../core/product/theme/app_typography.dart';
+import '../core/product/theme/app_spacing.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import '../models/clothing.dart';
+import 'clothing_detail_screen.dart';
 import 'wardrobe_screen.dart';
 
 class UploadScreen extends StatefulWidget {
@@ -30,6 +40,7 @@ class _UploadScreenState extends State<UploadScreen>
   int _currentUploadIndex = 0;
   int _totalUploads = 0;
   List<String> _uploadedDescriptions = [];
+  List<Clothing> _uploadedItems = [];
   bool _lastUploadHadLowConfidence = false;
 
   final _colorController = TextEditingController();
@@ -111,17 +122,33 @@ class _UploadScreenState extends State<UploadScreen>
         _isLoading = true;
       });
 
-      final List<XFile> images = await _picker.pickMultiImage();
-      if (!mounted) return;
-      if (images.isNotEmpty) {
-        setState(() {
-          _images = images.map((image) => File(image.path)).toList();
-        });
+      if (source == ImageSource.gallery) {
+        final List<XFile> images = await _picker.pickMultiImage();
+        if (!mounted) return;
+        if (images.isNotEmpty) {
+          setState(() {
+            final newImages = images.map((image) => File(image.path)).toList();
+            _images.addAll(newImages);
+          });
+        }
+      } else {
+        // Use our custom camera screen
+        final File? image = await Navigator.push<File>(
+          context,
+          EditorialPageRoute(page: const ClothingCameraScreen()),
+        );
+
+        if (!mounted) return;
+        if (image != null) {
+          setState(() {
+            _images.add(image);
+          });
+        }
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Hata: ${e.toString()}')),
+      ScaffoldMessenger.of(context).showError(
+        ErrorMessageHelper.getUserFriendlyMessage(e),
       );
     } finally {
       setState(() {
@@ -132,9 +159,8 @@ class _UploadScreenState extends State<UploadScreen>
 
   Future<void> _uploadImages() async {
     if (_images.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Lütfen en az bir fotoğraf seçin')),
-      );
+      ScaffoldMessenger.of(context)
+          .showError('Lütfen en az bir fotoğraf seçin');
       return;
     }
 
@@ -247,7 +273,10 @@ class _UploadScreenState extends State<UploadScreen>
         });
 
         try {
-          await provider.addClothingItem(_images[i]);
+          final newlyAddedItem = await provider.addClothingItem(_images[i]);
+          if (newlyAddedItem != null) {
+            _uploadedItems.add(newlyAddedItem);
+          }
 
           // Update the free items counter in the subscription provider
           if (!subscriptionProvider.isPremium) {
@@ -291,12 +320,8 @@ class _UploadScreenState extends State<UploadScreen>
           } else {
             // Show generic error for other errors
             if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Kıyafet yüklenirken hata oluştu: $e'),
-                  backgroundColor: AppColors.error,
-                ),
-              );
+              ScaffoldMessenger.of(context)
+                  .showError('Kıyafet yüklenirken hata oluştu: $e');
             }
           }
 
@@ -317,22 +342,22 @@ class _UploadScreenState extends State<UploadScreen>
 
       // After successful upload and analysis
       if (mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Kıyafet başarıyla yüklendi ve analiz edildi'),
-            backgroundColor: AppColors.primary,
-          ),
-        );
+        if (_uploadedItems.length == 1) {
+          Navigator.push(
+            context,
+            EditorialPageRoute(
+                page: ClothingDetailScreen(item: _uploadedItems.first)),
+          );
+        }
+
+        ScaffoldMessenger.of(context)
+            .showSuccess('Kıyafet başarıyla yüklendi ve analiz edildi');
       }
     } catch (e) {
       debugPrint('Yükleme hatası: $e');
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Hata: $e'),
-          backgroundColor: AppColors.error,
-        ),
+      ScaffoldMessenger.of(context).showError(
+        ErrorMessageHelper.getUserFriendlyMessage(e),
       );
     } finally {
       _stopLoadingAnimation();
@@ -349,6 +374,7 @@ class _UploadScreenState extends State<UploadScreen>
       _currentUploadIndex = 0;
       _totalUploads = 0;
       _uploadedDescriptions = [];
+      _uploadedItems = [];
       _lastUploadHadLowConfidence = false;
     });
   }
@@ -383,6 +409,57 @@ class _UploadScreenState extends State<UploadScreen>
     );
   }
 
+  Widget _buildActionCard({
+    required String title,
+    required String subtitle,
+    required dynamic icon,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        decoration: BoxDecoration(
+          color: AppColors.background,
+          border: Border.all(color: AppColors.border, width: 0.5),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.02),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            HugeIcon(
+              icon: icon,
+              color: AppColors.textPrimary,
+              size: 32,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              style: AppTypography.label.copyWith(
+                fontWeight: FontWeight.w600,
+                letterSpacing: 2.0,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              subtitle,
+              style: AppTypography.caption.copyWith(
+                color: AppColors.textSecondary,
+                fontSize: 10,
+                letterSpacing: 1.0,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildInitialUploadScreen() {
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
@@ -391,60 +468,28 @@ class _UploadScreenState extends State<UploadScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 8),
-            GestureDetector(
-              onTap: () => _getImages(ImageSource.gallery),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 30),
-                decoration: BoxDecoration(
-                  color: AppColors.softBackground,
-                  border: Border.all(
-                    color: AppColors.border,
-                    width: 0.5,
+            const UploadGuideCard(),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildActionCard(
+                    title: 'GALERİ',
+                    subtitle: 'ÇOKLU SEÇİM',
+                    icon: HugeIcons.strokeRoundedImage01,
+                    onTap: () => _getImages(ImageSource.gallery),
                   ),
                 ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: 72,
-                      height: 72,
-                      decoration: BoxDecoration(
-                        color: AppColors.textPrimary.withValues(alpha: 0.1),
-                        border: Border.all(
-                          color: AppColors.border,
-                          width: 0.5,
-                        ),
-                      ),
-                      child: Icon(
-                        Icons.add_photo_alternate_outlined,
-                        size: 32,
-                        color: AppColors.textPrimary.withValues(alpha: 0.8),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'FOTOĞRAF EKLE',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w400,
-                        color: AppColors.textPrimary,
-                        letterSpacing: 1.5,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Galeriden seç veya fotoğraf çek',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: AppColors.textPrimary.withValues(alpha: 0.7),
-                        letterSpacing: 0.2,
-                      ),
-                    ),
-                  ],
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildActionCard(
+                    title: 'KAMERA',
+                    subtitle: 'ÖZEL ÇEKİM',
+                    icon: HugeIcons.strokeRoundedCamera01,
+                    onTap: () => _getImages(ImageSource.camera),
+                  ),
                 ),
-              ),
+              ],
             ),
             if (_images.isNotEmpty) ...[
               const SizedBox(height: 24),
@@ -569,36 +614,60 @@ class _UploadScreenState extends State<UploadScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              color: AppColors.textPrimary.withValues(alpha: 0.1),
-            ),
-            child: Center(
-              child: CircularProgressIndicator(
-                valueColor:
-                    AlwaysStoppedAnimation<Color>(AppColors.textPrimary),
-                strokeWidth: 3,
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              Container(
+                width: 120,
+                height: 160,
+                decoration: BoxDecoration(
+                  color: AppColors.softBackground,
+                  border: Border.all(color: AppColors.border, width: 0.5),
+                ),
+                child: _images.isNotEmpty
+                    ? Image.file(_images[_currentUploadIndex],
+                        fit: BoxFit.cover)
+                    : const Center(
+                        child: HugeIcon(
+                            icon: HugeIcons.strokeRoundedCircle,
+                            size: 40,
+                            color: AppColors.border)),
               ),
-            ),
+              AnimatedBuilder(
+                animation: _fadeController,
+                builder: (context, child) {
+                  return Positioned(
+                    top: _fadeController.value * 160,
+                    left: 0,
+                    right: 0,
+                    child: Container(
+                      height: 2,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            AppColors.primary.withValues(alpha: 0.0),
+                            AppColors.primary,
+                            AppColors.primary.withValues(alpha: 0.0),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 48),
           Text(
             _loadingMessages[_currentMessageIndex],
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w400,
-              color: AppColors.textPrimary,
-            ),
+            style: AppTypography.title.copyWith(fontSize: 14),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           Text(
             '${_currentUploadIndex + 1} / $_totalUploads',
-            style: TextStyle(
-              fontSize: 14,
-              color: AppColors.textPrimary.withValues(alpha: 0.7),
+            style: AppTypography.caption.copyWith(
+              color: AppColors.textSecondary,
             ),
           ),
         ],
@@ -637,6 +706,69 @@ class _UploadScreenState extends State<UploadScreen>
               ),
             ),
             const SizedBox(height: 16),
+            const SizedBox(height: 16),
+            if (_uploadedItems.isNotEmpty) ...[
+              SizedBox(
+                height: 140,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _uploadedItems.length,
+                  itemBuilder: (context, index) {
+                    final item = _uploadedItems[index];
+                    return GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          EditorialPageRoute(
+                              page: ClothingDetailScreen(item: item)),
+                        );
+                      },
+                      child: Container(
+                        width: 100,
+                        margin: const EdgeInsets.only(right: 12),
+                        decoration: BoxDecoration(
+                          border:
+                              Border.all(color: AppColors.border, width: 0.5),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(
+                              child: CachedNetworkImage(
+                                imageUrl: item.displayImageUrl,
+                                fit: BoxFit.cover,
+                                placeholder: (context, url) => Container(
+                                  color: AppColors.softBackground,
+                                  child: const Center(
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 1),
+                                  ),
+                                ),
+                                errorWidget: (context, url, error) =>
+                                    const Icon(Icons.error),
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.all(4),
+                              color: AppColors.background,
+                              child: Text(
+                                item.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                    fontSize: 10, color: AppColors.textPrimary),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
             if (_uploadedDescription != null)
               Container(
                 padding: const EdgeInsets.all(16),
@@ -706,6 +838,27 @@ class _UploadScreenState extends State<UploadScreen>
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUploadIcon(dynamic icon) {
+    return Container(
+      width: 64,
+      height: 64,
+      decoration: BoxDecoration(
+        color: AppColors.textPrimary.withValues(alpha: 0.05),
+        border: Border.all(
+          color: AppColors.border,
+          width: 0.5,
+        ),
+      ),
+      child: Center(
+        child: HugeIcon(
+          icon: icon,
+          size: 28,
+          color: AppColors.textPrimary.withValues(alpha: 0.8),
         ),
       ),
     );

@@ -8,6 +8,8 @@ import '../models/style_profile.dart';
 import '../models/user.dart' as app_user;
 import '../services/firestore_service_base.dart';
 import 'premium_screen.dart';
+import 'package:vestiyer_nodejs/core/product/utils/scaffold_messenger_helper.dart';
+import 'package:vestiyer_nodejs/core/product/utils/error_message_helper.dart';
 
 /// Oyunlaştırılmış Stil DNA onboarding — Zara Editoryal Tasarım
 class StyleDNAOnboardingScreen extends StatefulWidget {
@@ -116,12 +118,8 @@ class _StyleDNAOnboardingScreenState extends State<StyleDNAOnboardingScreen>
       widget.onComplete(updatedUser);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Hata: $e'),
-            backgroundColor: AppColors.background,
-            behavior: SnackBarBehavior.floating,
-          ),
+        ScaffoldMessenger.of(context).showError(
+          ErrorMessageHelper.getUserFriendlyMessage(e),
         );
       }
     } finally {

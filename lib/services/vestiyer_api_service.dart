@@ -622,41 +622,47 @@ class VestiyerApiService {
         return null;
       }
 
-      // ── 1. Parse JSON response ─────────────────────────────────────
-      final dynamic data;
-      try {
-        data = json.decode(response.body);
-      } catch (e) {
-        debugPrint('Segment Service: JSON parse error: $e');
-        _markVpsDown();
-        return null;
-      }
+      final contentType = response.headers['content-type']?.toLowerCase() ?? '';
+      Uint8List? imageBytes;
 
-      if (data['success'] != true || data['imageBase64'] == null) {
-        debugPrint('Segment Service: unexpected response fields: ${data.keys}');
-        _markVpsDown();
-        return null;
-      }
+      // ── 1. New protocol: direct PNG bytes ──────────────────────────
+      if (contentType.contains('image/png')) {
+        imageBytes = response.bodyBytes;
+      } else {
+        // ── 2. Legacy protocol: JSON with base64 ─────────────────────
+        final dynamic data;
+        try {
+          data = json.decode(response.body);
+        } catch (e) {
+          debugPrint('Segment Service: JSON parse error: $e');
+          _markVpsDown();
+          return null;
+        }
 
-      // ── 2. Decode base64 ───────────────────────────────────────────
-      String base64String = data['imageBase64'] as String;
-      if (base64String.contains(',')) {
-        base64String = base64String.split(',').last;
-      }
+        if (data['success'] != true || data['imageBase64'] == null) {
+          debugPrint('Segment Service: unexpected response fields: ${data.keys}');
+          _markVpsDown();
+          return null;
+        }
 
-      if (base64String.isEmpty) {
-        debugPrint('Segment Service: empty base64 string');
-        _markVpsDown();
-        return null;
-      }
+        String base64String = data['imageBase64'] as String;
+        if (base64String.contains(',')) {
+          base64String = base64String.split(',').last;
+        }
 
-      final Uint8List imageBytes;
-      try {
-        imageBytes = base64Decode(base64String);
-      } catch (e) {
-        debugPrint('Segment Service: base64 decode error: $e');
-        _markVpsDown();
-        return null;
+        if (base64String.isEmpty) {
+          debugPrint('Segment Service: empty base64 string');
+          _markVpsDown();
+          return null;
+        }
+
+        try {
+          imageBytes = base64Decode(base64String);
+        } catch (e) {
+          debugPrint('Segment Service: base64 decode error: $e');
+          _markVpsDown();
+          return null;
+        }
       }
 
       // ── 3. Validate image data ─────────────────────────────────────
