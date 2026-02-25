@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:vestiyer_nodejs/core/product/theme/app_colors.dart';
 import 'package:vestiyer_nodejs/utils/clothing_formatter.dart';
@@ -104,7 +105,7 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                ClothingFormatter.format(widget.item.category),
+                                ClothingFormatter.format(context, widget.item.category),
                                 style: const TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w400,
@@ -128,23 +129,23 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
                     _buildDivider(),
                     _buildRowItem(
                         'RENK',
-                        ClothingFormatter.format(widget.item.colors.isNotEmpty
+                        ClothingFormatter.format(context, widget.item.colors.isNotEmpty
                             ? widget.item.colors.join(',')
                             : widget.item.advancedAnalysis?.color)),
                     _buildDivider(),
                     _buildRowItem(
                         'MATERYAL',
-                        ClothingFormatter.format(
+                        ClothingFormatter.format(context,
                             widget.item.advancedAnalysis?.material)),
                     _buildDivider(),
                     _buildRowItem(
                         'STİL',
-                        ClothingFormatter.format(
+                        ClothingFormatter.format(context,
                             widget.item.advancedAnalysis?.style)),
                     _buildDivider(),
                     _buildRowItem(
                         'SEZON',
-                        ClothingFormatter.format(
+                        ClothingFormatter.format(context,
                             widget.item.advancedAnalysis?.season)),
                     _buildDivider(),
 
@@ -197,11 +198,11 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
       {
         'label': 'ANA GRUP',
         'value':
-            ClothingFormatter.format(widget.item.advancedAnalysis?.mainGroup)
+            ClothingFormatter.format(context, widget.item.advancedAnalysis?.mainGroup)
       },
       {
         'label': 'KATEGORİ',
-        'value': ClothingFormatter.format(widget.item.category)
+        'value': ClothingFormatter.format(context, widget.item.category)
       },
       // Add more if needed, but let's keep it minimal
     ];

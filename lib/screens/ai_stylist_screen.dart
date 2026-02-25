@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -12,6 +13,7 @@ import 'package:vestiyer_nodejs/utils/clothing_formatter.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import '../models/clothing.dart';
 import '../models/combination.dart';
+import '../providers/locale_provider.dart';
 import '../providers/wardrobe_provider.dart';
 import '../providers/subscription_provider.dart';
 import '../services/cloud_functions_service.dart';
@@ -45,18 +47,7 @@ class _AIStylistScreenState extends State<AIStylistScreen> {
   String? _stylingAdvice;
   String? _stylingModeItemId;
 
-  // Editorial loading messages
-  final List<String> _loadingMessages = [
-    'STİL ANALİZİ BAŞLATILIYOR',
-    'DOLABINIZ İNCELENİYOR',
-    'RENK UYUMLARI KONTROL EDİLİYOR',
-    'SEZON TRENDLERİ TARANIYOR',
-    'VÜCUT TİPİNE UYGUN SEÇİMLER',
-    'KUMAŞ DOKULARI EŞLEŞTİRİLİYOR',
-    'AKSESUAR DETAYLARI PLANLANIYOR',
-    'SON MODA DOKUNUŞLAR EKLENİYOR',
-    'SİZE ÖZEL KOMBİNLER HAZIRLANIYOR',
-  ];
+  static const int _loadingMessagesCount = 9;
   int _currentMessageIndex = 0;
   Timer? _messageTimer;
 
@@ -78,7 +69,7 @@ class _AIStylistScreenState extends State<AIStylistScreen> {
       if (mounted) {
         setState(() {
           _currentMessageIndex =
-              (_currentMessageIndex + 1) % _loadingMessages.length;
+              (_currentMessageIndex + 1) % _loadingMessagesCount;
         });
       }
     });
@@ -138,11 +129,11 @@ class _AIStylistScreenState extends State<AIStylistScreen> {
 
     if (!subscriptionProvider.isPremium &&
         !subscriptionProvider.hasDailyFreeCombinationLeft) {
+      final l10n = AppLocalizations.of(context);
       await PaywallWidget.showPaywall(
         context,
         type: PaywallType.featureGated,
-        customMessage:
-            'GÜNLÜK ÜCRETSİZ KOMBİN HAKKINIZI KULLANDINIZ. SINIRSIZ KOMBİN İÇİN PREMİUM\'A GEÇİN.',
+        customMessage: l10n.aiStylistPaywall,
       );
       return;
     }
@@ -151,7 +142,7 @@ class _AIStylistScreenState extends State<AIStylistScreen> {
 
     if (wardrobeItems.isEmpty) {
       setState(() {
-        _error = 'DOLABINIZDA HENÜZ KIYAFET BULUNMUYOR. ÖNCE KIYAFET EKLEYİN.';
+        _error = AppLocalizations.of(context).aiStylistEmptyWardrobe;
       });
       return;
     }
@@ -169,13 +160,16 @@ class _AIStylistScreenState extends State<AIStylistScreen> {
     if (!mounted) return;
     final functions = context.read<CloudFunctionsService>();
     final wardrobeProvider = context.read<WardrobeProvider>();
+    final locale = context.read<LocaleProvider>().languageCode;
     final userId = wardrobeProvider.currentUserId;
-    if (userId == null) throw Exception('Kullanıcı girişi yapılmamış');
+    if (userId == null)
+      throw Exception(AppLocalizations.of(context).outfitHistoryNotSignedIn);
 
     try {
       final result = await functions.generateCombinations(
         userId,
         occasion: selectedOccasion,
+        locale: locale,
       );
 
       if (!mounted) return;
@@ -245,14 +239,14 @@ class _AIStylistScreenState extends State<AIStylistScreen> {
         await _persistCurrentSuggestions();
       } else {
         setState(() {
-          _error = 'YETERLİ KIYAFET BULUNAMADI. DAHA FAZLA PARÇA EKLEYİN.';
+          _error = AppLocalizations.of(context).aiStylistInsufficientItems;
           _isLoading = false;
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = 'BİR HATA OLUŞTU. LÜTFEN TEKRAR DENEYİN.';
+          _error = AppLocalizations.of(context).aiStylistError;
           _isLoading = false;
         });
       }
@@ -273,13 +267,15 @@ class _AIStylistScreenState extends State<AIStylistScreen> {
 
     try {
       final functions = context.read<CloudFunctionsService>();
-      final result = await functions.saveCombination(userId, combination);
+      final locale = context.read<LocaleProvider>().languageCode;
+      final result = await functions.saveCombination(userId, combination,
+          locale: locale);
 
       if (mounted) {
         if (result['success'] == true) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('KOMBİN BAŞARIYLA KAYDEDİLDİ'),
+            SnackBar(
+              content: Text(AppLocalizations.of(context).aiStylistSaveSuccess),
               backgroundColor: AppColors.textPrimary,
             ),
           );
@@ -291,8 +287,8 @@ class _AIStylistScreenState extends State<AIStylistScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('KAYDETME SIRASINDA HATA OLUŞTU'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context).aiStylistSaveError),
             backgroundColor: Colors.red,
           ),
         );
@@ -320,7 +316,7 @@ class _AIStylistScreenState extends State<AIStylistScreen> {
             colors: [],
             id: item.clothingId,
             userId: '',
-            title: 'Bulunamadı',
+            title: AppLocalizations.of(context).aiStylistNotFound,
             category: item.category ?? 'unknown',
             imageUrl: '',
             imagePath: '',
@@ -340,8 +336,8 @@ class _AIStylistScreenState extends State<AIStylistScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         VestiyerPageHeader(
-          title: 'AI STİLİST',
-          subtitle: 'Kişisel Moda Danışmanınız',
+          title: AppLocalizations.of(context).aiStylistTitle,
+          subtitle: AppLocalizations.of(context).aiStylistSubtitle,
           showBackButton: false,
           actions: [
             if (_combinations.isNotEmpty || _stylingAdvice != null)
@@ -350,7 +346,7 @@ class _AIStylistScreenState extends State<AIStylistScreen> {
                     icon: HugeIcons.strokeRoundedRefresh,
                     color: AppColors.textPrimary),
                 onPressed: _generateOutfitSuggestion,
-                tooltip: 'YENİLE',
+                tooltip: AppLocalizations.of(context).aiStylistRefresh,
               ),
           ],
         ),
@@ -370,6 +366,18 @@ class _AIStylistScreenState extends State<AIStylistScreen> {
   }
 
   Widget _buildLoadingScreen() {
+    final l10n = AppLocalizations.of(context);
+    final messages = [
+      l10n.aiStylistLoading1,
+      l10n.aiStylistLoading2,
+      l10n.aiStylistLoading3,
+      l10n.aiStylistLoading4,
+      l10n.aiStylistLoading5,
+      l10n.aiStylistLoading6,
+      l10n.aiStylistLoading7,
+      l10n.aiStylistLoading8,
+      l10n.aiStylistLoading9,
+    ];
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 40),
@@ -385,7 +393,7 @@ class _AIStylistScreenState extends State<AIStylistScreen> {
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 500),
               child: Text(
-                _loadingMessages[_currentMessageIndex],
+                messages[_currentMessageIndex % messages.length],
                 key: ValueKey<int>(_currentMessageIndex),
                 style: const TextStyle(
                   fontSize: 14,
@@ -441,7 +449,7 @@ class _AIStylistScreenState extends State<AIStylistScreen> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
               ),
-              child: const Text('TEKRAR DENE'),
+              child: Text(AppLocalizations.of(context).aiStylistRetry),
             ),
           ],
         ),
@@ -468,9 +476,9 @@ class _AIStylistScreenState extends State<AIStylistScreen> {
               ),
             ),
             const SizedBox(height: 40),
-            const Text(
-              'YAPAY ZEKA KOMBIN ASİSTANI',
-              style: TextStyle(
+            Text(
+              AppLocalizations.of(context).aiStylistInitialTitle,
+              style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w300,
                 color: AppColors.textPrimary,
@@ -480,7 +488,7 @@ class _AIStylistScreenState extends State<AIStylistScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              'Dolabınızdaki parçaları analiz ederek size özel stil önerileri sunar.',
+              AppLocalizations.of(context).aiStylistInitialDescription,
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w300,
@@ -505,9 +513,9 @@ class _AIStylistScreenState extends State<AIStylistScreen> {
                       borderRadius: BorderRadius.zero,
                     ),
                   ),
-                  child: const Text(
-                    'KOMBİN OLUŞTUR',
-                    style: TextStyle(
+                  child: Text(
+                    AppLocalizations.of(context).aiStylistGenerate,
+                    style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w400,
                       letterSpacing: 1.5,
@@ -523,6 +531,7 @@ class _AIStylistScreenState extends State<AIStylistScreen> {
   }
 
   Widget _buildOutfitSuggestions() {
+    final l10n = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -532,7 +541,8 @@ class _AIStylistScreenState extends State<AIStylistScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'KOMBİN ÖNERİLERİ (${_currentOutfitIndex + 1}/${_combinations.length})',
+                l10n.aiStylistSuggestionsHeader(
+                    _currentOutfitIndex + 1, _combinations.length),
                 style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w400,
@@ -637,7 +647,8 @@ class _AIStylistScreenState extends State<AIStylistScreen> {
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
-                                    ClothingFormatter.format(clothing.category)
+                                    ClothingFormatter.format(
+                                            context, clothing.category)
                                         .toUpperCase(),
                                     style: const TextStyle(
                                       fontSize: 10,
@@ -673,7 +684,8 @@ class _AIStylistScreenState extends State<AIStylistScreen> {
                             children: [
                               Expanded(
                                 child: Text(
-                                  ClothingFormatter.format(combination.name)
+                                  ClothingFormatter.format(
+                                          context, combination.name)
                                       .toUpperCase(),
                                   style: const TextStyle(
                                     fontSize: 16,
@@ -693,7 +705,8 @@ class _AIStylistScreenState extends State<AIStylistScreen> {
                                       color: AppColors.border, width: 0.5),
                                 ),
                                 child: Text(
-                                  ClothingFormatter.format(combination.occasion)
+                                  ClothingFormatter.format(
+                                          context, combination.occasion)
                                       .toUpperCase(),
                                   style: const TextStyle(
                                     fontSize: 10,
@@ -723,9 +736,10 @@ class _AIStylistScreenState extends State<AIStylistScreen> {
                                       child: Column(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          const Text(
-                                            'KOMBİN DETAYI',
-                                            style: TextStyle(
+                                          Text(
+                                            AppLocalizations.of(context)
+                                                .aiStylistDetailTitle,
+                                            style: const TextStyle(
                                               fontSize: 16,
                                               fontWeight: FontWeight.w400,
                                               letterSpacing: 1.5,
@@ -748,9 +762,10 @@ class _AIStylistScreenState extends State<AIStylistScreen> {
                                           TextButton(
                                             onPressed: () =>
                                                 Navigator.pop(context),
-                                            child: const Text(
-                                              'KAPAT',
-                                              style: TextStyle(
+                                            child: Text(
+                                              AppLocalizations.of(context)
+                                                  .aiStylistClose,
+                                              style: const TextStyle(
                                                 color: AppColors.textPrimary,
                                                 letterSpacing: 1.0,
                                               ),
@@ -804,7 +819,9 @@ class _AIStylistScreenState extends State<AIStylistScreen> {
                                       ),
                                     )
                                   : Text(
-                                      isSaved ? 'KAYDEDİLDİ' : 'KAYDET',
+                                      isSaved
+                                          ? l10n.aiStylistSaved
+                                          : l10n.aiStylistSave,
                                       style: const TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w400,
@@ -827,6 +844,7 @@ class _AIStylistScreenState extends State<AIStylistScreen> {
   }
 
   Widget _buildStylingAdviceScreen() {
+    final l10n = AppLocalizations.of(context);
     final wardrobeItems = context.read<WardrobeProvider>().items;
     Clothing? styledItem;
     if (_stylingModeItemId != null) {
@@ -867,9 +885,9 @@ class _AIStylistScreenState extends State<AIStylistScreen> {
                   ),
                 ),
               ),
-            const Text(
-              'STİL ÖNERİSİ',
-              style: TextStyle(
+            Text(
+              l10n.aiStylistAdviceTitle,
+              style: const TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w300,
                 letterSpacing: 3.0,
@@ -878,7 +896,7 @@ class _AIStylistScreenState extends State<AIStylistScreen> {
             ),
             const SizedBox(height: 24),
             Text(
-              'Dolabınızda yeterli parça çeşitliliği bulunmuyor. İşte bu parça için önerilerimiz:',
+              l10n.aiStylistAdviceDescription,
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w300,
@@ -907,7 +925,7 @@ class _AIStylistScreenState extends State<AIStylistScreen> {
             ),
             const SizedBox(height: 32),
             Text(
-              'Üst ve alt giyim kategorilerinden en az birer parça ekleyin.',
+              l10n.aiStylistAdviceTip,
               style: TextStyle(
                 fontSize: 12,
                 color: AppColors.textPrimary.withValues(alpha: 0.5),

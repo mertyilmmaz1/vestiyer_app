@@ -11,13 +11,14 @@ const {
   selectAndDescribeCombinations,
   generateStylingAdvice,
   getStyleAdvice,
-  getShoppingSuggestions, // Added
+  getShoppingSuggestions,
   detectChatIntent
 } = require('./services/aiService');
 const { generateOutfitCandidates } = require('./services/combinationEngine');
 const { checkImageQuality } = require('./services/imageQualityCheck');
 const { extractDominantColors } = require('./services/colorExtraction');
 const { callVpsSegment, checkVpsHealth } = require('./services/segmentService');
+const { t } = require('./services/i18n');
 
 admin.initializeApp();
 
@@ -27,22 +28,22 @@ const { OpenAI } = require('openai');
 const CONFIDENCE_THRESHOLD = 0.7;
 
 /** Lazy init: OpenAI is only created at runtime when a function runs (so deploy does not require OPENAI_API_KEY). */
-function getOpenAIClient() {
+function getOpenAIClient(locale) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     throw new functions.https.HttpsError(
       'failed-precondition',
-      'OPENAI_API_KEY yapılandırılmamış. Firebase Secret Manager veya config ile ekleyin.'
+      t(locale || 'tr', 'errors.openaiNotConfigured')
     );
   }
   return new OpenAI({ apiKey });
 }
 
-function requireAuth(context) {
+function requireAuth(context, locale = 'tr') {
   if (!context.auth || !context.auth.uid) {
     throw new functions.https.HttpsError(
       'unauthenticated',
-      'Oturum açmanız gerekiyor.'
+      t(locale, 'errors.authRequired')
     );
   }
   return context.auth.uid;
@@ -68,42 +69,39 @@ exports.analyzeClothing = functions
     secrets: ['OPENAI_API_KEY', 'SEGMENT_SERVICE_URL', 'SEGMENT_SERVICE_API_KEY']
   })
   .https.onCall(async (data, context) => {
-    const uid = requireAuth(context);
-    const { userId, imageUrl, title, skipServerSegmentation, segmentationApplied } = data || {};
+    const locale = (data && data.locale) || 'tr';
+    const uid = requireAuth(context, locale);
+    const { userId, imageUrl, title } = data || {};
     if (userId && userId !== uid) {
-      throw new functions.https.HttpsError('permission-denied', 'Yetkisiz erişim.');
+      throw new functions.https.HttpsError('permission-denied', t(locale, 'errors.permissionDenied'));
     }
     const targetUserId = userId || uid;
     if (!imageUrl || typeof imageUrl !== 'string') {
-      throw new functions.https.HttpsError('invalid-argument', 'imageUrl zorunludur.');
+      throw new functions.https.HttpsError('invalid-argument', t(locale, 'errors.imageUrlRequired'));
     }
 
     const qualityCheck = await checkImageQuality(imageUrl);
     if (!qualityCheck.ok) {
-      throw new functions.https.HttpsError('invalid-argument', qualityCheck.error || 'Görsel kalitesi yetersiz.');
+      throw new functions.https.HttpsError('invalid-argument', qualityCheck.error || t(locale, 'errors.imageQualityPoor'));
     }
-
-    const shouldRunServerSegmentation = skipServerSegmentation !== true;
 
     let segmentResult = { success: false };
-    if (shouldRunServerSegmentation) {
-      const segmentUrl =
-        process.env.SEGMENT_SERVICE_URL ||
-        (typeof functions.config().segment_service === 'object' && functions.config().segment_service?.url) ||
-        '';
-      const segmentKey =
-        process.env.SEGMENT_SERVICE_API_KEY ||
-        (typeof functions.config().segment_service === 'object' && functions.config().segment_service?.api_key) ||
-        '';
-      segmentResult = segmentUrl && segmentUrl.startsWith('http')
-        ? await callVpsSegment(imageUrl, segmentUrl, segmentKey)
-        : { success: false };
-    }
+    const segmentUrl =
+      process.env.SEGMENT_SERVICE_URL ||
+      (typeof functions.config().segment_service === 'object' && functions.config().segment_service?.url) ||
+      '';
+    const segmentKey =
+      process.env.SEGMENT_SERVICE_API_KEY ||
+      (typeof functions.config().segment_service === 'object' && functions.config().segment_service?.api_key) ||
+      '';
+    segmentResult = segmentUrl && segmentUrl.startsWith('http')
+      ? await callVpsSegment(imageUrl, segmentUrl, segmentKey)
+      : { success: false };
 
     let imageForVision = imageUrl;
     let imageForColor = imageUrl;
     let segmentedImageUrl = null;
-    let segmentationSkipped = segmentationApplied !== true;
+    let segmentationSkipped = true;
 
     if (segmentResult.success && segmentResult.buffer) {
       try {
@@ -111,6 +109,15 @@ exports.analyzeClothing = functions
         imageForVision = segmentedImageUrl;
         imageForColor = segmentResult.buffer;
         segmentationSkipped = false;
+        if (segmentResult.telemetry) {
+          console.log('Segment telemetry', {
+            uid: targetUserId,
+            model: segmentResult.telemetry.model || 'unknown',
+            confidence: segmentResult.telemetry.confidence,
+            fallbackUsed: segmentResult.telemetry.fallbackUsed,
+            latencyMs: segmentResult.telemetry.latencyMs
+          });
+        }
       } catch (e) {
         imageForVision = imageUrl;
         imageForColor = imageUrl;
@@ -119,9 +126,9 @@ exports.analyzeClothing = functions
 
     const backendColors = await extractDominantColors(imageForColor);
 
-    const result = await analyzeClothingFromUrl(getOpenAIClient(), imageForVision, backendColors);
+    const result = await analyzeClothingFromUrl(getOpenAIClient(locale), imageForVision, backendColors, locale);
     if (!result.success) {
-      throw new functions.https.HttpsError('internal', result.error || 'Analiz başarısız.');
+      throw new functions.https.HttpsError('internal', result.error || t(locale, 'errors.analysisFailed'));
     }
 
     const category = result.category || 'top';
@@ -133,12 +140,12 @@ exports.analyzeClothing = functions
     const finalImageUrl = segmentedImageUrl || imageUrl;
     const doc = {
       userId: targetUserId,
-      title: title || result.parsedAnalysis.category || 'Kıyafet',
+      title: title || result.parsedAnalysis.category || t(locale, 'defaultClothingTitle'),
       category,
       imageUrl: finalImageUrl,
       imagePath: finalImageUrl,
       ...(segmentationSkipped && { segmentationSkipped: true }),
-      ...(segmentationApplied === true && { segmentationSource: 'client' }),
+      ...(!segmentationSkipped && { segmentationSource: 'server' }),
       colors,
       colorsWithDominance: result.colorsWithDominance || null,
       confidence,
@@ -175,7 +182,7 @@ exports.analyzeClothing = functions
     return {
       success: true,
       clothingId: ref.id,
-      message: 'Kıyafet analiz edildi ve kaydedildi.',
+      message: t(locale, 'success.clothingAnalyzed'),
       lowConfidence: lowConfidence || undefined
     };
   });
@@ -183,7 +190,8 @@ exports.analyzeClothing = functions
 exports.generateCombinations = functions
   .runWith({ timeoutSeconds: 60, secrets: ['OPENAI_API_KEY'] })
   .https.onCall(async (data, context) => {
-    const uid = requireAuth(context);
+    const locale = (data && data.locale) || 'tr';
+    const uid = requireAuth(context, locale);
     const { userId, forceGenerate, occasion } = data || {};
     const targetUserId = userId || uid;
 
@@ -207,7 +215,7 @@ exports.generateCombinations = functions
     if (clothingItems.length === 0) {
       throw new functions.https.HttpsError(
         'failed-precondition',
-        'Dolabınızda henüz kıyafet bulunmuyor. Önce kıyafet ekleyin.'
+        t(locale, 'errors.wardrobeEmpty')
       );
     }
 
@@ -221,16 +229,17 @@ exports.generateCombinations = functions
     if (engineResult.mode === 'insufficient') {
       throw new functions.https.HttpsError(
         'failed-precondition',
-        engineResult.message || 'En az 2 kıyafet ekleyerek kombin önerisi alabilirsiniz.'
+        engineResult.message || t(locale, 'errors.insufficientItems')
       );
     }
 
     let result;
     if (engineResult.mode === 'styling' && engineResult.singleItems && engineResult.singleItems.length > 0) {
       const adviceResult = await generateStylingAdvice(
-        getOpenAIClient(),
+        getOpenAIClient(locale),
         engineResult.singleItems[0],
-        occasion
+        occasion,
+        locale
       );
       const comboCost = (adviceResult.usage.prompt_tokens * 0.00015) / 1000 +
         (adviceResult.usage.completion_tokens * 0.0006) / 1000;
@@ -247,23 +256,24 @@ exports.generateCombinations = functions
         success: true,
         mode: 'styling',
         stylingAdvice: { advice: adviceResult.advice, itemId: adviceResult.itemId },
-        message: 'Stil önerisi hazırlandı.'
+        message: t(locale, 'success.stylingAdviceReady')
       };
     }
 
     if (engineResult.candidates && engineResult.candidates.length > 0) {
       result = await selectAndDescribeCombinations(
-        getOpenAIClient(),
+        getOpenAIClient(locale),
         engineResult.candidates,
         occasion,
-        userProfile
+        userProfile,
+        locale
       );
     } else {
-      result = await generateCombinations(getOpenAIClient(), clothingItems, occasion, userProfile);
+      result = await generateCombinations(getOpenAIClient(locale), clothingItems, occasion, userProfile, locale);
     }
 
     if (!result.success) {
-      throw new functions.https.HttpsError('internal', result.error || 'Kombin oluşturulamadı.');
+      throw new functions.https.HttpsError('internal', result.error || t(locale, 'errors.combinationFailed'));
     }
 
     const comboCost = (result.usage.prompt_tokens * 0.00015) / 1000 + (result.usage.completion_tokens * 0.0006) / 1000;
@@ -280,7 +290,7 @@ exports.generateCombinations = functions
     return {
       success: true,
       mode: engineResult.mode || 'full',
-      message: 'Kombinler oluşturuldu.',
+      message: t(locale, 'success.combinationsCreated'),
       combinations: result.combinations,
       totalItems: clothingItems.length,
       usedItems: clothingItems.length
@@ -290,12 +300,13 @@ exports.generateCombinations = functions
 exports.saveCombination = functions
   .runWith({ timeoutSeconds: 30 })
   .https.onCall(async (data, context) => {
-    const uid = requireAuth(context);
+    const locale = (data && data.locale) || 'tr';
+    const uid = requireAuth(context, locale);
     const { userId, combination } = data || {};
     const targetUserId = userId || uid;
 
     if (!combination || !combination.items || combination.items.length === 0) {
-      throw new functions.https.HttpsError('invalid-argument', 'Kombin verisi eksik.');
+      throw new functions.https.HttpsError('invalid-argument', t(locale, 'errors.combinationDataMissing'));
     }
 
     const clothingItemsForDoc = (combination.items || []).map((id) => ({
@@ -325,17 +336,18 @@ exports.saveCombination = functions
     return {
       success: true,
       combinationId: docRef.id,
-      message: 'Kombin başarıyla kaydedildi.'
+      message: t(locale, 'success.combinationSaved')
     };
   });
 
 exports.getStyleAdvice = functions
   .runWith({ timeoutSeconds: 60, secrets: ['OPENAI_API_KEY'] })
   .https.onCall(async (data, context) => {
-    const uid = requireAuth(context);
+    const locale = (data && data.locale) || 'tr';
+    const uid = requireAuth(context, locale);
     const { message, conversationHistory, wardrobeSummary } = data || {};
     if (!message || typeof message !== 'string') {
-      throw new functions.https.HttpsError('invalid-argument', 'message zorunludur.');
+      throw new functions.https.HttpsError('invalid-argument', t(locale, 'errors.messageRequired'));
     }
 
     const history = Array.isArray(conversationHistory) ? conversationHistory.slice(-5) : [];
@@ -361,18 +373,21 @@ exports.getStyleAdvice = functions
         const engineResult = generateOutfitCandidates(clothingItems, 'casual');
         if (engineResult.candidates && engineResult.candidates.length > 0) {
           const selectResult = await selectAndDescribeCombinations(
-            getOpenAIClient(),
+            getOpenAIClient(locale),
             engineResult.candidates,
-            'casual'
+            'casual',
+            null,
+            locale
           );
           if (selectResult.combinations && selectResult.combinations.length > 0) {
             combinationResult = { combinations: selectResult.combinations };
           }
         } else if (engineResult.mode === 'styling' && engineResult.singleItems && engineResult.singleItems.length > 0) {
           const adviceResult = await generateStylingAdvice(
-            getOpenAIClient(),
+            getOpenAIClient(locale),
             engineResult.singleItems[0],
-            'casual'
+            'casual',
+            locale
           );
           combinationResult = {
             combinations: [{
@@ -390,11 +405,12 @@ exports.getStyleAdvice = functions
     }
 
     const result = await getStyleAdvice(
-      getOpenAIClient(),
+      getOpenAIClient(locale),
       message,
       history,
       summary,
-      { combinationResult, occasion: 'casual' }
+      { combinationResult, occasion: 'casual' },
+      locale
     );
 
     return {
@@ -406,12 +422,13 @@ exports.getStyleAdvice = functions
 exports.getShoppingSuggestions = functions
   .runWith({ timeoutSeconds: 60, secrets: ['OPENAI_API_KEY'] })
   .https.onCall(async (data, context) => {
-    const uid = requireAuth(context);
+    const locale = (data && data.locale) || 'tr';
+    const uid = requireAuth(context, locale);
     const { userId, wardrobeSummary } = data || {};
     const targetUserId = userId || uid;
 
     if (targetUserId !== uid) {
-      throw new functions.https.HttpsError('permission-denied', 'Yetkisiz erişim.');
+      throw new functions.https.HttpsError('permission-denied', t(locale, 'errors.permissionDenied'));
     }
 
     const summary = wardrobeSummary && typeof wardrobeSummary === 'object' ? wardrobeSummary : null;
@@ -422,9 +439,10 @@ exports.getShoppingSuggestions = functions
       : null;
 
     const result = await getShoppingSuggestions(
-      getOpenAIClient(),
+      getOpenAIClient(locale),
       summary,
-      userProfile
+      userProfile,
+      locale
     );
 
     const cost = (result.usage.prompt_tokens * 0.00015) / 1000 + (result.usage.completion_tokens * 0.0006) / 1000;
@@ -444,11 +462,12 @@ exports.getShoppingSuggestions = functions
   });
 
 exports.managePremiumStatus = functions.https.onCall(async (data, context) => {
-  const uid = requireAuth(context);
+  const locale = (data && data.locale) || 'tr';
+  const uid = requireAuth(context, locale);
   const { userId, ...payload } = data || {};
   const targetUserId = userId || uid;
   if (targetUserId !== uid) {
-    throw new functions.https.HttpsError('permission-denied', 'Yetkisiz.');
+    throw new functions.https.HttpsError('permission-denied', t(locale, 'errors.permissionDeniedShort'));
   }
   await db.collection('users').doc(targetUserId).update({
     ...payload,
@@ -464,7 +483,8 @@ exports.checkSegmentServiceHealth = functions
     secrets: ['SEGMENT_SERVICE_URL']
   })
   .https.onCall(async (data, context) => {
-    requireAuth(context);
+    const locale = (data && data.locale) || 'tr';
+    requireAuth(context, locale);
 
     const segmentUrl =
       process.env.SEGMENT_SERVICE_URL ||

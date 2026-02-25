@@ -5,7 +5,52 @@ import 'app_colors.dart';
 
 /// Zara editorial tipografi - kontrollü lüks + sistematik.
 /// Serif: brand/section title. Sans-serif: Inter, 300-400 weight.
+/// For RTL/locale: use [getTextTheme] with [Locale]; prefer EdgeInsetsDirectional and start/end in layouts.
 abstract class AppTypography {
+  /// Returns a TextTheme for the given [locale]. Use for locale-aware font selection (e.g. Arabic: Cairo, CJK: Noto Sans JP).
+  static TextTheme getTextTheme(Locale locale) {
+    final lang = locale.languageCode.toLowerCase();
+    if (lang == 'ar') {
+      return TextTheme(
+        displayLarge: GoogleFonts.cairo(fontSize: 32, fontWeight: FontWeight.w400, color: AppColors.textPrimary),
+        displayMedium: GoogleFonts.cairo(fontSize: 24, fontWeight: FontWeight.w400, color: AppColors.textPrimary),
+        displaySmall: GoogleFonts.cairo(fontSize: 20, fontWeight: FontWeight.w400, color: AppColors.textPrimary),
+        headlineLarge: GoogleFonts.cairo(fontSize: 20, fontWeight: FontWeight.w400, color: AppColors.textPrimary),
+        headlineMedium: GoogleFonts.cairo(fontSize: 18, fontWeight: FontWeight.w400, color: AppColors.textPrimary),
+        headlineSmall: GoogleFonts.cairo(fontSize: 16, fontWeight: FontWeight.w400, color: AppColors.textPrimary),
+        titleLarge: GoogleFonts.cairo(fontSize: 16, fontWeight: FontWeight.w400, color: AppColors.textPrimary),
+        titleMedium: GoogleFonts.cairo(fontSize: 14, fontWeight: FontWeight.w400, color: AppColors.textPrimary),
+        titleSmall: GoogleFonts.cairo(fontSize: 12, fontWeight: FontWeight.w400, color: AppColors.textPrimary),
+        bodyLarge: GoogleFonts.cairo(fontSize: 16, fontWeight: FontWeight.w400, color: AppColors.textPrimary),
+        bodyMedium: GoogleFonts.cairo(fontSize: 14, fontWeight: FontWeight.w300, color: AppColors.textPrimary),
+        bodySmall: GoogleFonts.cairo(fontSize: 12, fontWeight: FontWeight.w300, color: AppColors.textPrimary),
+        labelLarge: GoogleFonts.cairo(fontSize: 14, fontWeight: FontWeight.w400, color: AppColors.textPrimary),
+        labelMedium: GoogleFonts.cairo(fontSize: 12, fontWeight: FontWeight.w400, color: AppColors.textPrimary),
+        labelSmall: GoogleFonts.cairo(fontSize: 11, fontWeight: FontWeight.w400, color: AppColors.textPrimary),
+      );
+    }
+    if (lang == 'ja' || lang == 'zh' || lang == 'ko') {
+      return TextTheme(
+        displayLarge: GoogleFonts.notoSansJp(fontSize: 32, fontWeight: FontWeight.w400, color: AppColors.textPrimary),
+        displayMedium: GoogleFonts.notoSansJp(fontSize: 24, fontWeight: FontWeight.w400, color: AppColors.textPrimary),
+        displaySmall: GoogleFonts.notoSansJp(fontSize: 20, fontWeight: FontWeight.w400, color: AppColors.textPrimary),
+        headlineLarge: GoogleFonts.notoSansJp(fontSize: 20, fontWeight: FontWeight.w400, color: AppColors.textPrimary),
+        headlineMedium: GoogleFonts.notoSansJp(fontSize: 18, fontWeight: FontWeight.w400, color: AppColors.textPrimary),
+        headlineSmall: GoogleFonts.notoSansJp(fontSize: 16, fontWeight: FontWeight.w400, color: AppColors.textPrimary),
+        titleLarge: GoogleFonts.notoSansJp(fontSize: 16, fontWeight: FontWeight.w400, color: AppColors.textPrimary),
+        titleMedium: GoogleFonts.notoSansJp(fontSize: 14, fontWeight: FontWeight.w400, color: AppColors.textPrimary),
+        titleSmall: GoogleFonts.notoSansJp(fontSize: 12, fontWeight: FontWeight.w400, color: AppColors.textPrimary),
+        bodyLarge: GoogleFonts.notoSansJp(fontSize: 16, fontWeight: FontWeight.w400, color: AppColors.textPrimary),
+        bodyMedium: GoogleFonts.notoSansJp(fontSize: 14, fontWeight: FontWeight.w300, color: AppColors.textPrimary),
+        bodySmall: GoogleFonts.notoSansJp(fontSize: 12, fontWeight: FontWeight.w300, color: AppColors.textPrimary),
+        labelLarge: GoogleFonts.notoSansJp(fontSize: 14, fontWeight: FontWeight.w400, color: AppColors.textPrimary),
+        labelMedium: GoogleFonts.notoSansJp(fontSize: 12, fontWeight: FontWeight.w400, color: AppColors.textPrimary),
+        labelSmall: GoogleFonts.notoSansJp(fontSize: 11, fontWeight: FontWeight.w400, color: AppColors.textPrimary),
+      );
+    }
+    return textTheme;
+  }
+
   // Serif - Playfair Display (editorial, Didot alternatifi)
   static TextStyle _serif({
     double? fontSize,

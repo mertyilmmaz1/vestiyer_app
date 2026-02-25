@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/product/theme/app_colors.dart';
 import '../core/product/theme/app_typography.dart';
@@ -16,10 +17,11 @@ class IntroDialog extends StatefulWidget {
     if (hasSeen) return;
 
     if (context.mounted) {
+      final l10n = AppLocalizations.of(context);
       await showGeneralDialog(
         context: context,
         barrierDismissible: false,
-        barrierLabel: 'Intro',
+        barrierLabel: l10n.introBarrierLabel,
         barrierColor: Colors.black.withValues(alpha: 0.8),
         transitionDuration: const Duration(milliseconds: 300),
         pageBuilder: (_, __, ___) => const IntroDialog(),
@@ -44,29 +46,14 @@ class _IntroDialogState extends State<IntroDialog> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
-  final List<Map<String, dynamic>> _steps = [
-    {
-      'title': 'GARDIROBUNUZU\nDİJİTALLEŞTİRİN',
-      'description':
-          'Kıyafetlerinizi fotoğrafını çekerek veya galeriden yükleyerek sanal gardırobunuza ekleyin.',
-      'card': const IntroUploadCard(),
-    },
-    {
-      'title': 'SINIRSIZ\nKOMBİNLER',
-      'description':
-          'Parçalarınızı eşleştirin ve yapay zeka desteğiyle saniyeler içinde yeni stiller keşfedin.',
-      'card': const IntroCombineCard(),
-    },
-    {
-      'title': 'KİŞİSEL\nSTİL ANALİZİ',
-      'description':
-          'Dolabınızdaki renk, tarz ve sezon dağılımını analiz ederek size özel alışveriş tavsiyeleri alın.',
-      'card': const IntroAnalysisCard(),
-    },
+  static const List<Widget> _stepCards = [
+    IntroUploadCard(),
+    IntroCombineCard(),
+    IntroAnalysisCard(),
   ];
 
   void _nextPage() {
-    if (_currentPage < _steps.length - 1) {
+    if (_currentPage < _stepCards.length - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 500),
         curve: Curves.easeInOutCubic,
@@ -93,7 +80,7 @@ class _IntroDialogState extends State<IntroDialog> {
               children: [
                 // Top Progress Bar
                 Row(
-                  children: List.generate(_steps.length, (index) {
+                  children: List.generate(_stepCards.length, (index) {
                     return Expanded(
                       child: Container(
                         height: 2,
@@ -114,9 +101,19 @@ class _IntroDialogState extends State<IntroDialog> {
                         _currentPage = index;
                       });
                     },
-                    itemCount: _steps.length,
+                    itemCount: _stepCards.length,
                     itemBuilder: (context, index) {
-                      final step = _steps[index];
+                      final l10n = AppLocalizations.of(context);
+                      final titles = [
+                        l10n.introStep1Title,
+                        l10n.introStep2Title,
+                        l10n.introStep3Title,
+                      ];
+                      final descriptions = [
+                        l10n.introStep1Description,
+                        l10n.introStep2Description,
+                        l10n.introStep3Description,
+                      ];
                       return Padding(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 24, vertical: 24),
@@ -124,7 +121,7 @@ class _IntroDialogState extends State<IntroDialog> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
-                              step['title'],
+                              titles[index],
                               style: AppTypography.display.copyWith(
                                 fontSize: 24,
                                 height: 1.2,
@@ -135,7 +132,7 @@ class _IntroDialogState extends State<IntroDialog> {
                             ),
                             const SizedBox(height: 12),
                             Text(
-                              step['description'],
+                              descriptions[index],
                               style: AppTypography.body.copyWith(
                                 fontSize: 13,
                                 height: 1.5,
@@ -144,7 +141,7 @@ class _IntroDialogState extends State<IntroDialog> {
                               textAlign: TextAlign.center,
                             ),
                             const SizedBox(height: 24),
-                            Expanded(child: step['card'] as Widget),
+                            Expanded(child: _stepCards[index]),
                           ],
                         ),
                       );
@@ -160,31 +157,41 @@ class _IntroDialogState extends State<IntroDialog> {
                     children: [
                       TextButton(
                         onPressed: () => Navigator.of(context).pop(),
-                        child: Text(
-                          'ATLA',
-                          style: AppTypography.label.copyWith(
-                            color: AppColors.textSecondary,
-                            letterSpacing: 1.5,
-                          ),
+                        child: Builder(
+                          builder: (context) {
+                            final l10n = AppLocalizations.of(context);
+                            return Text(
+                              l10n.introSkip,
+                              style: AppTypography.label.copyWith(
+                                color: AppColors.textSecondary,
+                                letterSpacing: 1.5,
+                              ),
+                            );
+                          },
                         ),
                       ),
                       GestureDetector(
                         onTap: _nextPage,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 32, vertical: 16),
-                          decoration: const BoxDecoration(
-                            color: AppColors.textPrimary,
-                          ),
-                          child: Text(
-                            _currentPage == _steps.length - 1
-                                ? 'BAŞLA'
-                                : 'DEVAM ET',
-                            style: AppTypography.label.copyWith(
-                              color: AppColors.background,
-                              letterSpacing: 2.0,
-                            ),
-                          ),
+                        child: Builder(
+                          builder: (context) {
+                            final l10n = AppLocalizations.of(context);
+                            return Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 32, vertical: 16),
+                              decoration: const BoxDecoration(
+                                color: AppColors.textPrimary,
+                              ),
+                              child: Text(
+                                _currentPage == _stepCards.length - 1
+                                    ? l10n.introStart
+                                    : l10n.introContinue,
+                                style: AppTypography.label.copyWith(
+                                  color: AppColors.background,
+                                  letterSpacing: 2.0,
+                                ),
+                              ),
+                            );
+                          },
                         ),
                       ),
                     ],

@@ -42,27 +42,33 @@ String _mapToInventoryCategory(Clothing item) {
   return 'top'; // default
 }
 
-/// Season names in Turkish for AI context.
-const Map<String, String> _seasonMap = {
-  'ilkbahar': 'ilkbahar',
-  'yaz': 'yaz',
-  'sonbahar': 'sonbahar',
-  'kis': 'kış',
-  'kış': 'kış',
-  'tum_yil': 'tüm yıl',
-  'tüm yıl': 'tüm yıl',
-  'all-season': 'tüm yıl',
+/// Season names: input (any locale) -> normalized English key for AI/backend.
+const Map<String, String> _seasonToNormalized = {
+  'ilkbahar': 'spring',
+  'spring': 'spring',
+  'yaz': 'summer',
+  'summer': 'summer',
+  'sonbahar': 'autumn',
+  'autumn': 'autumn',
+  'fall': 'autumn',
+  'kis': 'winter',
+  'kış': 'winter',
+  'winter': 'winter',
+  'tum_yil': 'all-season',
+  'tüm yıl': 'all-season',
+  'all-season': 'all-season',
+  'all_seasons': 'all-season',
 };
 
-/// Normalizes season string to Turkish key.
+/// Normalizes season string to English key (for consistent AI/backend summary).
 String _normalizeSeason(String? s) {
-  if (s == null || s.isEmpty) return 'tüm yıl';
-  final t = s.toLowerCase().trim();
-  if (_seasonMap.containsKey(t)) return _seasonMap[t]!;
-  if (t.contains('ilkbahar') || t.contains('spring')) return 'ilkbahar';
-  if (t.contains('yaz') || t.contains('summer')) return 'yaz';
-  if (t.contains('sonbahar') || t.contains('fall')) return 'sonbahar';
-  if (t.contains('kis') || t.contains('kış') || t.contains('winter')) return 'kış';
+  if (s == null || s.isEmpty) return 'all-season';
+  final t = s.toLowerCase().trim().replaceAll(' ', '_');
+  if (_seasonToNormalized.containsKey(t)) return _seasonToNormalized[t]!;
+  if (t.contains('ilkbahar') || t.contains('spring')) return 'spring';
+  if (t.contains('yaz') || t.contains('summer')) return 'summer';
+  if (t.contains('sonbahar') || t.contains('fall')) return 'autumn';
+  if (t.contains('kis') || t.contains('kış') || t.contains('winter')) return 'winter';
   return t;
 }
 
@@ -119,7 +125,7 @@ Map<String, dynamic> buildWardrobeSummary(List<Clothing> items) {
         seasonSet.add(_normalizeSeason(part.trim()));
       }
     } else {
-      seasonSet.add('tüm yıl');
+      seasonSet.add('all-season');
     }
   }
 

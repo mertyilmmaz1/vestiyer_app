@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../core/product/theme/app_colors.dart';
 import '../core/product/theme/app_typography.dart';
@@ -183,7 +184,7 @@ class _IntroUploadCardState extends State<IntroUploadCard>
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        'YÜKLENDİ',
+                        AppLocalizations.of(context).introCardUploaded,
                         style: AppTypography.label.copyWith(
                           color: AppColors.background,
                           fontSize: 10,
@@ -333,15 +334,19 @@ class IntroAnalysisCard extends StatefulWidget {
 }
 
 class _IntroAnalysisCardState extends State<IntroAnalysisCard> {
-  final String _message =
-      "Stil analizi tamamlandı.\n%85 Casual uyumu.\nÖnerilen renkler:\n• Bej\n• Lacivert\n• Haki";
+  String _message = "";
   String _displayedText = "";
   Timer? _timer;
+  bool _typingStarted = false;
 
   @override
-  void initState() {
-    super.initState();
-    _startTyping();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_typingStarted) {
+      _typingStarted = true;
+      _message = AppLocalizations.of(context).introCardAnalysisMessage;
+      _startTyping();
+    }
   }
 
   void _startTyping() {
@@ -398,7 +403,7 @@ class _IntroAnalysisCardState extends State<IntroAnalysisCard> {
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  'AI ASİSTAN',
+                  AppLocalizations.of(context).introCardAiAssistant,
                   style: AppTypography.label.copyWith(
                     letterSpacing: 1.5,
                     fontSize: 10,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../core/product/theme/app_colors.dart';
 import '../core/product/theme/app_typography.dart';
@@ -28,7 +29,7 @@ class UploadGuideCard extends StatelessWidget {
               ),
               const SizedBox(width: AppSpacing.sm),
               Text(
-                'MÜKEMMEL ANALİZ İÇİN',
+                AppLocalizations.of(context).uploadGuideTitle,
                 style: AppTypography.label.copyWith(
                   fontWeight: FontWeight.w600,
                   letterSpacing: 1.2,
@@ -38,25 +39,28 @@ class UploadGuideCard extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.md),
           _buildGuideItem(
+            context,
             HugeIcons.strokeRoundedCircle,
-            'Sade bir arka plan kullanın (tercihen beyaz veya gri).',
+            AppLocalizations.of(context).uploadGuideTip1,
           ),
           const SizedBox(height: AppSpacing.sm),
           _buildGuideItem(
+            context,
             HugeIcons.strokeRoundedSun03,
-            'Gün ışığı veya iyi aydınlatılmış bir odayı tercih edin.',
+            AppLocalizations.of(context).uploadGuideTip2,
           ),
           const SizedBox(height: AppSpacing.sm),
           _buildGuideItem(
+            context,
             HugeIcons.strokeRoundedSquare,
-            'Kıyafeti düz bir zemine yayın veya askıda çekin.',
+            AppLocalizations.of(context).uploadGuideTip3,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildGuideItem(dynamic icon, String text) {
+  Widget _buildGuideItem(BuildContext context, dynamic icon, String text) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

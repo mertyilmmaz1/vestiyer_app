@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:vestiyer_nodejs/core/product/theme/app_colors.dart';
 import 'package:vestiyer_nodejs/core/product/theme/app_spacing.dart';
 import 'package:vestiyer_nodejs/core/product/theme/app_typography.dart';
@@ -14,7 +15,7 @@ class HorizontalWardrobeStrip extends StatelessWidget {
     required this.items,
     this.onSeeAll,
     required this.onItemTap,
-    this.emptyMessage = 'Henüz kıyafet yok',
+    this.emptyMessage,
     this.emptyActionLabel,
     this.onEmptyAction,
   });
@@ -23,13 +24,16 @@ class HorizontalWardrobeStrip extends StatelessWidget {
   final List<Clothing> items;
   final VoidCallback? onSeeAll;
   final void Function(Clothing item) onItemTap;
-  final String emptyMessage;
+  final String? emptyMessage;
   final String? emptyActionLabel;
   final VoidCallback? onEmptyAction;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
+    final effectiveEmptyMessage =
+        emptyMessage ?? l10n.wardrobeNoClothingSubtitle;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -61,7 +65,7 @@ class HorizontalWardrobeStrip extends StatelessWidget {
                 GestureDetector(
                   onTap: onSeeAll,
                   child: Text(
-                    'TÜMÜNÜ GÖR',
+                    l10n.seeAll,
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: AppColors.textSecondary,
                       letterSpacing: 1.5,
@@ -77,7 +81,7 @@ class HorizontalWardrobeStrip extends StatelessWidget {
           height: 190,
           child: items.isEmpty
               ? _EmptyStrip(
-                  message: emptyMessage,
+                  message: effectiveEmptyMessage,
                   actionLabel: emptyActionLabel,
                   onAction: onEmptyAction,
                 )

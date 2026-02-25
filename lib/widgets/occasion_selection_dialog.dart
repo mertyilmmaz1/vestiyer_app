@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:vestiyer_nodejs/core/product/theme/app_colors.dart';
 
 class OccasionSelectionDialog extends StatelessWidget {
@@ -14,15 +15,16 @@ class OccasionSelectionDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final occasions = [
-      {'value': 'gundelik', 'label': 'GÜNDELİK', 'icon': Icons.circle_outlined},
-      {'value': 'is', 'label': 'İŞ', 'icon': Icons.circle_outlined},
-      {'value': 'piknik', 'label': 'PİKNİK', 'icon': Icons.circle_outlined},
-      {'value': 'spor', 'label': 'SPOR', 'icon': Icons.circle_outlined},
-      {'value': 'gece', 'label': 'GECE', 'icon': Icons.circle_outlined},
-      {'value': 'ozel', 'label': 'ÖZEL GÜN', 'icon': Icons.circle_outlined},
-      {'value': 'tatil', 'label': 'TATİL', 'icon': Icons.circle_outlined},
-      {'value': 'okul', 'label': 'OKUL', 'icon': Icons.circle_outlined},
+      {'value': 'gundelik', 'label': l10n.occasionCasual},
+      {'value': 'is', 'label': l10n.occasionWork},
+      {'value': 'piknik', 'label': l10n.occasionPicnic},
+      {'value': 'spor', 'label': l10n.occasionSport},
+      {'value': 'gece', 'label': l10n.occasionNight},
+      {'value': 'ozel', 'label': l10n.occasionSpecial},
+      {'value': 'tatil', 'label': l10n.occasionVacation},
+      {'value': 'okul', 'label': l10n.occasionSchool},
     ];
 
     final maxHeight = MediaQuery.sizeOf(context).height * 0.7;
@@ -43,9 +45,9 @@ class OccasionSelectionDialog extends StatelessWidget {
               padding: const EdgeInsets.all(24),
               child: Column(
                 children: [
-                  const Text(
-                    'KOMBİNİ NEREDE GİYECEKSİNİZ?',
-                    style: TextStyle(
+                  Text(
+                    l10n.occasionDialogTitle,
+                    style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w300,
                       letterSpacing: 1.5,
@@ -55,7 +57,7 @@ class OccasionSelectionDialog extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Size en uygun önerileri sunabilmemiz için bir ortam seçin',
+                    l10n.occasionDialogSubtitle,
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w300,
@@ -92,7 +94,7 @@ class OccasionSelectionDialog extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              occasion['label'] as String,
+                              occasion['label']!,
                               style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w400,
@@ -127,9 +129,9 @@ class OccasionSelectionDialog extends StatelessWidget {
                       borderRadius: BorderRadius.zero,
                     ),
                   ),
-                  child: const Text(
-                    'VAZGEÇ',
-                    style: TextStyle(
+                  child: Text(
+                    l10n.occasionCancel,
+                    style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w400,
                       letterSpacing: 2.0,

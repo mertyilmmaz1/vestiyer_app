@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:vestiyer_nodejs/core/product/theme/app_colors.dart';
 import 'package:vestiyer_nodejs/core/product/theme/app_spacing.dart';
 import 'package:vestiyer_nodejs/core/product/theme/app_typography.dart';
@@ -33,6 +33,7 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Center(
@@ -61,7 +62,7 @@ class _SplashScreenState extends State<SplashScreen>
               ),
               const SizedBox(height: AppSpacing.xl),
               Text(
-                'Vestiyer',
+                l10n.splashTitle,
                 style: AppTypography.display.copyWith(
                   fontSize: 32,
                   fontWeight: FontWeight.w400,
@@ -71,7 +72,7 @@ class _SplashScreenState extends State<SplashScreen>
               ),
               const SizedBox(height: AppSpacing.md),
               Text(
-                'Kıyafet dolabınızı yapay zeka ile yönetin',
+                l10n.splashTagline,
                 style: AppTypography.body.copyWith(
                   fontSize: 16,
                   color: AppColors.textSecondary,

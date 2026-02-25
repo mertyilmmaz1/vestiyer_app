@@ -14,12 +14,24 @@ import '../services/revenuecat_init.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 
 /// RevenueCat entitlement identifier (must match dashboard).
-const String _kPremiumEntitlementId = 'premium';
+const String kPremiumEntitlementId = 'vestiyer Pro';
 
 enum SubscriptionType {
   monthly,
   yearly,
+  lifetime,
   none,
+}
+
+/// Result of a RevenueCat purchase attempt for granular error handling.
+enum PurchaseResult {
+  success,
+  cancelled,
+  storeError,
+  notAllowed,
+  pending,
+  error,
+  notAvailable,
 }
 
 class SubscriptionProvider extends ChangeNotifier {
@@ -188,7 +200,7 @@ class SubscriptionProvider extends ChangeNotifier {
   }
 
   void _applyCustomerInfo(CustomerInfo customerInfo) {
-    final entitlement = customerInfo.entitlements.all[_kPremiumEntitlementId];
+    final entitlement = customerInfo.entitlements.all[kPremiumEntitlementId];
     if (entitlement != null && entitlement.isActive) {
       _isPremiumFromRevenueCat = true;
       final exp = entitlement.expirationDate;
@@ -209,6 +221,9 @@ class SubscriptionProvider extends ChangeNotifier {
     }
     if (id.contains('monthly') || id.contains('month')) {
       return SubscriptionType.monthly;
+    }
+    if (id.contains('lifetime') || id.contains('forever')) {
+      return SubscriptionType.lifetime;
     }
     return SubscriptionType.none;
   }
@@ -276,29 +291,10 @@ class SubscriptionProvider extends ChangeNotifier {
   }
 
   /// Purchases the given [Package] via RevenueCat. Returns true on success.
+  /// For detailed result and user-facing error message use [purchasePackageWithResult].
   Future<bool> purchasePackage(Package package) async {
-    if (kUseMockBackend || !isRevenueCatConfigured) return false;
-    try {
-      _isLoading = true;
-      notifyListeners();
-      final customerInfo = await Purchases.purchasePackage(package);
-      _applyCustomerInfo(customerInfo);
-      return true;
-    } on PlatformException catch (e) {
-      final code = PurchasesErrorHelper.getErrorCode(e);
-      if (code == PurchasesErrorCode.purchaseCancelledError) {
-        debugPrint('Purchase cancelled by user');
-      } else {
-        debugPrint('Purchase error: ${e.message}');
-      }
-      return false;
-    } catch (e) {
-      debugPrint('Error purchasing: $e');
-      return false;
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
+    final result = await purchasePackageWithResult(package);
+    return result == PurchaseResult.success;
   }
 
   /// Fetches current offerings. Returns null on error or when not configured.
@@ -312,7 +308,7 @@ class SubscriptionProvider extends ChangeNotifier {
     }
   }
 
-  /// Purchase by subscription type (monthly/yearly). Uses current offering.
+  /// Purchase by subscription type (monthly/yearly/lifetime). Uses current offering.
   Future<bool> purchaseSubscription(SubscriptionType type) async {
     if (kUseMockBackend || !isRevenueCatConfigured) return false;
     if (type == SubscriptionType.none) return false;
@@ -323,19 +319,32 @@ class SubscriptionProvider extends ChangeNotifier {
         debugPrint('No current offering or packages');
         return false;
       }
-      Package package;
-      if (type == SubscriptionType.monthly) {
-        package = current.monthly ??
-            current.availablePackages
-                .where((p) => p.packageType == PackageType.monthly)
-                .firstOrNull ??
-            current.availablePackages.first;
-      } else {
-        package = current.annual ??
-            current.availablePackages
-                .where((p) => p.packageType == PackageType.annual)
-                .firstOrNull ??
-            current.availablePackages.first;
+      Package? package;
+      switch (type) {
+        case SubscriptionType.monthly:
+          package = current.monthly ??
+              current.availablePackages
+                  .where((p) => p.packageType == PackageType.monthly)
+                  .firstOrNull;
+          break;
+        case SubscriptionType.yearly:
+          package = current.annual ??
+              current.availablePackages
+                  .where((p) => p.packageType == PackageType.annual)
+                  .firstOrNull;
+          break;
+        case SubscriptionType.lifetime:
+          package = current.lifetime ??
+              current.availablePackages
+                  .where((p) => p.packageType == PackageType.lifetime)
+                  .firstOrNull;
+          break;
+        case SubscriptionType.none:
+          return false;
+      }
+      if (package == null) {
+        debugPrint('Package not found for type: $type');
+        return false;
       }
       return await purchasePackage(package);
     } catch (e) {
@@ -390,8 +399,69 @@ class SubscriptionProvider extends ChangeNotifier {
         return '\$9.99/ay';
       case SubscriptionType.yearly:
         return '\$99.99/yıl';
+      case SubscriptionType.lifetime:
+        return 'Bir kerelik';
       case SubscriptionType.none:
         return 'Ücretsiz';
+    }
+  }
+
+  /// Returns current RevenueCat [CustomerInfo] or null if not configured / error.
+  /// Use for debugging or when you need raw entitlement/expiration data.
+  Future<CustomerInfo?> getCustomerInfo() async {
+    if (kUseMockBackend || !isRevenueCatConfigured) return null;
+    try {
+      return await Purchases.getCustomerInfo();
+    } catch (e) {
+      debugPrint('getCustomerInfo error: $e');
+      return null;
+    }
+  }
+
+  /// User-facing message for purchase errors. Use after [purchasePackage] or [purchaseSubscription] returns false.
+  String get lastPurchaseErrorMessage => _lastPurchaseErrorMessage;
+  String _lastPurchaseErrorMessage = '';
+
+  /// Result of a purchase attempt for clearer error handling.
+  Future<PurchaseResult> purchasePackageWithResult(Package package) async {
+    _lastPurchaseErrorMessage = '';
+    if (kUseMockBackend || !isRevenueCatConfigured) {
+      _lastPurchaseErrorMessage = 'Subscriptions not available';
+      return PurchaseResult.notAvailable;
+    }
+    try {
+      _isLoading = true;
+      notifyListeners();
+      final customerInfo = await Purchases.purchasePackage(package);
+      _applyCustomerInfo(customerInfo);
+      return PurchaseResult.success;
+    } on PlatformException catch (e) {
+      final code = PurchasesErrorHelper.getErrorCode(e);
+      if (code == PurchasesErrorCode.purchaseCancelledError) {
+        _lastPurchaseErrorMessage = 'Purchase cancelled';
+        return PurchaseResult.cancelled;
+      }
+      if (code == PurchasesErrorCode.storeProblemError) {
+        _lastPurchaseErrorMessage = 'Store error. Please try again later.';
+        return PurchaseResult.storeError;
+      }
+      if (code == PurchasesErrorCode.purchaseNotAllowedError) {
+        _lastPurchaseErrorMessage = 'Purchases are not allowed on this device';
+        return PurchaseResult.notAllowed;
+      }
+      if (code == PurchasesErrorCode.paymentPendingError) {
+        _lastPurchaseErrorMessage = 'Payment is pending';
+        return PurchaseResult.pending;
+      }
+      _lastPurchaseErrorMessage = e.message ?? 'Purchase failed';
+      return PurchaseResult.error;
+    } catch (e) {
+      debugPrint('Error purchasing: $e');
+      _lastPurchaseErrorMessage = e.toString();
+      return PurchaseResult.error;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 

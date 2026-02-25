@@ -16,7 +16,6 @@ class VestiyerApiService {
 
   String get _segmentServiceUrl =>
       dotenv.env['SEGMENT_SERVICE_URL'] ?? 'http://vestiyerapp.com:8000';
-  String? get _segmentApiKey => dotenv.env['SEGMENT_SERVICE_API_KEY'];
 
   // ── VPS availability cache ──────────────────────────────────────
   bool _vpsAvailable = true;
@@ -607,7 +606,6 @@ class VestiyerApiService {
             Uri.parse('$_segmentServiceUrl/segment'),
             headers: {
               'Content-Type': 'application/json',
-              if (_segmentApiKey != null) 'X-API-Key': _segmentApiKey!,
             },
             body: json.encode({'imageUrl': imageUrl}),
           )
@@ -640,7 +638,8 @@ class VestiyerApiService {
         }
 
         if (data['success'] != true || data['imageBase64'] == null) {
-          debugPrint('Segment Service: unexpected response fields: ${data.keys}');
+          debugPrint(
+              'Segment Service: unexpected response fields: ${data.keys}');
           _markVpsDown();
           return null;
         }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:vestiyer_nodejs/core/product/navigation/editorial_page_route.dart';
 import 'package:vestiyer_nodejs/core/product/theme/app_colors.dart';
 import 'package:vestiyer_nodejs/core/product/theme/app_spacing.dart';
@@ -29,17 +30,7 @@ class _WardrobeAnalysisScreenState extends State<WardrobeAnalysisScreen> {
   Map<String, dynamic>? _analysisData;
   Timer? _messageTimer;
 
-  final List<String> _loadingMessages = [
-    'Gardırobunuzu analiz ediyoruz...',
-    'Stil tercihleriniz inceleniyor...',
-    'Renk paleitleri değerlendiriliyor...',
-    'Mevsimlik dağılımlar hesaplanıyor...',
-    'Kombin fırsatları keşfediliyor...',
-    'Öneriler hazırlanıyor...',
-    'Stil profili oluşturuluyor...',
-    'Alışveriş tavsiyeleri listeliyor...',
-    'Son rötuşlar yapılıyor...',
-  ];
+  static const int _loadingMessagesCount = 9;
   int _currentMessageIndex = 0;
 
   @override
@@ -62,7 +53,7 @@ class _WardrobeAnalysisScreenState extends State<WardrobeAnalysisScreen> {
       if (mounted) {
         setState(() {
           _currentMessageIndex =
-              (_currentMessageIndex + 1) % _loadingMessages.length;
+              (_currentMessageIndex + 1) % _loadingMessagesCount;
         });
       }
     });
@@ -271,8 +262,8 @@ class _WardrobeAnalysisScreenState extends State<WardrobeAnalysisScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             VestiyerPageHeader(
-              title: 'Gardırop Analizi',
-              subtitle: 'Stil önerileri',
+              title: AppLocalizations.of(context)!.wardrobeAnalysisTitle,
+              subtitle: AppLocalizations.of(context)!.wardrobeAnalysisSubtitle,
               showBackButton: true,
               onBack: () => Navigator.maybePop(context),
               actions: [
@@ -281,7 +272,7 @@ class _WardrobeAnalysisScreenState extends State<WardrobeAnalysisScreen> {
                     icon: Icon(Icons.refresh,
                         color: AppColors.textPrimary.withValues(alpha: 0.7)),
                     onPressed: _startAnalysis,
-                    tooltip: 'Yeni Analiz',
+                    tooltip: AppLocalizations.of(context)!.wardrobeAnalysisRefreshTooltip,
                   ),
               ],
             ),
@@ -301,6 +292,18 @@ class _WardrobeAnalysisScreenState extends State<WardrobeAnalysisScreen> {
   }
 
   Widget _buildLoadingScreen() {
+    final l10n = AppLocalizations.of(context)!;
+    final messages = [
+      l10n.wardrobeAnalysisLoading1,
+      l10n.wardrobeAnalysisLoading2,
+      l10n.wardrobeAnalysisLoading3,
+      l10n.wardrobeAnalysisLoading4,
+      l10n.wardrobeAnalysisLoading5,
+      l10n.wardrobeAnalysisLoading6,
+      l10n.wardrobeAnalysisLoading7,
+      l10n.wardrobeAnalysisLoading8,
+      l10n.wardrobeAnalysisLoading9,
+    ];
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -342,7 +345,7 @@ class _WardrobeAnalysisScreenState extends State<WardrobeAnalysisScreen> {
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 500),
             child: Text(
-              _loadingMessages[_currentMessageIndex],
+              messages[_currentMessageIndex % messages.length],
               key: ValueKey<int>(_currentMessageIndex),
               style: AppTypography.body.copyWith(
                 fontSize: 18,
@@ -353,7 +356,7 @@ class _WardrobeAnalysisScreenState extends State<WardrobeAnalysisScreen> {
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
-            'Bu işlem birkaç dakika sürebilir...',
+            AppLocalizations.of(context)!.wardrobeAnalysisLoadingSub,
             style: AppTypography.body.copyWith(
               color: AppColors.textSecondary,
             ),
@@ -377,7 +380,7 @@ class _WardrobeAnalysisScreenState extends State<WardrobeAnalysisScreen> {
             ),
             const SizedBox(height: 24),
             Text(
-              'Analiz Başarısız',
+              AppLocalizations.of(context)!.wardrobeAnalysisFailTitle,
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.w400,
@@ -414,7 +417,7 @@ class _WardrobeAnalysisScreenState extends State<WardrobeAnalysisScreen> {
                   borderRadius: BorderRadius.zero,
                 ),
               ),
-              child: const Text('Tekrar Dene'),
+              child: Text(AppLocalizations.of(context)!.wardrobeAnalysisRetry),
             ),
           ],
         ),
@@ -449,14 +452,14 @@ class _WardrobeAnalysisScreenState extends State<WardrobeAnalysisScreen> {
             ),
             const SizedBox(height: 32),
             Text(
-              'GARDIROP ANALİZİ',
+              AppLocalizations.of(context)!.wardrobeAnalysisIntroTitle,
               style: AppTypography.headline.copyWith(
                 color: AppColors.textPrimary,
               ),
             ),
             const SizedBox(height: AppSpacing.md),
             Text(
-              'Dolabınızı analiz ederek kişisel stil önerilerinizi keşfedin',
+              AppLocalizations.of(context)!.wardrobeAnalysisIntroDescription,
               style: AppTypography.body.copyWith(
                 color: AppColors.textSecondary,
               ),
@@ -479,8 +482,8 @@ class _WardrobeAnalysisScreenState extends State<WardrobeAnalysisScreen> {
                   ),
                 ),
                 icon: const Icon(Icons.analytics),
-                label: const Text(
-                  'Analizi Başlat',
+                label: Text(
+                  AppLocalizations.of(context)!.wardrobeAnalysisStart,
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w400,

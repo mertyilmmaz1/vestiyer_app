@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:provider/provider.dart';
 
@@ -10,6 +12,7 @@ import 'core/product/navigation/editorial_page_route.dart';
 import 'core/product/theme/app_colors.dart';
 import 'core/product/theme/app_theme.dart';
 import 'core/product/theme/app_typography.dart';
+import 'providers/locale_provider.dart';
 import 'providers/subscription_provider.dart';
 
 import 'providers/wardrobe_provider.dart';
@@ -30,7 +33,6 @@ import 'services/firebase_auth_service.dart';
 import 'services/firebase_storage_service.dart';
 import 'services/firestore_service.dart';
 import 'services/firestore_service_base.dart';
-import 'services/vestiyer_api_service.dart';
 import 'services/hive_cache_service.dart';
 import 'services/mock/mock_cloud_functions_service.dart';
 import 'services/mock/mock_firebase_auth_service.dart';
@@ -52,6 +54,13 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider<LocaleProvider>(
+          create: (_) {
+            final provider = LocaleProvider();
+            provider.loadSavedLocale();
+            return provider;
+          },
+        ),
         Provider<FirebaseAuthService>(
           create: (_) {
             if (kUseMockBackend) return MockFirebaseAuthService();
@@ -80,9 +89,6 @@ class MyApp extends StatelessWidget {
               ? MockCloudFunctionsService()
               : CloudFunctionsService(),
         ),
-        Provider<VestiyerApiService>(
-          create: (_) => VestiyerApiService(),
-        ),
         Provider<HiveCacheService?>(
           create: (_) => _hiveCache,
         ),
@@ -91,7 +97,6 @@ class MyApp extends StatelessWidget {
             context.read<FirestoreServiceBase>(),
             context.read<FirebaseStorageService>(),
             context.read<CloudFunctionsService>(),
-            context.read<VestiyerApiService>(),
           ),
         ),
         ChangeNotifierProvider<SubscriptionProvider>(
@@ -101,10 +106,22 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ],
-      child: MaterialApp(
-        title: 'Vestiyer',
-        theme: AppTheme.lightTheme,
-        home: const SplashScreenWrapper(),
+      child: Consumer<LocaleProvider>(
+        builder: (context, localeProvider, _) {
+          return MaterialApp(
+            title: 'Vestiyer',
+            theme: AppTheme.lightTheme,
+            locale: localeProvider.locale,
+            supportedLocales: AppLocalizations.supportedLocales,
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            home: const SplashScreenWrapper(),
+          );
+        },
       ),
     );
   }
@@ -392,11 +409,12 @@ class _AuthenticatedHomeState extends State<_AuthenticatedHome> {
       return const SplashScreen();
     }
 
+    final l10n = AppLocalizations.of(context);
     final topTabs = [
-      {'label': 'ANA SAYFA', 'index': 0},
-      {'label': 'DOLABIM', 'index': 1},
-      {'label': 'AI STİLİST', 'index': 2},
-      {'label': 'PROFİL', 'index': 3},
+      {'label': l10n.navHome, 'index': 0},
+      {'label': l10n.navWardrobe, 'index': 1},
+      {'label': l10n.navAiStylist, 'index': 2},
+      {'label': l10n.navProfile, 'index': 3},
     ];
 
     return Scaffold(
@@ -411,7 +429,7 @@ class _AuthenticatedHomeState extends State<_AuthenticatedHome> {
                 children: [
                   Expanded(
                     child: Text(
-                      'VESTIYER',
+                      l10n.appTitle,
                       style: AppTypography.display.copyWith(
                         fontSize: 26,
                         fontWeight: FontWeight.w400,

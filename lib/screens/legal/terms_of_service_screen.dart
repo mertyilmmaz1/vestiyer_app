@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:vestiyer_nodejs/core/product/theme/app_colors.dart';
 import '../../widgets/vestiyer_page_header.dart';
@@ -8,14 +9,15 @@ class TermsOfServiceScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const VestiyerPageHeader(
-              title: 'Kullanım Şartları',
+            VestiyerPageHeader(
+              title: l10n.termsTitle,
               showBackButton: true,
             ),
             Expanded(
@@ -26,66 +28,44 @@ class TermsOfServiceScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildSection(
-                      'Kabul Edilen Şartlar',
-                      'Bu kullanım şartları, Vestiyer uygulamasını kullanımınızı düzenler. '
-                          'Uygulamayı kullanarak bu şartları kabul etmiş olursunuz.',
+                      l10n.termsAcceptedTitle,
+                      l10n.termsAcceptedContent,
                     ),
                     _buildSection(
-                      'Hesap Oluşturma',
-                      '• 18 yaşından büyük olmalısınız\n'
-                          '• Doğru ve güncel bilgiler sağlamalısınız\n'
-                          '• Hesap güvenliğinizden siz sorumlusunuz\n'
-                          '• Hesabınızı başkalarıyla paylaşmamalısınız',
+                      l10n.termsAccountTitle,
+                      l10n.termsAccountContent,
                     ),
                     _buildSection(
-                      'Kullanıcı Sorumlulukları',
-                      'Aşağıdaki içeriklerin paylaşılması yasaktır:\n\n'
-                          '• Yasa dışı ürünler\n'
-                          '• Sahte ürünler\n'
-                          '• Uygunsuz içerik\n'
-                          '• Spam veya yanıltıcı içerik\n'
-                          '• Başkalarının haklarını ihlal eden içerik',
+                      l10n.termsResponsibilitiesTitle,
+                      l10n.termsResponsibilitiesContent,
                     ),
                     _buildSection(
-                      'Ürün Listeleme Kuralları',
-                      '• Ürünler doğru kategoride listelenmelidir\n'
-                          '• Fotoğraflar ürünü net göstermelidir\n'
-                          '• Fiyatlar makul ve gerçekçi olmalıdır\n'
-                          '• Ürün açıklamaları doğru ve detaylı olmalıdır',
+                      l10n.termsListingTitle,
+                      l10n.termsListingContent,
                     ),
                     _buildSection(
-                      'Alım-Satım İşlemleri',
-                      '• Tüm işlemler uygulama üzerinden yapılmalıdır\n'
-                          '• Uygulama dışı işlemlerden Vestiyer sorumlu değildir\n'
-                          '• Ödeme ve kargo süreçleri belirtilen şekilde yürütülmelidir\n'
-                          '• İade süreçleri belirlenen politikalara uygun olmalıdır',
+                      l10n.termsTransactionsTitle,
+                      l10n.termsTransactionsContent,
                     ),
                     _buildSection(
-                      'Fikri Mülkiyet',
-                      'Vestiyer\'in tüm hakları saklıdır. Uygulama içeriği, logo ve tasarımlar '
-                          'izinsiz kullanılamaz ve kopyalanamaz.',
+                      l10n.termsIpTitle,
+                      l10n.termsIpContent,
                     ),
                     _buildSection(
-                      'Hesap Askıya Alma',
-                      'Aşağıdaki durumlarda hesabınız askıya alınabilir:\n\n'
-                          '• Kullanım şartlarının ihlali\n'
-                          '• Sahte ürün satışı\n'
-                          '• Uygunsuz davranış\n'
-                          '• Dolandırıcılık',
+                      l10n.termsSuspensionTitle,
+                      l10n.termsSuspensionContent,
                     ),
                     _buildSection(
-                      'Sorumluluk Reddi',
-                      'Vestiyer, kullanıcılar arasındaki işlemlerden doğan sorunlardan '
-                          'doğrudan sorumlu değildir. Ancak sorunların çözümü için destek sağlar.',
+                      l10n.termsDisclaimerTitle,
+                      l10n.termsDisclaimerContent,
                     ),
                     _buildSection(
-                      'Değişiklikler',
-                      'Bu kullanım şartları periyodik olarak güncellenebilir. Değişiklikler '
-                          'hakkında kullanıcılar bilgilendirilecektir.',
+                      l10n.termsChangesTitle,
+                      l10n.termsChangesContent,
                     ),
                     const SizedBox(height: 20),
                     Text(
-                      'Son Güncelleme: ${DateTime.now().day}.${DateTime.now().month}.${DateTime.now().year}',
+                      l10n.termsLastUpdate('${DateTime.now().day}.${DateTime.now().month}.${DateTime.now().year}'),
                       style: TextStyle(
                         color: AppColors.textPrimary.withValues(alpha: 0.5),
                         fontSize: 12,
@@ -115,9 +95,9 @@ class TermsOfServiceScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Text(
-                    'Tarayıcıda Aç',
-                    style: TextStyle(
+                  child: Text(
+                    l10n.openInBrowser,
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 16,
                       fontWeight: FontWeight.bold,

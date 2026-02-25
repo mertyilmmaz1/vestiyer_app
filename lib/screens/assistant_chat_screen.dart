@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:vestiyer_nodejs/core/product/theme/app_colors.dart';
 import 'package:provider/provider.dart';
 import '../widgets/vestiyer_page_header.dart';
 import '../widgets/bouncing_widget.dart';
+import '../providers/locale_provider.dart';
 import '../providers/wardrobe_provider.dart';
 import '../providers/subscription_provider.dart';
 import '../services/cloud_functions_service.dart';
@@ -59,14 +61,14 @@ class _AssistantChatScreenState extends State<AssistantChatScreen> {
   }
 
   void _checkPremiumStatus() {
+    final l10n = AppLocalizations.of(context);
     final subscriptionProvider =
         Provider.of<SubscriptionProvider>(context, listen: false);
     if (!subscriptionProvider.isPremium) {
       PaywallWidget.showPaywall(
         context,
         type: PaywallType.featureGated,
-        customMessage:
-            'Vestiyer Asistanı premium üyeler için kullanılabilir. Stil danışmanlığı almak için premium olun.',
+        customMessage: l10n.assistantPaywall,
       );
     }
   }
@@ -147,11 +149,11 @@ class _AssistantChatScreenState extends State<AssistantChatScreen> {
     final subscriptionProvider =
         Provider.of<SubscriptionProvider>(context, listen: false);
     if (!subscriptionProvider.isPremium) {
+      final l10n = AppLocalizations.of(context);
       await PaywallWidget.showPaywall(
         context,
         type: PaywallType.featureGated,
-        customMessage:
-            'Vestiyer Asistanı premium üyeler için kullanılabilir. Stil danışmanlığı almak için premium olun.',
+        customMessage: l10n.assistantPaywall,
       );
       return;
     }
@@ -173,13 +175,16 @@ class _AssistantChatScreenState extends State<AssistantChatScreen> {
 
     try {
       final functions = context.read<CloudFunctionsService>();
+      final locale = context.read<LocaleProvider>().languageCode;
       final result = await functions.getStyleAdvice(
         trimmed,
         conversationHistory: history,
         wardrobeSummary: _wardrobeSummary,
+        locale: locale,
       );
-      final response = result['response'] as String? ?? 'Yanıt alınamadı.';
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
+        final response = result['response'] as String? ?? l10n.assistantErrorFallback;
         setState(() {
           _messages.add(_ChatMessage(role: 'assistant', content: response));
           _typingMessageIndex = _messages.length - 1;
@@ -190,11 +195,12 @@ class _AssistantChatScreenState extends State<AssistantChatScreen> {
       }
     } catch (e) {
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         setState(() {
           _messages.add(
             _ChatMessage(
               role: 'assistant',
-              content: 'Üzgünüm, bir hata oluştu. Lütfen tekrar deneyin.',
+              content: l10n.assistantError,
             ),
           );
           _error = e.toString();
@@ -219,6 +225,7 @@ class _AssistantChatScreenState extends State<AssistantChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -227,7 +234,7 @@ class _AssistantChatScreenState extends State<AssistantChatScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   VestiyerPageHeader(
-                    title: 'Vestiyer Asistanı',
+                    title: l10n.assistantTitle,
                     showBackButton: true,
                     onBack: () => Navigator.maybePop(context),
                   ),
@@ -245,7 +252,7 @@ class _AssistantChatScreenState extends State<AssistantChatScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   VestiyerPageHeader(
-                    title: 'Vestiyer Asistanı',
+                    title: l10n.assistantTitle,
                     showBackButton: true,
                     onBack: () => Navigator.maybePop(context),
                   ),
@@ -261,7 +268,7 @@ class _AssistantChatScreenState extends State<AssistantChatScreen> {
                             itemBuilder: (context, index) {
                               final m = _messages[index];
                               final isTyping = index == _typingMessageIndex;
-                              return _buildMessageBubble(m, index, isTyping);
+                              return _buildMessageBubble(context, m, index, isTyping);
                             },
                           ),
                         ),
@@ -278,7 +285,7 @@ class _AssistantChatScreenState extends State<AssistantChatScreen> {
                               ),
                             ),
                           ),
-                        _buildInputRow(),
+                        _buildInputRow(context),
                       ],
                     ),
                   ),
@@ -288,7 +295,9 @@ class _AssistantChatScreenState extends State<AssistantChatScreen> {
     );
   }
 
-  Widget _buildMessageBubble(_ChatMessage m, int index, bool isTyping) {
+  Widget _buildMessageBubble(
+      BuildContext context, _ChatMessage m, int index, bool isTyping) {
+    final l10n = AppLocalizations.of(context);
     final isUser = m.role == 'user';
     final displayContent = isTyping
         ? m.content
@@ -304,7 +313,7 @@ class _AssistantChatScreenState extends State<AssistantChatScreen> {
           Padding(
             padding: const EdgeInsets.only(bottom: 4),
             child: Text(
-              isUser ? 'SİZ' : 'VESTİYER ASİSTANI',
+              isUser ? l10n.assistantUserLabel : l10n.assistantLabel,
               style: const TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w600,
@@ -353,7 +362,8 @@ class _AssistantChatScreenState extends State<AssistantChatScreen> {
     );
   }
 
-  Widget _buildInputRow() {
+  Widget _buildInputRow(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: EdgeInsets.only(
         left: 20,
@@ -387,9 +397,9 @@ class _AssistantChatScreenState extends State<AssistantChatScreen> {
                 controller: _inputController,
                 maxLines: 4,
                 minLines: 1,
-                decoration: const InputDecoration(
-                  hintText: 'Stil veya kombin hakkında sor...',
-                  hintStyle: TextStyle(
+                decoration: InputDecoration(
+                  hintText: l10n.assistantHint,
+                  hintStyle: const TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 14,
                     fontWeight: FontWeight.w300,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../core/product/theme/app_colors.dart';
 import '../core/product/theme/app_typography.dart';
@@ -76,7 +77,7 @@ class _PlainBackgroundGuideState extends State<PlainBackgroundGuide>
                     borderRadius: BorderRadius.circular(2),
                   ),
                   child: Text(
-                    'SADE ARKA PLAN',
+                    AppLocalizations.of(context).cameraGuidePlainBg,
                     style: AppTypography.label.copyWith(
                       color: AppColors.background,
                       fontSize: 8,
@@ -175,7 +176,7 @@ class _ClothingFittingGuideState extends State<ClothingFittingGuide>
                     borderRadius: BorderRadius.circular(2),
                   ),
                   child: Text(
-                    'TAMAMINI ÇEKİN',
+                    AppLocalizations.of(context).cameraGuideFull,
                     style: AppTypography.label.copyWith(
                       color: AppColors.background,
                       fontSize: 8,
@@ -282,7 +283,7 @@ class _LightingGuideState extends State<LightingGuide>
                     borderRadius: BorderRadius.circular(2),
                   ),
                   child: Text(
-                    'YETERLİ IŞIK',
+                    AppLocalizations.of(context).cameraGuideLight,
                     style: AppTypography.label.copyWith(
                       color: AppColors.background,
                       fontSize: 8,

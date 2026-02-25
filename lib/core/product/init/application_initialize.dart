@@ -6,7 +6,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 
 import '../../../firebase_options.dart';
 import '../../../services/hive_cache_service.dart';
-// import '../../../services/revenuecat_init.dart';
+import '../../../services/revenuecat_init.dart';
 
 /// Set to true to use in-memory mock services (no Firebase).
 const bool kUseMockBackend = false;
@@ -23,7 +23,7 @@ class ApplicationInitialize {
       DeviceOrientation.portraitUp,
     ]);
 
-    // await configureRevenueCat(); // Disabled as per user request
+    await configureRevenueCat();
 
     HiveCacheService? hiveCache;
     if (!kUseMockBackend) {

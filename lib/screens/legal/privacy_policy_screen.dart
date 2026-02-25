@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:vestiyer_nodejs/core/product/theme/app_colors.dart';
 import '../../widgets/vestiyer_page_header.dart';
@@ -8,14 +9,15 @@ class PrivacyPolicyScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const VestiyerPageHeader(
-              title: 'Gizlilik Politikası',
+            VestiyerPageHeader(
+              title: l10n.privacyTitle,
               showBackButton: true,
             ),
             Expanded(
@@ -26,63 +28,40 @@ class PrivacyPolicyScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildSection(
-                      'Giriş',
-                      'Bu gizlilik politikası, Vestiyer uygulamasının kullanıcı verilerini nasıl topladığını, '
-                          'kullandığını ve koruduğunu açıklar. Uygulamamızı kullanarak bu politikayı kabul etmiş olursunuz.',
+                      l10n.privacyIntroTitle,
+                      l10n.privacyIntroContent,
                     ),
                     _buildSection(
-                      'Toplanan Veriler',
-                      '• Hesap Bilgileri: E-posta adresi, ad ve soyad\n'
-                          '• Profil Bilgileri: Profil fotoğrafı, kullanıcı adı\n'
-                          '• Dolap İçeriği: Yüklenen ürün fotoğrafları ve açıklamaları\n'
-                          '• Kullanım Verileri: Uygulama içi aktiviteler, tercihler\n'
-                          '• Cihaz Bilgileri: İşletim sistemi, uygulama versiyonu',
+                      l10n.privacyDataCollectedTitle,
+                      l10n.privacyDataCollectedContent,
                     ),
                     _buildSection(
-                      'Veri Kullanımı',
-                      'Topladığımız verileri aşağıdaki amaçlar için kullanırız:\n\n'
-                          '• Hesabınızı oluşturmak ve yönetmek\n'
-                          '• Uygulama özelliklerini sağlamak\n'
-                          '• Kullanıcı deneyimini iyileştirmek\n'
-                          '• Güvenliği sağlamak\n'
-                          '• Yasal yükümlülükleri yerine getirmek',
+                      l10n.privacyDataUsageTitle,
+                      l10n.privacyDataUsageContent,
                     ),
                     _buildSection(
-                      'Veri Güvenliği',
-                      'Verilerinizi korumak için endüstri standardı güvenlik önlemleri kullanıyoruz. '
-                          'Veriler şifrelenerek saklanır ve düzenli olarak yedeklenir.',
+                      l10n.privacySecurityTitle,
+                      l10n.privacySecurityContent,
                     ),
                     _buildSection(
-                      'Üçüncü Taraf Hizmetleri',
-                      'Uygulamamız aşağıdaki üçüncü taraf hizmetlerini kullanabilir:\n\n'
-                          '• Google Sign-In\n'
-                          '• Facebook Login\n'
-                          '• Apple Sign-In\n'
-                          '• Firebase Analytics\n'
-                          '• Cloud Firestore',
+                      l10n.privacyThirdPartyTitle,
+                      l10n.privacyThirdPartyContent,
                     ),
                     _buildSection(
-                      'Kullanıcı Hakları',
-                      'Kullanıcılar şu haklara sahiptir:\n\n'
-                          '• Verilerine erişim\n'
-                          '• Veri düzeltme\n'
-                          '• Veri silme\n'
-                          '• Veri taşıma\n'
-                          '• İtiraz hakkı',
+                      l10n.privacyUserRightsTitle,
+                      l10n.privacyUserRightsContent,
                     ),
                     _buildSection(
-                      'İletişim',
-                      'Gizlilik politikamızla ilgili sorularınız için support@vestiyer.com '
-                          'adresinden bizimle iletişime geçebilirsiniz.',
+                      l10n.privacyContactTitle,
+                      l10n.privacyContactContent,
                     ),
                     _buildSection(
-                      'Güncellemeler',
-                      'Bu gizlilik politikası periyodik olarak güncellenebilir. Önemli değişiklikler '
-                          'olduğunda kullanıcılarımızı bilgilendireceğiz.',
+                      l10n.privacyUpdatesTitle,
+                      l10n.privacyUpdatesContent,
                     ),
                     const SizedBox(height: 20),
                     Text(
-                      'Son Güncelleme: ${DateTime.now().day}.${DateTime.now().month}.${DateTime.now().year}',
+                      l10n.termsLastUpdate('${DateTime.now().day}.${DateTime.now().month}.${DateTime.now().year}'),
                       style: TextStyle(
                         color: AppColors.textPrimary.withValues(alpha: 0.5),
                         fontSize: 12,
@@ -112,8 +91,8 @@ class PrivacyPolicyScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Text(
-                    'Tarayıcıda Aç',
+                  child: Text(
+                    l10n.openInBrowser,
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 16,

@@ -11,11 +11,16 @@ import '../core/product/init/application_initialize.dart';
 bool _isRevenueCatConfigured = false;
 
 /// Configures RevenueCat on iOS/Android. No-op if API keys are missing.
+/// Supports a single [REVENUECAT_API_KEY] (e.g. for testing) used on both platforms,
+/// or platform-specific [REVENUECAT_APPLE_API_KEY] / [REVENUECAT_GOOGLE_API_KEY].
 Future<void> configureRevenueCat() async {
   if (kUseMockBackend) return;
 
   final String? apiKey;
-  if (Platform.isIOS) {
+  final String? singleKey = dotenv.env['REVENUECAT_API_KEY']?.trim();
+  if (singleKey != null && singleKey.isNotEmpty) {
+    apiKey = singleKey;
+  } else if (Platform.isIOS) {
     apiKey = dotenv.env['REVENUECAT_APPLE_API_KEY']?.trim();
   } else if (Platform.isAndroid) {
     apiKey = dotenv.env['REVENUECAT_GOOGLE_API_KEY']?.trim();

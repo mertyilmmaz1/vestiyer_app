@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:vestiyer_nodejs/core/product/theme/app_colors.dart';
 import 'package:vestiyer_nodejs/core/product/theme/app_spacing.dart';
 import 'package:vestiyer_nodejs/core/product/theme/app_typography.dart';
@@ -20,6 +21,7 @@ class HomePageHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(
@@ -33,7 +35,7 @@ class HomePageHeader extends StatelessWidget {
         children: [
           if (firstName != null && firstName!.isNotEmpty) ...[
             Text(
-              'MERHABA, ${firstName!.toUpperCase()}',
+              l10n.greetingUser(firstName!.toUpperCase()),
               style: AppTypography.label.copyWith(
                 color: AppColors.textPrimary,
                 fontSize: 14,

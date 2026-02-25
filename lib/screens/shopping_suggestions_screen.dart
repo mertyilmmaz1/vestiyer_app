@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:vestiyer_nodejs/core/product/theme/app_colors.dart';
 import 'package:vestiyer_nodejs/core/product/theme/app_typography.dart';
+import '../providers/locale_provider.dart';
 import '../providers/wardrobe_provider.dart';
 import '../services/cloud_functions_service.dart';
 import '../widgets/vestiyer_page_header.dart';
@@ -21,14 +23,7 @@ class _ShoppingSuggestionsScreenState extends State<ShoppingSuggestionsScreen> {
   String? _error;
   Map<String, dynamic>? _suggestions;
 
-  final List<String> _loadingMessages = [
-    'GARDIROBUNUZ ANALİZ EDİLİYOR',
-    'EKSİK PARÇALAR TESPİT EDİLİYOR',
-    'STİLİNİZ İÇİN EN İYİLER SEÇİLİYOR',
-    'TAMAMLAYICI PARÇALAR ARANIYOR',
-    'MODA DÜNYASI TARANIYOR',
-    'SİZE ÖZEL ÖNERİLER HAZIRLANIYOR',
-  ];
+  static const int _loadingMessagesCount = 6;
   int _currentMessageIndex = 0;
   Timer? _messageTimer;
 
@@ -50,7 +45,7 @@ class _ShoppingSuggestionsScreenState extends State<ShoppingSuggestionsScreen> {
       if (mounted) {
         setState(() {
           _currentMessageIndex =
-              (_currentMessageIndex + 1) % _loadingMessages.length;
+              (_currentMessageIndex + 1) % _loadingMessagesCount;
         });
       }
     });
@@ -66,16 +61,17 @@ class _ShoppingSuggestionsScreenState extends State<ShoppingSuggestionsScreen> {
     try {
       final functions = context.read<CloudFunctionsService>();
       final wardrobeProvider = context.read<WardrobeProvider>();
+      final locale = context.read<LocaleProvider>().languageCode;
       final userId = wardrobeProvider.currentUserId;
-      if (userId == null) throw Exception('Giriş yapmanız gerekiyor');
+      if (userId == null) throw Exception(AppLocalizations.of(context)!.shoppingLoginRequired);
 
       final summary = wardrobeProvider.getWardrobeSummary();
       final result = await functions.getShoppingSuggestions(userId,
-          wardrobeSummary: summary);
+          wardrobeSummary: summary, locale: locale);
 
       final rawSuggestions = result['suggestions'];
       if (rawSuggestions is! Map) {
-        throw Exception('Geçersiz öneri formatı');
+        throw Exception(AppLocalizations.of(context)!.shoppingInvalidFormat);
       }
 
       if (mounted) {
@@ -106,8 +102,8 @@ class _ShoppingSuggestionsScreenState extends State<ShoppingSuggestionsScreen> {
         child: Column(
           children: [
             VestiyerPageHeader(
-              title: 'ALIŞVERİŞ ÖNERİLERİ',
-              subtitle: 'Dolabını Tamamla',
+              title: AppLocalizations.of(context)!.shoppingTitle,
+              subtitle: AppLocalizations.of(context)!.shoppingSubtitle,
               showBackButton: true,
               onBack: () => Navigator.pop(context),
               actions: [
@@ -135,6 +131,15 @@ class _ShoppingSuggestionsScreenState extends State<ShoppingSuggestionsScreen> {
   }
 
   Widget _buildLoadingScreen() {
+    final l10n = AppLocalizations.of(context)!;
+    final messages = [
+      l10n.shoppingLoading1,
+      l10n.shoppingLoading2,
+      l10n.shoppingLoading3,
+      l10n.shoppingLoading4,
+      l10n.shoppingLoading5,
+      l10n.shoppingLoading6,
+    ];
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 40),
@@ -150,7 +155,7 @@ class _ShoppingSuggestionsScreenState extends State<ShoppingSuggestionsScreen> {
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 500),
               child: Text(
-                _loadingMessages[_currentMessageIndex],
+                messages[_currentMessageIndex % messages.length],
                 key: ValueKey<int>(_currentMessageIndex),
                 style: const TextStyle(
                   fontSize: 13,
@@ -198,7 +203,7 @@ class _ShoppingSuggestionsScreenState extends State<ShoppingSuggestionsScreen> {
                       borderRadius: BorderRadius.zero),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
-                child: const Text('TEKRAR DENE'),
+                child: Text(AppLocalizations.of(context)!.shoppingRetry),
               ),
             ),
           ],
@@ -229,9 +234,9 @@ class _ShoppingSuggestionsScreenState extends State<ShoppingSuggestionsScreen> {
               color: AppColors.softBackground,
               border: Border.all(color: AppColors.border, width: 0.5),
             ),
-            child: const Text(
-              'Sunucuya ulaşılamadı. Geçici olarak dolabınıza göre hızlı öneriler gösteriliyor.',
-              style: TextStyle(
+            child: Text(
+              AppLocalizations.of(context)!.shoppingFallbackNotice,
+              style: const TextStyle(
                 fontSize: 12,
                 color: AppColors.textSecondary,
                 height: 1.4,
@@ -242,7 +247,7 @@ class _ShoppingSuggestionsScreenState extends State<ShoppingSuggestionsScreen> {
         ],
         if (missing.isNotEmpty) ...[
           _buildSectionHeader(
-              'EKSİK TEMEL PARÇALAR', Icons.inventory_2_outlined),
+              AppLocalizations.of(context)!.shoppingEssentials, Icons.inventory_2_outlined),
           ...missing.asMap().entries.map((e) => StaggeredSlideFade(
                 index: e.key,
                 child: _buildSuggestionCard(
@@ -255,7 +260,7 @@ class _ShoppingSuggestionsScreenState extends State<ShoppingSuggestionsScreen> {
           const SizedBox(height: 32),
         ],
         if (complementary.isNotEmpty) ...[
-          _buildSectionHeader('TAMAMLAYICI ÖNERİLER', Icons.add_circle_outline),
+          _buildSectionHeader(AppLocalizations.of(context)!.shoppingComplementary, Icons.add_circle_outline),
           ...complementary.asMap().entries.map((e) => StaggeredSlideFade(
                 index: e.key + missing.length,
                 child: _buildSuggestionCard(
@@ -270,7 +275,7 @@ class _ShoppingSuggestionsScreenState extends State<ShoppingSuggestionsScreen> {
         ],
         if (seasonal.isNotEmpty) ...[
           _buildSectionHeader(
-              'MEVSİMLİK FAVORİLER', Icons.calendar_today_outlined),
+              AppLocalizations.of(context)!.shoppingSeasonal, Icons.calendar_today_outlined),
           ...seasonal.asMap().entries.map((e) => StaggeredSlideFade(
                 index: e.key + missing.length + complementary.length,
                 child: _buildSuggestionCard(

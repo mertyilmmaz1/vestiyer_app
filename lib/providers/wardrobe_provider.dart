@@ -8,8 +8,6 @@ import '../models/clothing.dart';
 import '../services/cloud_functions_service.dart';
 import '../services/firestore_service_base.dart';
 import '../services/firebase_storage_service.dart';
-import '../services/local_segmentation_service.dart';
-import '../services/vestiyer_api_service.dart';
 
 class WardrobeProvider with ChangeNotifier {
   final List<Clothing> _items = [];
@@ -20,12 +18,7 @@ class WardrobeProvider with ChangeNotifier {
   String? _currentUserId;
   Map<String, dynamic>? _lastResponse;
 
-  WardrobeProvider(
-      this._firestore, this._storage, this._functions, this._apiService);
-
-  final VestiyerApiService _apiService;
-  final LocalSegmentationService _localSegmentation =
-      LocalSegmentationService();
+  WardrobeProvider(this._firestore, this._storage, this._functions);
 
   List<Clothing> get items => List.unmodifiable(_items);
   bool get isLoading => _isLoading;
@@ -65,7 +58,8 @@ class WardrobeProvider with ChangeNotifier {
     }
   }
 
-  Future<Clothing?> addClothingItem(File imageFile, {String? title}) async {
+  Future<Clothing?> addClothingItem(File imageFile,
+      {String? title, String? locale}) async {
     if (_currentUserId == null) {
       throw Exception('Kullanıcı girişi yapılmamış');
     }
@@ -76,101 +70,32 @@ class WardrobeProvider with ChangeNotifier {
 
       final compressedImage = await _compressImage(imageFile);
 
-      String? originalImageUrl;
-      String finalAnalysisUrl;
-      String? segmentedImageUrl;
-      String segmentationSource = 'none';
-
-      // 1) Try on-device segmentation first
-      try {
-        final localSegmentedBytes = await _localSegmentation
-            .segmentFromBytes(await compressedImage.readAsBytes());
-        if (localSegmentedBytes != null) {
-          final localFilename =
-              'segmented_local_${DateTime.now().millisecondsSinceEpoch}.png';
-          segmentedImageUrl = await _storage.uploadClothingImageBytes(
-            _currentUserId!,
-            localSegmentedBytes,
-            localFilename,
-          );
-          finalAnalysisUrl = segmentedImageUrl;
-          segmentationSource = 'local';
-          debugPrint(
-              'Local segmentation successful. Analysis will use: $finalAnalysisUrl');
-        } else {
-          debugPrint(
-              'Local segmentation returned null. Falling back to VPS segmentation.');
-          finalAnalysisUrl = '';
-        }
-      } catch (e) {
-        debugPrint(
-            'Local segmentation failed: $e. Falling back to VPS segmentation.');
-        finalAnalysisUrl = '';
-      }
-
-      // 2) Upload original image (always keep a source image)
-      originalImageUrl = await _storage.uploadClothingImage(
+      // Upload original image; server-side segmentation runs in Cloud Functions.
+      final originalImageUrl = await _storage.uploadClothingImage(
         _currentUserId!,
         compressedImage,
       );
 
-      // 3) If local failed, try VPS segmentation
-      if (segmentedImageUrl == null) {
-        finalAnalysisUrl = originalImageUrl;
-        try {
-          final segmentedBytes =
-              await _apiService.segmentImage(originalImageUrl);
-          if (segmentedBytes != null) {
-            final filename =
-                'segmented_vps_${DateTime.now().millisecondsSinceEpoch}.png';
-            segmentedImageUrl = await _storage.uploadClothingImageBytes(
-              _currentUserId!,
-              segmentedBytes,
-              filename,
-            );
-            finalAnalysisUrl = segmentedImageUrl;
-            segmentationSource = 'vps';
-            debugPrint(
-                'VPS segmentation successful. Analysis will use: $finalAnalysisUrl');
-          } else {
-            debugPrint(
-                'VPS segmentation returned null. Falling back to original image.');
-          }
-        } catch (e) {
-          debugPrint(
-              'VPS segmentation failed: $e. Falling back to original image.');
-        }
-      }
-
-      if (segmentedImageUrl == null) {
-        finalAnalysisUrl = originalImageUrl;
-      }
-
       await compressedImage.delete();
 
-      // 4) Analyze clothing without server-side segmentation (prevents duplicate work)
+      // Analyze clothing; server-side segmentation is now the single source of truth.
       final result = await _functions.analyzeClothing(
         _currentUserId!,
-        finalAnalysisUrl,
+        originalImageUrl,
         title: title,
-        skipServerSegmentation: true,
-        segmentationApplied: segmentedImageUrl != null,
+        locale: locale,
       );
 
       final clothingId = result['clothingId'] as String?;
       final lowConfidence = result['lowConfidence'] as bool? ?? false;
 
       if (clothingId != null) {
-        Map<String, dynamic> updates = {
+        final updates = <String, dynamic>{
           'originalImageUrl': originalImageUrl,
-          'segmentationSource': segmentationSource,
-          'segmentationSkipped': segmentedImageUrl == null,
-          if (segmentedImageUrl != null) 'segmentedImageUrl': segmentedImageUrl,
+          'segmentationSource': 'server',
         };
 
-        if (updates.isNotEmpty) {
-          await _firestore.updateClothing(_currentUserId!, clothingId, updates);
-        }
+        await _firestore.updateClothing(_currentUserId!, clothingId, updates);
 
         final clothing =
             await _firestore.getClothing(_currentUserId!, clothingId);

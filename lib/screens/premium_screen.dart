@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:vestiyer_nodejs/core/product/theme/app_colors.dart';
@@ -21,7 +22,8 @@ class PremiumScreen extends StatefulWidget {
 }
 
 class _PremiumScreenState extends State<PremiumScreen> {
-  bool _showMonthly = true;
+  /// Selected plan: monthly, yearly, or lifetime.
+  SubscriptionType _selectedPlan = SubscriptionType.monthly;
   Offerings? _offerings;
   String? _offeringsError;
   bool _purchaseInProgress = false;
@@ -39,12 +41,13 @@ class _PremiumScreenState extends State<PremiumScreen> {
     setState(() {
       _offerings = offerings;
       _offeringsError =
-          offerings?.current == null ? 'Ürünler yüklenemedi' : null;
+          offerings?.current == null ? AppLocalizations.of(context).premiumOfferingsError : null;
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final subscriptionProvider = Provider.of<SubscriptionProvider>(context);
 
     return Scaffold(
@@ -53,8 +56,8 @@ class _PremiumScreenState extends State<PremiumScreen> {
         child: Column(
           children: [
             VestiyerPageHeader(
-              title: 'PREMIUM',
-              subtitle: 'DOLABINI OPTİMİZE ET',
+              title: l10n.premiumTitle,
+              subtitle: l10n.premiumSubtitle,
               showBackButton: widget.showCloseButton,
               onBack: () => Navigator.pop(context),
             ),
@@ -75,17 +78,17 @@ class _PremiumScreenState extends State<PremiumScreen> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             const SizedBox(height: 12),
-                            _buildFeatureItem('DOLABINI ANALİZ ET',
-                                'Eksik parça tespiti ve akıllı alışveriş önerileri'),
+                            _buildFeatureItem(l10n.premiumFeatureAnalysis,
+                                l10n.premiumFeatureAnalysisDesc),
                             const SizedBox(height: 24),
-                            _buildFeatureItem('STİL ASİSTANI',
-                                'Kişisel stil raporu ve hava durumuna göre öneriler'),
+                            _buildFeatureItem(l10n.premiumFeatureAssistant,
+                                l10n.premiumFeatureAssistantDesc),
                             const SizedBox(height: 24),
-                            _buildFeatureItem('SINIRSIZ KOMBİN',
-                                'Dolabını sınırsız büyüt, sınırsız kombin üret'),
+                            _buildFeatureItem(l10n.premiumFeatureUnlimited,
+                                l10n.premiumFeatureUnlimitedDesc),
                             const SizedBox(height: 48),
 
-                            // Toggle
+                            // Plan selector: Monthly | Yearly | Lifetime
                             Container(
                               padding: const EdgeInsets.all(4),
                               decoration: BoxDecoration(
@@ -96,60 +99,17 @@ class _PremiumScreenState extends State<PremiumScreen> {
                               ),
                               child: Row(
                                 children: [
-                                  Expanded(
-                                    child: GestureDetector(
-                                      onTap: () =>
-                                          setState(() => _showMonthly = true),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            vertical: 12),
-                                        color: _showMonthly
-                                            ? AppColors.textPrimary
-                                            : Colors.transparent,
-                                        child: Text(
-                                          'AYLIK',
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(
-                                            color: _showMonthly
-                                                ? AppColors.background
-                                                : AppColors.textPrimary,
-                                            fontWeight: FontWeight.w600,
-                                            letterSpacing: 1.5,
-                                            fontSize: 13,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
+                                  _buildPlanChip(
+                                    l10n.premiumMonthly,
+                                    SubscriptionType.monthly,
                                   ),
-                                  Expanded(
-                                    child: GestureDetector(
-                                      onTap: () =>
-                                          setState(() => _showMonthly = false),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            vertical: 12),
-                                        color: !_showMonthly
-                                            ? AppColors.textPrimary
-                                            : Colors.transparent,
-                                        child: Stack(
-                                          alignment: Alignment.center,
-                                          children: [
-                                            Text(
-                                              'YILLIK',
-                                              textAlign: TextAlign.center,
-                                              style: TextStyle(
-                                                color: !_showMonthly
-                                                    ? AppColors.background
-                                                    : AppColors.textPrimary,
-                                                fontWeight: FontWeight.w600,
-                                                letterSpacing: 1.5,
-                                                fontSize: 13,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
+                                  _buildPlanChip(
+                                    l10n.premiumYearly,
+                                    SubscriptionType.yearly,
+                                  ),
+                                  _buildPlanChip(
+                                    l10n.premiumLifetime,
+                                    SubscriptionType.lifetime,
                                   ),
                                 ],
                               ),
@@ -161,7 +121,7 @@ class _PremiumScreenState extends State<PremiumScreen> {
                             Column(
                               children: [
                                 const SizedBox(height: 12),
-                                _buildPriceRow(subscriptionProvider),
+                                _buildPriceRow(context, subscriptionProvider),
                                 if (_offeringsError != null) ...[
                                   const SizedBox(height: 8),
                                   Text(
@@ -176,9 +136,9 @@ class _PremiumScreenState extends State<PremiumScreen> {
                                     onPressed: _purchaseInProgress
                                         ? null
                                         : () => _loadOfferings(),
-                                    child: const Text(
-                                      'Yeniden dene',
-                                      style: TextStyle(
+                                    child: Text(
+                                      l10n.premiumRetry,
+                                      style: const TextStyle(
                                         fontSize: 13,
                                         color: AppColors.textPrimary,
                                         decoration: TextDecoration.underline,
@@ -193,8 +153,7 @@ class _PremiumScreenState extends State<PremiumScreen> {
                                     child: ElevatedButton(
                                       onPressed: _purchaseInProgress
                                           ? null
-                                          : () =>
-                                              _purchase(subscriptionProvider),
+                                          : () => _purchase(subscriptionProvider),
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: AppColors.textPrimary,
                                         foregroundColor: AppColors.background,
@@ -217,9 +176,9 @@ class _PremiumScreenState extends State<PremiumScreen> {
                                                         AppColors.background),
                                               ),
                                             )
-                                          : const Text(
-                                              'PREMIUM\'A GEÇ',
-                                              style: TextStyle(
+                                          : Text(
+                                              l10n.premiumPurchaseButton,
+                                              style: const TextStyle(
                                                 fontSize: 14,
                                                 fontWeight: FontWeight.w600,
                                                 letterSpacing: 2.0,
@@ -245,11 +204,11 @@ class _PremiumScreenState extends State<PremiumScreen> {
                                         if (!mounted) return;
                                         if (subscriptionProvider.isPremium) {
                                           messenger.showSuccess(
-                                              'Satın alımlar geri yüklendi');
+                                              l10n.premiumRestoreSuccess);
                                         }
                                       },
                                 child: Text(
-                                  'Satın alımları geri yükle',
+                                  l10n.premiumRestorePurchases,
                                   style: TextStyle(
                                     color: AppColors.textPrimary
                                         .withValues(alpha: 0.6),
@@ -265,7 +224,7 @@ class _PremiumScreenState extends State<PremiumScreen> {
                               padding:
                                   const EdgeInsets.symmetric(horizontal: 20),
                               child: Text(
-                                'Aboneliğiniz, iptal edilmediği sürece seçilen dönem sonunda otomatik olarak yenilenir. Ödeme, dönem bitiminden 24 saat önce hesabınızdan tahsil edilir.',
+                                l10n.premiumSubscriptionTerms,
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   fontSize: 10,
@@ -287,20 +246,46 @@ class _PremiumScreenState extends State<PremiumScreen> {
     );
   }
 
+  Widget _buildPlanChip(String label, SubscriptionType plan) {
+    final selected = _selectedPlan == plan;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _selectedPlan = plan),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          color: selected ? AppColors.textPrimary : Colors.transparent,
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: selected ? AppColors.background : AppColors.textPrimary,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 1.0,
+              fontSize: 11,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Kendi paywall ekranımızla satın alma. RevenueCat sadece fiyat + satın alma motoru.
   Future<void> _purchase(SubscriptionProvider subscriptionProvider) async {
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
     setState(() => _purchaseInProgress = true);
-    final success = await subscriptionProvider.purchaseSubscription(
-      _showMonthly ? SubscriptionType.monthly : SubscriptionType.yearly,
-    );
+    final success = await subscriptionProvider.purchaseSubscription(_selectedPlan);
     if (!mounted) return;
     setState(() => _purchaseInProgress = false);
+    final l10n = AppLocalizations.of(context);
     if (success) {
-      messenger.showSuccess('Premium abonelik başarıyla aktif edildi');
+      messenger.showSuccess(l10n.premiumPurchaseSuccess);
       navigator.pop();
     } else {
-      messenger.showError('Satın alma tamamlanamadı veya iptal edildi');
+      final msg = subscriptionProvider.lastPurchaseErrorMessage.isNotEmpty
+          ? subscriptionProvider.lastPurchaseErrorMessage
+          : l10n.premiumPurchaseError;
+      messenger.showError(msg);
     }
   }
 
@@ -351,12 +336,24 @@ class _PremiumScreenState extends State<PremiumScreen> {
     );
   }
 
-  Widget _buildPriceRow(SubscriptionProvider provider) {
+  Widget _buildPriceRow(BuildContext context, SubscriptionProvider provider) {
     if (_offerings?.current == null) return const SizedBox.shrink();
+    final l10n = AppLocalizations.of(context);
 
-    final package = _showMonthly
-        ? _offerings!.current!.monthly
-        : _offerings!.current!.annual;
+    Package? package;
+    switch (_selectedPlan) {
+      case SubscriptionType.monthly:
+        package = _offerings!.current!.monthly;
+        break;
+      case SubscriptionType.yearly:
+        package = _offerings!.current!.annual;
+        break;
+      case SubscriptionType.lifetime:
+        package = _offerings!.current!.lifetime;
+        break;
+      case SubscriptionType.none:
+        return const SizedBox.shrink();
+    }
 
     if (package == null) return const SizedBox.shrink();
 
@@ -371,14 +368,14 @@ class _PremiumScreenState extends State<PremiumScreen> {
             letterSpacing: -0.5,
           ),
         ),
-        if (!_showMonthly) ...[
+        if (_selectedPlan == SubscriptionType.yearly) ...[
           const SizedBox(height: 4),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             color: AppColors.textPrimary,
-            child: const Text(
-              '%25 TASARRUF',
-              style: TextStyle(
+            child: Text(
+              l10n.premiumYearlySavings,
+              style: const TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w600,
                 color: AppColors.background,

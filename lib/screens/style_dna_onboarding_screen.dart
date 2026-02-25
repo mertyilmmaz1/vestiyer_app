@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:vestiyer_nodejs/core/product/navigation/editorial_page_route.dart';
 import 'package:vestiyer_nodejs/core/product/theme/app_colors.dart';
@@ -119,7 +120,7 @@ class _StyleDNAOnboardingScreenState extends State<StyleDNAOnboardingScreen>
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showError(
-          ErrorMessageHelper.getUserFriendlyMessage(e),
+          ErrorMessageHelper.getUserFriendlyMessage(context, e),
         );
       }
     } finally {
@@ -309,10 +310,10 @@ class _StyleDNAOnboardingScreenState extends State<StyleDNAOnboardingScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 24),
-          _buildQuestionTitle('TARZINI\nSEÇ'),
+          _buildQuestionTitle(AppLocalizations.of(context)!.styleDnaStep1Title),
           const SizedBox(height: 12),
           _buildDescription(
-              'Sana en yakın 3 stili seç.\nBu seçimler kombinlerini şekillendirecek.'),
+              AppLocalizations.of(context)!.styleDnaStep1Description),
           const SizedBox(height: 48),
           Wrap(
             spacing: 12,
@@ -344,7 +345,7 @@ class _StyleDNAOnboardingScreenState extends State<StyleDNAOnboardingScreen>
                     ),
                   ),
                   child: Text(
-                    opt.label.toUpperCase(),
+                    opt.getLabel(AppLocalizations.of(context)).toUpperCase(),
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w400,
@@ -361,7 +362,7 @@ class _StyleDNAOnboardingScreenState extends State<StyleDNAOnboardingScreen>
           if (_selectedStyles.isNotEmpty) ...[
             const SizedBox(height: 24),
             Text(
-              '${_selectedStyles.length}/3 SEÇİLDİ',
+              AppLocalizations.of(context).styleDnaSelectionCount(_selectedStyles.length),
               style: TextStyle(
                 fontSize: 10,
                 letterSpacing: 1.5,
@@ -382,10 +383,10 @@ class _StyleDNAOnboardingScreenState extends State<StyleDNAOnboardingScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 24),
-          _buildQuestionTitle('RENK\nTERCİHLERİN'),
+          _buildQuestionTitle(AppLocalizations.of(context)!.styleDnaStep2Title),
           const SizedBox(height: 12),
           _buildDescription(
-              'Dolabında en sık kullandığın renkleri seç.\nBirden fazla seçim yapabilirsin.'),
+              AppLocalizations.of(context)!.styleDnaStep2Description),
           const SizedBox(height: 48),
           Wrap(
             spacing: 20,
@@ -396,22 +397,22 @@ class _StyleDNAOnboardingScreenState extends State<StyleDNAOnboardingScreen>
               // for now using a placeholder visual representation
               Color colorPreview;
               switch (opt.value) {
-                case 'siyah':
+                case 'black':
                   colorPreview = const Color(0xFF000000);
                   break;
-                case 'beyaz':
+                case 'white':
                   colorPreview = const Color(0xFFFFFFFF);
                   break;
-                case 'bej':
+                case 'beige':
                   colorPreview = const Color(0xFFF5F5DC);
                   break;
-                case 'mavi':
+                case 'blue':
                   colorPreview = const Color(0xFF2196F3);
                   break;
-                case 'toprak_tonlari':
+                case 'earth_tones':
                   colorPreview = const Color(0xFF8B4513);
                   break;
-                case 'renkli':
+                case 'colorful':
                   colorPreview = const Color(0xFFFF4081);
                   break;
                 default:
@@ -465,7 +466,7 @@ class _StyleDNAOnboardingScreenState extends State<StyleDNAOnboardingScreen>
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    opt.label.toUpperCase(),
+                    opt.getLabel(AppLocalizations.of(context)).toUpperCase(),
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
@@ -491,10 +492,10 @@ class _StyleDNAOnboardingScreenState extends State<StyleDNAOnboardingScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 24),
-          _buildQuestionTitle('FİT\nTERCİHİN'),
+          _buildQuestionTitle(AppLocalizations.of(context)!.styleDnaStep3Title),
           const SizedBox(height: 12),
           _buildDescription(
-              'Kıyafetlerin üzerindeki duruşu nasıl olmalı?\nSana özel öneriler için önemli.'),
+              AppLocalizations.of(context)!.styleDnaStep3Description),
           const SizedBox(height: 48),
           ...kFitOptions.map((opt) {
             final selected = _selectedFit == opt.value;
@@ -521,7 +522,7 @@ class _StyleDNAOnboardingScreenState extends State<StyleDNAOnboardingScreen>
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        opt.label.toUpperCase(),
+                        opt.getLabel(AppLocalizations.of(context)).toUpperCase(),
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight:
@@ -552,10 +553,10 @@ class _StyleDNAOnboardingScreenState extends State<StyleDNAOnboardingScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 24),
-          _buildQuestionTitle('YAŞAM\nTARZIN'),
+          _buildQuestionTitle(AppLocalizations.of(context)!.styleDnaStep4Title),
           const SizedBox(height: 12),
           _buildDescription(
-              'Günlük hayatın nasıl geçiyor?\nKombinlerin temposuna uyum sağlasın.'),
+              AppLocalizations.of(context)!.styleDnaStep4Description),
           const SizedBox(height: 48),
           ...kLifestyleOptions.map((opt) {
             final selected = _selectedLifestyle == opt.value;
@@ -582,7 +583,7 @@ class _StyleDNAOnboardingScreenState extends State<StyleDNAOnboardingScreen>
                     children: [
                       Expanded(
                         child: Text(
-                          opt.label.toUpperCase(),
+                          opt.getLabel(AppLocalizations.of(context)).toUpperCase(),
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight:
@@ -608,17 +609,18 @@ class _StyleDNAOnboardingScreenState extends State<StyleDNAOnboardingScreen>
 
   // ─── Step 5: Result ───
   Widget _buildResultStep() {
+    final l10n = AppLocalizations.of(context);
     final styleLabels = _selectedStyles
         .map((v) => kStyleDnaOptions
             .firstWhere((o) => o.value == v,
-                orElse: () => const StyleDnaOption('', ''))
-            .label)
+                orElse: () => const StyleDnaOption(''))
+            .getLabel(l10n))
         .join(', ');
 
     final fitLabel = kFitOptions
         .firstWhere((o) => o.value == _selectedFit,
-            orElse: () => const FitOption('', ''))
-        .label;
+            orElse: () => const FitOption(''))
+        .getLabel(l10n);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -626,10 +628,10 @@ class _StyleDNAOnboardingScreenState extends State<StyleDNAOnboardingScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 24),
-          _buildQuestionTitle('STİL\nANALİZİN'),
+          _buildQuestionTitle(AppLocalizations.of(context)!.styleDnaStep5Title),
           const SizedBox(height: 12),
           _buildDescription(
-              'Seçimlerine göre oluşturulan stil profilin hazır.'),
+              AppLocalizations.of(context)!.styleDnaStep5Description),
           const SizedBox(height: 48),
           Container(
             padding: const EdgeInsets.all(32),

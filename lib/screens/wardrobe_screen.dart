@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:provider/provider.dart';
 import 'package:vestiyer_nodejs/core/product/theme/app_colors.dart';
@@ -45,6 +46,7 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
   }
 
   void _showDeleteConfirmation(BuildContext context, Clothing item) {
+    final l10n = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -54,18 +56,18 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
           side: BorderSide(color: AppColors.border, width: 0.5),
         ),
         title: Text(
-          'Kıyafeti Sil',
+          l10n.wardrobeDeleteTitle,
           style: AppTypography.headline.copyWith(color: AppColors.textPrimary),
         ),
         content: Text(
-          'Bu kıyafeti silmek istediğinizden emin misiniz?',
+          l10n.wardrobeDeleteConfirm,
           style: AppTypography.body.copyWith(color: AppColors.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(
-              'İptal',
+              l10n.cancel,
               style:
                   AppTypography.body.copyWith(color: AppColors.textSecondary),
             ),
@@ -74,22 +76,19 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
             onPressed: () async {
               Navigator.pop(context);
               try {
-                // Önce UI'dan kaldır
                 context.read<WardrobeProvider>().removeItemLocally(item);
-                // Sonra backend'den sil
                 await context.read<WardrobeProvider>().deleteClothingItem(item);
               } catch (e) {
                 if (context.mounted) {
-                  // Hata durumunda item'ı geri ekle
                   context.read<WardrobeProvider>().addItemLocally(item);
                   ScaffoldMessenger.of(context).showError(
-                    ErrorMessageHelper.getUserFriendlyMessage(e),
+                    ErrorMessageHelper.getUserFriendlyMessage(context, e),
                   );
                 }
               }
             },
             child: Text(
-              'Sil',
+              l10n.delete,
               style: AppTypography.body.copyWith(color: AppColors.error),
             ),
           ),
@@ -99,6 +98,7 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
   }
 
   void _showResetWardrobeConfirmation(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -108,18 +108,18 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
           side: BorderSide(color: AppColors.border, width: 0.5),
         ),
         title: Text(
-          'Dolabı Sıfırla',
+          l10n.wardrobeResetTitle,
           style: AppTypography.headline.copyWith(color: AppColors.textPrimary),
         ),
         content: Text(
-          'Tüm kıyafetleriniz silinecek. Bu işlem geri alınamaz. Emin misiniz?',
+          l10n.wardrobeResetConfirm,
           style: AppTypography.body.copyWith(color: AppColors.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(
-              'İptal',
+              l10n.cancel,
               style:
                   AppTypography.body.copyWith(color: AppColors.textSecondary),
             ),
@@ -131,18 +131,18 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
                 await context.read<WardrobeProvider>().resetWardrobe();
                 if (context.mounted) {
                   ScaffoldMessenger.of(context)
-                      .showSuccess('Dolap başarıyla sıfırlandı');
+                      .showSuccess(AppLocalizations.of(context).wardrobeResetSuccess);
                 }
               } catch (e) {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showError(
-                    ErrorMessageHelper.getUserFriendlyMessage(e),
+                    ErrorMessageHelper.getUserFriendlyMessage(context, e),
                   );
                 }
               }
             },
             child: Text(
-              'Sıfırla',
+              AppLocalizations.of(context).reset,
               style: AppTypography.body.copyWith(color: AppColors.error),
             ),
           ),
@@ -155,6 +155,7 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
   Widget build(BuildContext context) {
     return Consumer<WardrobeProvider>(
       builder: (context, wardrobeProvider, child) {
+        final l10n = AppLocalizations.of(context);
         final items = wardrobeProvider.items;
 
         return Scaffold(
@@ -163,10 +164,10 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               VestiyerPageHeader(
-                title: 'Dolabım',
+                title: l10n.wardrobeTitle,
                 subtitle: items.isEmpty
-                    ? 'Henüz kıyafet yok'
-                    : '${items.length} kıyafet',
+                    ? l10n.wardrobeNoClothingSubtitle
+                    : l10n.wardrobeCountSubtitle(items.length),
                 showBackButton: widget.showBackButton,
                 onBack: () => Navigator.maybePop(context),
                 actions: items.isEmpty
@@ -193,7 +194,7 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
                                           color: AppColors.border, width: 0.5),
                                     ),
                                     title: Text(
-                                      'Kıyafet Listesi',
+                                      l10n.wardrobeClothingList,
                                       style: AppTypography.headline.copyWith(
                                           color: AppColors.textPrimary),
                                     ),
@@ -212,7 +213,7 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
                                         icon: HugeIcon(
                                             icon: HugeIcons.strokeRoundedCopy01,
                                             color: AppColors.textSecondary),
-                                        label: Text('Kopyala',
+                                        label: Text(l10n.copy,
                                             style: AppTypography.body.copyWith(
                                                 color: AppColors.textPrimary)),
                                         onPressed: () {
@@ -221,7 +222,7 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
                                           if (context.mounted) {
                                             ScaffoldMessenger.of(context)
                                                 .showSuccess(
-                                                    'Kıyafet listesi kopyalandı');
+                                                    l10n.wardrobeListCopied);
                                             Navigator.pop(context);
                                           }
                                         },
@@ -229,7 +230,7 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
                                       TextButton(
                                         onPressed: () => Navigator.pop(context),
                                         child: Text(
-                                          'Kapat',
+                                          l10n.close,
                                           style: AppTypography.body.copyWith(
                                               color: AppColors.textSecondary),
                                         ),
@@ -241,12 +242,12 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
                             } catch (e) {
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showError(
-                                  ErrorMessageHelper.getUserFriendlyMessage(e),
+                                  ErrorMessageHelper.getUserFriendlyMessage(context, e),
                                 );
                               }
                             }
                           },
-                          tooltip: 'Kıyafet Listesi',
+                          tooltip: l10n.wardrobeClothingList,
                         ),
                         IconButton(
                           icon: HugeIcon(
@@ -256,7 +257,7 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
                               size: 26),
                           onPressed: () =>
                               _showResetWardrobeConfirmation(context),
-                          tooltip: 'Dolabı Sıfırla',
+                          tooltip: l10n.wardrobeResetTooltip,
                         ),
                       ],
               ),
@@ -294,6 +295,7 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
   }
 
   Widget _buildEmptyState(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -307,7 +309,7 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
             ),
             const SizedBox(height: 20),
             Text(
-              'HENÜZ KIYAFET EKLENMEMİŞ',
+              l10n.wardrobeEmptyTitle,
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w400,
@@ -328,7 +330,7 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
                 ),
               ),
               child: Text(
-                'Dolabınızı oluşturmak için ana sayfadan kıyafet yükleyin',
+                l10n.wardrobeEmptyMessage,
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 14,
@@ -412,7 +414,7 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          ClothingFormatter.format(item.category).toUpperCase(),
+                          ClothingFormatter.format(context, item.category).toUpperCase(),
                           style: const TextStyle(
                             fontWeight: FontWeight.w400,
                             fontSize: 12,
@@ -471,6 +473,7 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
   }
 
   Widget _buildKombinFab(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       decoration: BoxDecoration(
         border: Border.all(
@@ -522,9 +525,9 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
               size: 20,
             ),
           ),
-          label: const Text(
-            'KOMBİN',
-            style: TextStyle(
+          label: Text(
+            l10n.wardrobeCombineFab,
+            style: const TextStyle(
               color: AppColors.textPrimary,
               fontWeight: FontWeight.w400,
               fontSize: 13,

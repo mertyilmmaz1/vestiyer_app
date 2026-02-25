@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:vestiyer_nodejs/core/product/navigation/editorial_page_route.dart';
@@ -25,8 +26,6 @@ class _OutfitHistoryScreenState extends State<OutfitHistoryScreen> {
   bool _isLoading = true;
   String? _error;
 
-  static final DateFormat _dayFormat = DateFormat('d MMMM', 'tr');
-
   @override
   void initState() {
     super.initState();
@@ -39,7 +38,7 @@ class _OutfitHistoryScreenState extends State<OutfitHistoryScreen> {
     final userId = wardrobeProvider.currentUserId;
     if (userId == null) {
       setState(() {
-        _error = 'Giriş yapılmamış';
+        _error = AppLocalizations.of(context)!.outfitHistoryNotSignedIn;
         _isLoading = false;
       });
       return;
@@ -58,7 +57,7 @@ class _OutfitHistoryScreenState extends State<OutfitHistoryScreen> {
       });
     } catch (e) {
       setState(() {
-        _error = 'Geçmiş yüklenirken hata: $e';
+        _error = AppLocalizations.of(context)!.outfitHistoryLoadError(e.toString());
         _isLoading = false;
       });
     }
@@ -84,7 +83,7 @@ class _OutfitHistoryScreenState extends State<OutfitHistoryScreen> {
           colors: [],
           id: item.clothingId,
           userId: '',
-          title: 'Bulunamadı',
+          title: AppLocalizations.of(context)!.outfitSuggestionsNotFound,
           category: item.category ?? 'unknown',
           imageUrl: '',
           imagePath: '',
@@ -105,7 +104,7 @@ class _OutfitHistoryScreenState extends State<OutfitHistoryScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             VestiyerPageHeader(
-              title: 'Giyim Geçmişi',
+              title: AppLocalizations.of(context)!.outfitHistoryTitle,
               showBackButton: true,
               onBack: () => Navigator.maybePop(context),
               actions: [
@@ -115,7 +114,7 @@ class _OutfitHistoryScreenState extends State<OutfitHistoryScreen> {
                     color: AppColors.textPrimary.withValues(alpha: 0.7),
                   ),
                   onPressed: _isLoading ? null : _load,
-                  tooltip: 'Yenile',
+                  tooltip: AppLocalizations.of(context)!.outfitHistoryRefreshTooltip,
                 ),
               ],
             ),
@@ -144,7 +143,7 @@ class _OutfitHistoryScreenState extends State<OutfitHistoryScreen> {
                                 const SizedBox(height: 16),
                                 TextButton(
                                   onPressed: _load,
-                                  child: const Text('Tekrar dene'),
+                                  child: Text(AppLocalizations.of(context)!.outfitHistoryRetry),
                                 ),
                               ],
                             ),
@@ -162,7 +161,7 @@ class _OutfitHistoryScreenState extends State<OutfitHistoryScreen> {
                                   ),
                                   const SizedBox(height: 16),
                                   Text(
-                                    'Henüz giyim kaydı yok',
+                                    AppLocalizations.of(context)!.outfitHistoryEmpty,
                                     style: TextStyle(
                                       fontSize: 18,
                                       color:
@@ -171,7 +170,7 @@ class _OutfitHistoryScreenState extends State<OutfitHistoryScreen> {
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
-                                    'Kombinler ekranında "Bugün giydim" ile kayıt ekleyebilirsiniz.',
+                                    AppLocalizations.of(context)!.outfitHistoryEmptyDescription,
                                     style: TextStyle(
                                       fontSize: 14,
                                       color:
@@ -198,10 +197,12 @@ class _OutfitHistoryScreenState extends State<OutfitHistoryScreen> {
       itemBuilder: (context, index) {
         final log = _logs[index];
         final combo = _combinationForLog(log);
-        final name = log.combinationName ?? combo?.name ?? 'Kombin';
+        final l10n = AppLocalizations.of(context)!;
+        final name = log.combinationName ?? combo?.name ?? l10n.outfitHistoryDefaultName;
         final clothing =
             combo != null ? _clothingForCombination(combo) : <Clothing>[];
-        final dateStr = _dayFormat.format(log.wornAt);
+        final locale = Localizations.localeOf(context).toString();
+        final dateStr = DateFormat('d MMMM', locale).format(log.wornAt);
         return Container(
           margin: const EdgeInsets.only(bottom: 16),
           decoration: BoxDecoration(

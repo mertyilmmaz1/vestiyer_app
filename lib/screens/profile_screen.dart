@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vestiyer_nodejs/core/product/navigation/editorial_page_route.dart';
@@ -15,14 +14,20 @@ import 'package:vestiyer_nodejs/core/product/widget/design/vestiyer_text_field.d
 import 'package:vestiyer_nodejs/core/product/utils/scaffold_messenger_helper.dart';
 import 'package:vestiyer_nodejs/core/product/utils/error_message_helper.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:image/image.dart' as img;
 import 'package:path_provider/path_provider.dart';
+import '../providers/locale_provider.dart';
 import '../providers/subscription_provider.dart';
 import '../providers/wardrobe_provider.dart';
 import '../services/firebase_auth_service.dart';
 import '../services/firebase_storage_service.dart';
 import '../services/hive_cache_service.dart';
 import '../services/firestore_service_base.dart';
+import 'package:purchases_flutter/purchases_flutter.dart';
+import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
+import '../core/product/init/application_initialize.dart';
+import '../services/revenuecat_init.dart';
 import '../utils/mock_data_helper.dart';
 import '../widgets/vestiyer_page_header.dart';
 import '../main.dart';
@@ -45,11 +50,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final ImagePicker _imagePicker = ImagePicker();
   bool _isLoading = false;
   bool _isUploadingProfileImage = false;
-
-  bool get _canShowTestPremiumButton =>
-      kDebugMode ||
-      (Platform.isIOS &&
-          dotenv.env['SHOW_TEST_PREMIUM_BUTTON']?.toLowerCase() == 'true');
 
   @override
   void initState() {
@@ -84,6 +84,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
         await cache.clearAll(); // Clear EVERYTHING
       }
 
+      // Log out from RevenueCat to clear customer identity before Firebase signOut
+      if (!kUseMockBackend && isRevenueCatConfigured) {
+        try {
+          await Purchases.logOut();
+        } catch (e) {
+          debugPrint('RevenueCat logOut error (non-fatal): $e');
+        }
+      }
+
       await authService.signOut();
 
       if (!mounted) return;
@@ -103,8 +112,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
     } catch (e) {
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context)
-            .showError('Çıkış yapılırken hata oluştu: $e');
+            .showError(l10n.profileLogoutError(e.toString()));
       }
     }
   }
@@ -123,13 +133,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ListTile(
               leading: const HugeIcon(
                   icon: HugeIcons.strokeRoundedImage01, size: 24),
-              title: const Text('Galeri'),
+              title: Text(AppLocalizations.of(context).profileGallery),
               onTap: () => Navigator.pop(context, ImageSource.gallery),
             ),
             ListTile(
               leading: const HugeIcon(
                   icon: HugeIcons.strokeRoundedCamera01, size: 24),
-              title: const Text('Kamera'),
+              title: Text(AppLocalizations.of(context).profileCamera),
               onTap: () => Navigator.pop(context, ImageSource.camera),
             ),
           ],
@@ -154,7 +164,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final File file = File(picked.path);
       if (!await file.exists()) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showError('Seçilen dosya bulunamadı');
+          ScaffoldMessenger.of(context)
+              .showError(AppLocalizations.of(context).profileFileNotFound);
         }
         setState(() => _isUploadingProfileImage = false);
         return;
@@ -180,12 +191,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (mounted && updatedUser != null) {
         subscriptionProvider.setCurrentUser(updatedUser);
         ScaffoldMessenger.of(context)
-            .showSuccess('Profil fotoğrafı güncellendi');
+            .showSuccess(AppLocalizations.of(context).profilePhotoUpdated);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showError('Profil fotoğrafı yüklenemedi: $e');
+        ScaffoldMessenger.of(context).showError(
+            AppLocalizations.of(context).profilePhotoError(e.toString()));
       }
     } finally {
       if (mounted) setState(() => _isUploadingProfileImage = false);
@@ -256,12 +267,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
         if (updatedUser != null) {
           context.read<SubscriptionProvider>().setCurrentUser(updatedUser);
         }
-        ScaffoldMessenger.of(context).showSuccess('Profil güncellendi');
+        ScaffoldMessenger.of(context)
+            .showSuccess(AppLocalizations.of(context).profileUpdated);
         Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showError('Güncelleme başarısız: $e');
+        ScaffoldMessenger.of(context).showError(
+            AppLocalizations.of(context).profileUpdateError(e.toString()));
       }
     } finally {
       if (mounted) {
@@ -281,14 +294,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           VestiyerPageHeader(
-            title: 'Profil',
-            subtitle: 'Profili düzenle',
+            title: l10n.profileTitle,
+            subtitle: l10n.profileEditSubtitle,
             showBackButton: widget.showBackButton,
             onBack: () => Navigator.maybePop(context),
           ),
@@ -409,22 +423,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             const SizedBox(height: 32),
                             VestiyerTextField(
                               controller: _firstNameController,
-                              label: 'Ad',
+                              label: l10n.profileFirstName,
                               validator: (v) => (v == null || v.isEmpty)
-                                  ? 'Lütfen adınızı girin'
+                                  ? l10n.profileFirstNameRequired
                                   : null,
                             ),
                             const SizedBox(height: 16),
                             VestiyerTextField(
                               controller: _lastNameController,
-                              label: 'Soyad',
+                              label: l10n.profileLastName,
                               validator: (v) => (v == null || v.isEmpty)
-                                  ? 'Lütfen soyadınızı girin'
+                                  ? l10n.profileLastNameRequired
                                   : null,
                             ),
                             const SizedBox(height: 32),
                             VestiyerPrimaryButton(
-                              text: 'Profili Güncelle',
+                              text: l10n.profileUpdateButton,
                               isLoading: _isLoading,
                               enabled: !_isLoading,
                               onTap: _updateProfile,
@@ -440,13 +454,49 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     color: AppColors.textPrimary
                                         .withValues(alpha: 0.7)),
                                 label: Text(
-                                  'Çıkış Yap',
+                                  l10n.profileLogout,
                                   style: TextStyle(
                                       color: AppColors.textPrimary
                                           .withValues(alpha: 0.7),
                                       fontSize: 15),
                                 ),
                               ),
+                            ),
+                            Consumer<SubscriptionProvider>(
+                              builder: (context, sub, _) {
+                                if (!sub.isPremium || kUseMockBackend || !isRevenueCatConfigured) {
+                                  return const SizedBox.shrink();
+                                }
+                                return Column(
+                                  children: [
+                                    const SizedBox(height: 12),
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: TextButton.icon(
+                                        onPressed: () async {
+                                          try {
+                                            await RevenueCatUI.presentCustomerCenter();
+                                          } catch (e) {
+                                            debugPrint('Customer Center error: $e');
+                                          }
+                                        },
+                                        icon: HugeIcon(
+                                          icon: HugeIcons.strokeRoundedSettings01,
+                                          size: 20,
+                                          color: AppColors.textPrimary.withValues(alpha: 0.7),
+                                        ),
+                                        label: Text(
+                                          l10n.profileManageSubscription,
+                                          style: TextStyle(
+                                            color: AppColors.textPrimary.withValues(alpha: 0.7),
+                                            fontSize: 15,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
                             ),
                             if (kDebugMode) ...[
                               const SizedBox(height: 24),
@@ -464,35 +514,96 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       borderRadius: BorderRadius.zero,
                                     ),
                                   ),
-                                  child: const Text('Test verilerini yükle'),
+                                  child: Text(l10n.profileLoadTestData),
                                 ),
                               ),
                             ],
-                            if (_canShowTestPremiumButton) ...[
-                              const SizedBox(height: 16),
-                              SizedBox(
-                                width: double.infinity,
-                                height: 44,
-                                child: OutlinedButton(
-                                  onPressed: _isLoading ? null : _togglePremium,
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: AppColors.primary,
-                                    side: const BorderSide(
-                                        color: AppColors.primary, width: 0.5),
-                                    shape: const RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.zero,
+                            const SizedBox(height: 24),
+                            Consumer<LocaleProvider>(
+                              builder: (context, localeProvider, _) {
+                                return Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.softBackground,
+                                    border: Border.all(
+                                        color: AppColors.border, width: 0.5),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        l10n.profileLanguage,
+                                        style: const TextStyle(
+                                          color: AppColors.textPrimary,
+                                          fontSize: 15,
+                                        ),
+                                      ),
+                                      DropdownButton<String>(
+                                        value: localeProvider.languageCode,
+                                        underline: const SizedBox(),
+                                        items: const [
+                                          DropdownMenuItem(
+                                              value: 'tr',
+                                              child: Text('Türkçe')),
+                                          DropdownMenuItem(
+                                              value: 'en',
+                                              child: Text('English')),
+                                        ],
+                                        onChanged: (value) {
+                                          if (value != null) {
+                                            localeProvider
+                                                .setLocale(Locale(value));
+                                          }
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                            const SizedBox(height: 16),
+                            Consumer<SubscriptionProvider>(
+                              builder: (context, sub, child) {
+                                return Container(
+                                  decoration: BoxDecoration(
+                                    color: AppColors.softBackground,
+                                    border: Border.all(
+                                      color: AppColors.border,
+                                      width: 0.5,
                                     ),
                                   ),
-                                  child: Consumer<SubscriptionProvider>(
-                                    builder: (context, sub, child) {
-                                      return Text(sub.isPremium
-                                          ? 'Premium\'u İptal Et (Test)'
-                                          : 'Premium Ol (Test)');
-                                    },
+                                  child: SwitchListTile(
+                                    title: Text(
+                                      l10n.profilePremiumStatus,
+                                      style: AppTypography.headline.copyWith(
+                                        fontSize: 13,
+                                        letterSpacing: 1.5,
+                                      ),
+                                    ),
+                                    subtitle: Text(
+                                      sub.isPremium
+                                          ? l10n.profilePremiumActive
+                                          : l10n.profilePremiumInactive,
+                                      style: AppTypography.body.copyWith(
+                                        fontSize: 11,
+                                        color: AppColors.textSecondary,
+                                      ),
+                                    ),
+                                    value: sub.isPremium,
+                                    onChanged: _isLoading
+                                        ? null
+                                        : (_) => _togglePremium(),
+                                    activeColor: AppColors.primary,
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 4,
+                                    ),
                                   ),
-                                ),
-                              ),
-                            ],
+                                );
+                              },
+                            ),
                           ],
                         );
                       },
@@ -508,10 +619,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _togglePremium() async {
+    final l10n = AppLocalizations.of(context);
     final subProvider = context.read<SubscriptionProvider>();
     final user = subProvider.currentUser;
     if (user == null) {
-      ScaffoldMessenger.of(context).showError('Önce giriş yapın');
+      ScaffoldMessenger.of(context).showError(l10n.profileLoginFirst);
       return;
     }
 
@@ -526,12 +638,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (mounted && updatedUser != null) {
         subProvider.setCurrentUser(updatedUser);
         ScaffoldMessenger.of(context).showSuccess(
-          newStatus ? 'Premium mod aktif edildi' : 'Premium mod pasif edildi',
+          newStatus
+              ? l10n.profilePremiumActivated
+              : l10n.profilePremiumDeactivated,
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showError('Hata: $e');
+        ScaffoldMessenger.of(context)
+            .showError(AppLocalizations.of(context).profileError(e.toString()));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -539,23 +654,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _loadSampleData() async {
+    final l10n = AppLocalizations.of(context);
     final uid = context.read<SubscriptionProvider>().currentUser?.id ??
         context.read<WardrobeProvider>().currentUserId;
     if (uid == null) {
-      ScaffoldMessenger.of(context).showError('Önce giriş yapın');
+      ScaffoldMessenger.of(context).showError(l10n.profileLoginFirst);
       return;
     }
     setState(() => _isLoading = true);
     try {
       final firestore = context.read<FirestoreServiceBase>();
-      final list = await loadSampleClothingFromAssets(userId: uid, limit: 8);
+      final list =
+          await loadSampleClothingFromAssets(userId: uid, limit: 8, l10n: l10n);
       final ids = <String>[];
       for (final c in list) {
         final added = await firestore.addClothing(uid, c.toFirestore());
         if (added != null) ids.add(added.id);
       }
       if (ids.length >= 2) {
-        final combos = mockCombinations(userId: uid, clothingIds: ids);
+        final combos =
+            mockCombinations(userId: uid, clothingIds: ids, l10n: l10n);
         for (final combo in combos) {
           await firestore.addCombination(uid, {
             'name': combo.name,
@@ -574,12 +692,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (mounted) {
         context.read<WardrobeProvider>().loadClothingItems();
         ScaffoldMessenger.of(context)
-            .showSuccess('${list.length} kıyafet ve örnek kombinler eklendi.');
+            .showSuccess(l10n.profileSampleDataLoaded(list.length));
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showError(
-          ErrorMessageHelper.getUserFriendlyMessage(e),
+          ErrorMessageHelper.getUserFriendlyMessage(context, e),
         );
       }
     } finally {

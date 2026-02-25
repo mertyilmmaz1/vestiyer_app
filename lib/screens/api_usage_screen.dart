@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:vestiyer_nodejs/core/product/theme/app_colors.dart';
 import '../models/api_usage.dart';
 import '../widgets/vestiyer_page_header.dart';
@@ -82,7 +83,7 @@ class _ApiUsageScreenState extends State<ApiUsageScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 VestiyerPageHeader(
-                  title: 'API Kullanımı',
+                  title: AppLocalizations.of(context)!.apiUsageTitle,
                   showBackButton: true,
                   onBack: () => Navigator.maybePop(context),
                   actions: [

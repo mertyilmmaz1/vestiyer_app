@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:vestiyer_nodejs/core/product/navigation/editorial_page_route.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:vestiyer_nodejs/core/product/theme/app_colors.dart';
@@ -7,6 +8,7 @@ import 'package:vestiyer_nodejs/core/product/utils/scaffold_messenger_helper.dar
 import 'package:vestiyer_nodejs/core/product/utils/error_message_helper.dart';
 import 'dart:io';
 import 'package:provider/provider.dart';
+import '../providers/locale_provider.dart';
 import '../providers/wardrobe_provider.dart';
 import '../providers/subscription_provider.dart';
 import '../widgets/paywall_widget.dart';
@@ -46,15 +48,7 @@ class _UploadScreenState extends State<UploadScreen>
   final _colorController = TextEditingController();
   final _materialController = TextEditingController();
 
-  final List<String> _loadingMessages = [
-    'Kıyafetiniz analiz ediliyor...',
-    'Stil ve renk uyumu değerlendiriliyor...',
-    'En uygun kombinler belirleniyor...',
-    'Kıyafetinizin kategorisi tespit ediliyor...',
-    'Moda trendlerine göre değerlendiriliyor...',
-    'Stil önerileri hazırlanıyor...',
-    'Dolabınıza ekleniyor...',
-  ];
+  static const int _loadingMessagesCount = 7;
   int _currentMessageIndex = 0;
   Timer? _messageTimer;
 
@@ -106,7 +100,7 @@ class _UploadScreenState extends State<UploadScreen>
       if (mounted) {
         setState(() {
           _currentMessageIndex =
-              (_currentMessageIndex + 1) % _loadingMessages.length;
+              (_currentMessageIndex + 1) % _loadingMessagesCount;
         });
       }
     });
@@ -148,7 +142,7 @@ class _UploadScreenState extends State<UploadScreen>
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showError(
-        ErrorMessageHelper.getUserFriendlyMessage(e),
+        ErrorMessageHelper.getUserFriendlyMessage(context, e),
       );
     } finally {
       setState(() {
@@ -159,8 +153,8 @@ class _UploadScreenState extends State<UploadScreen>
 
   Future<void> _uploadImages() async {
     if (_images.isEmpty) {
-      ScaffoldMessenger.of(context)
-          .showError('Lütfen en az bir fotoğraf seçin');
+      final l10n = AppLocalizations.of(context)!;
+      ScaffoldMessenger.of(context).showError(l10n.uploadSelectPhoto);
       return;
     }
 
@@ -171,11 +165,11 @@ class _UploadScreenState extends State<UploadScreen>
 
     if (!subscriptionProvider.canAddClothing()) {
       // Show paywall immediately if no free items left
+      final l10n = AppLocalizations.of(context)!;
       await PaywallWidget.showPaywall(
         context,
         type: PaywallType.itemLimit,
-        customMessage:
-            'Ücretsiz kıyafet ekleme limitine ulaştınız. Premium üyelikle sınırsız kıyafet ekleyin.',
+        customMessage: l10n.uploadLimitReached,
       );
       if (!mounted) return;
 
@@ -188,14 +182,15 @@ class _UploadScreenState extends State<UploadScreen>
     // Check if the number of images exceeds the remaining free limit for non-premium users
     if (!subscriptionProvider.isPremium &&
         _images.length > remainingFreeItems) {
+      final l10n = AppLocalizations.of(context)!;
       final result = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
           backgroundColor: AppColors.softBackground,
           shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-          title: const Text(
-            'LİMİT UYARISI',
-            style: TextStyle(
+          title: Text(
+            l10n.uploadLimitTitle,
+            style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w400,
               color: AppColors.textPrimary,
@@ -203,7 +198,7 @@ class _UploadScreenState extends State<UploadScreen>
             ),
           ),
           content: Text(
-            'Ücretsiz sürümde $remainingFreeItems kıyafet ekleme hakkınız kaldı, ancak ${_images.length} kıyafet seçtiniz. Premium üyelikle sınırsız kıyafet ekleyebilirsiniz veya seçiminizi azaltabilirsiniz.',
+            l10n.uploadLimitMessage(remainingFreeItems, _images.length),
             style: TextStyle(
               color: AppColors.textPrimary.withValues(alpha: 0.7),
               fontSize: 14,
@@ -214,7 +209,7 @@ class _UploadScreenState extends State<UploadScreen>
             TextButton(
               onPressed: () => Navigator.pop(context, false),
               child: Text(
-                'İptal',
+                l10n.cancel,
                 style: TextStyle(
                     color: AppColors.textPrimary.withValues(alpha: 0.7)),
               ),
@@ -227,15 +222,15 @@ class _UploadScreenState extends State<UploadScreen>
                   EditorialPageRoute(page: const PremiumScreen()),
                 );
               },
-              child: const Text(
-                'Premium\'a Yükselt',
-                style: TextStyle(color: AppColors.primary),
+              child: Text(
+                l10n.uploadUpgradePremium,
+                style: const TextStyle(color: AppColors.primary),
               ),
             ),
             TextButton(
               onPressed: () => Navigator.pop(context, true),
               child: Text(
-                'İlk $remainingFreeItems Kıyafeti Yükle',
+                l10n.uploadFirstItems(remainingFreeItems),
                 style: const TextStyle(color: AppColors.textPrimary),
               ),
             ),
@@ -266,6 +261,7 @@ class _UploadScreenState extends State<UploadScreen>
 
       if (!mounted) return;
       final provider = Provider.of<WardrobeProvider>(context, listen: false);
+      final locale = Provider.of<LocaleProvider>(context, listen: false).languageCode;
 
       for (int i = 0; i < _images.length; i++) {
         setState(() {
@@ -273,7 +269,8 @@ class _UploadScreenState extends State<UploadScreen>
         });
 
         try {
-          final newlyAddedItem = await provider.addClothingItem(_images[i]);
+          final newlyAddedItem = await provider.addClothingItem(_images[i],
+              locale: locale);
           if (newlyAddedItem != null) {
             _uploadedItems.add(newlyAddedItem);
           }
@@ -286,9 +283,10 @@ class _UploadScreenState extends State<UploadScreen>
           // Get the analysis results
           final response = provider.getLastResponse();
           if (response != null) {
+            final l10n = AppLocalizations.of(context)!;
             setState(() {
               _uploadedDescriptions
-                  .add(response['description'] ?? 'Kıyafet eklendi');
+                  .add(response['description'] ?? l10n.uploadClothingAdded);
               if (response['lowConfidence'] == true) {
                 _lastUploadHadLowConfidence = true;
               }
@@ -302,11 +300,11 @@ class _UploadScreenState extends State<UploadScreen>
               e.toString().contains('Limit')) {
             if (mounted) {
               // Show paywall for limit exceeded
+              final l10n = AppLocalizations.of(context)!;
               await PaywallWidget.showPaywall(
                 context,
                 type: PaywallType.itemLimit,
-                customMessage:
-                    'Ücretsiz kıyafet ekleme limitine ulaştınız. Premium üyelikle sınırsız kıyafet ekleyin.',
+                customMessage: l10n.uploadLimitReached,
               );
 
               // If user didn't upgrade, stop the upload process
@@ -320,8 +318,9 @@ class _UploadScreenState extends State<UploadScreen>
           } else {
             // Show generic error for other errors
             if (mounted) {
+              final l10n = AppLocalizations.of(context)!;
               ScaffoldMessenger.of(context)
-                  .showError('Kıyafet yüklenirken hata oluştu: $e');
+                  .showError(l10n.uploadError(e.toString()));
             }
           }
 
@@ -335,9 +334,10 @@ class _UploadScreenState extends State<UploadScreen>
 
       setState(() {
         _isSuccess = true;
-        _uploadedDescription = _uploadedDescriptions.isNotEmpty
+        final l10n = AppLocalizations.of(context)!;
+      _uploadedDescription = _uploadedDescriptions.isNotEmpty
             ? _uploadedDescriptions.join('\n\n')
-            : 'Kıyafetler başarıyla eklendi';
+            : l10n.uploadSuccessMessage;
       });
 
       // After successful upload and analysis
@@ -350,14 +350,14 @@ class _UploadScreenState extends State<UploadScreen>
           );
         }
 
-        ScaffoldMessenger.of(context)
-            .showSuccess('Kıyafet başarıyla yüklendi ve analiz edildi');
+        final l10n = AppLocalizations.of(context)!;
+        ScaffoldMessenger.of(context).showSuccess(l10n.uploadSuccessSnackbar);
       }
     } catch (e) {
       debugPrint('Yükleme hatası: $e');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showError(
-        ErrorMessageHelper.getUserFriendlyMessage(e),
+        ErrorMessageHelper.getUserFriendlyMessage(context, e),
       );
     } finally {
       _stopLoadingAnimation();
@@ -381,9 +381,9 @@ class _UploadScreenState extends State<UploadScreen>
 
   @override
   Widget build(BuildContext context) {
-    final title = _isSuccess ? 'Yükleme Başarılı' : 'Kıyafet Yükle';
-    final subtitle =
-        _isSuccess ? null : 'Kıyafetlerini yükle ve kişisel dolabını oluştur.';
+    final l10n = AppLocalizations.of(context)!;
+    final title = _isSuccess ? l10n.uploadSuccessTitle : l10n.uploadTitle;
+    final subtitle = _isSuccess ? null : l10n.uploadSubtitle;
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -461,6 +461,7 @@ class _UploadScreenState extends State<UploadScreen>
   }
 
   Widget _buildInitialUploadScreen() {
+    final l10n = AppLocalizations.of(context)!;
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       child: Padding(
@@ -474,8 +475,8 @@ class _UploadScreenState extends State<UploadScreen>
               children: [
                 Expanded(
                   child: _buildActionCard(
-                    title: 'GALERİ',
-                    subtitle: 'ÇOKLU SEÇİM',
+                    title: l10n.uploadGallery,
+                    subtitle: l10n.uploadMultiSelect,
                     icon: HugeIcons.strokeRoundedImage01,
                     onTap: () => _getImages(ImageSource.gallery),
                   ),
@@ -483,8 +484,8 @@ class _UploadScreenState extends State<UploadScreen>
                 const SizedBox(width: 12),
                 Expanded(
                   child: _buildActionCard(
-                    title: 'KAMERA',
-                    subtitle: 'ÖZEL ÇEKİM',
+                    title: l10n.uploadCamera,
+                    subtitle: l10n.uploadSpecialShot,
                     icon: HugeIcons.strokeRoundedCamera01,
                     onTap: () => _getImages(ImageSource.camera),
                   ),
@@ -494,7 +495,7 @@ class _UploadScreenState extends State<UploadScreen>
             if (_images.isNotEmpty) ...[
               const SizedBox(height: 24),
               Text(
-                'SEÇİLEN KIYAFETLER',
+                l10n.uploadSelectedItems,
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w400,
@@ -592,7 +593,7 @@ class _UploadScreenState extends State<UploadScreen>
                     ),
                   ),
                   child: Text(
-                    'KIYAFETLERİ YÜKLE VE ANALİZ ET',
+                    l10n.uploadAndAnalyze,
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w400,
@@ -610,6 +611,16 @@ class _UploadScreenState extends State<UploadScreen>
   }
 
   Widget _buildLoadingScreen() {
+    final l10n = AppLocalizations.of(context)!;
+    final messages = [
+      l10n.uploadAnalyzing,
+      l10n.uploadStyleCheck,
+      l10n.uploadCombinCheck,
+      l10n.uploadCategoryCheck,
+      l10n.uploadTrendCheck,
+      l10n.uploadStyleSuggestions,
+      l10n.uploadAddingToWardrobe,
+    ];
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -659,7 +670,7 @@ class _UploadScreenState extends State<UploadScreen>
           ),
           const SizedBox(height: 48),
           Text(
-            _loadingMessages[_currentMessageIndex],
+            messages[_currentMessageIndex % messages.length],
             style: AppTypography.title.copyWith(fontSize: 14),
             textAlign: TextAlign.center,
           ),
@@ -676,6 +687,7 @@ class _UploadScreenState extends State<UploadScreen>
   }
 
   Widget _buildSuccessScreen() {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -697,7 +709,7 @@ class _UploadScreenState extends State<UploadScreen>
             ),
             const SizedBox(height: 32),
             Text(
-              'BAŞARILI!',
+              l10n.uploadSuccessBadge,
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.w400,
@@ -793,7 +805,7 @@ class _UploadScreenState extends State<UploadScreen>
                     if (_lastUploadHadLowConfidence) ...[
                       const SizedBox(height: 12),
                       Text(
-                        'Analiz tam emin değil. Kıyafet detaylarını dolaptan düzenleyebilirsiniz.',
+                        l10n.uploadLowConfidence,
                         style: TextStyle(
                           fontSize: 12,
                           color: AppColors.textPrimary.withValues(alpha: 0.5),
@@ -820,13 +832,13 @@ class _UploadScreenState extends State<UploadScreen>
                         borderRadius: BorderRadius.zero,
                       ),
                     ),
-                    child: const Text('Yeni Yükleme'),
+                    child: Text(l10n.uploadNewUpload),
                   ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: VestiyerPrimaryButton(
-                    text: 'Dolabı Gör',
+                    text: l10n.uploadViewWardrobe,
                     onTap: () {
                       Navigator.push(
                         context,

@@ -57,6 +57,17 @@ sudo systemctl start segment-service
 - `POST /segment` – Body: `{ "imageUrl": "https://..." }` Header: `X-API-Key`
 
 Response: `image/png` (binary PNG bytes)
+Ek response header'ları:
+- `X-Segment-Model`
+- `X-Segment-Confidence`
+- `X-Segment-Fallback`
+
+## Algoritma ayarları (Env)
+
+- `SEGMENT_ALGO_V2=true|false` (default: `false`)
+- `SEGMENT_ALGO_V2_CANARY_PERCENT=0..100` (default: `0`)
+- `REMBG_PRIMARY_MODEL` (default: `isnet-general-use`)
+- `REMBG_FALLBACK_MODEL` (default: `u2net`)
 
 ## VPS sağlık kontrolü
 

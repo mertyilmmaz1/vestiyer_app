@@ -17,6 +17,7 @@ import '../models/user.dart' as app_user;
 import '../services/firebase_auth_service.dart';
 import '../services/firestore_service_base.dart';
 import '../main.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'legal/privacy_policy_screen.dart';
 import 'legal/terms_of_service_screen.dart';
 
@@ -68,7 +69,8 @@ class _LoginScreenState extends State<LoginScreen> {
       final uid = authService.currentUserId;
       if (uid == null) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showError('Giriş yapılamadı.');
+          final l10n = AppLocalizations.of(context);
+          ScaffoldMessenger.of(context).showError(l10n.loginFailed);
         }
         return;
       }
@@ -84,9 +86,10 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       log('Giriş hatası: $e');
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         final msg = '$e'.contains('expired') || '$e'.contains('malformed')
-            ? 'Oturum bilgisi geçersiz. Uygulamayı kapatıp yeniden açın veya şifrenizi kontrol edin.'
-            : 'Giriş yapılamadı. E-posta ve şifrenizi kontrol edin.';
+            ? l10n.loginSessionExpired
+            : l10n.loginCheckCredentials;
         ScaffoldMessenger.of(context).showError(msg);
       }
     } finally {
@@ -137,7 +140,8 @@ class _LoginScreenState extends State<LoginScreen> {
       final uid = authService.currentUserId;
       if (uid == null) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showError('Kayıt yapılamadı.');
+          final l10n = AppLocalizations.of(context);
+          ScaffoldMessenger.of(context).showError(l10n.registerFailed);
         }
         return;
       }
@@ -150,8 +154,9 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
       _navigateToHome();
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context)
-            .showSuccess('Kayıt başarılı! Hoş geldiniz!');
+            .showSuccess(l10n.registerSuccess);
       }
     } on FirebaseAuthException catch (e) {
       if (mounted) {
@@ -161,9 +166,10 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       log('Kayıt hatası: $e');
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         final msg = '$e'.contains('expired') || '$e'.contains('malformed')
-            ? 'Kayıt sırasında hata. Lütfen uygulamayı kapatıp yeniden deneyin.'
-            : 'Kayıt yapılamadı. E-posta ve şifrenizi kontrol edin.';
+            ? l10n.registerSessionExpired
+            : l10n.registerCheckCredentials;
         ScaffoldMessenger.of(context).showError(msg);
       }
     } finally {
@@ -247,8 +253,9 @@ class _LoginScreenState extends State<LoginScreen> {
       final uid = authService.currentUserId;
       if (uid == null) {
         if (mounted) {
+          final l10n = AppLocalizations.of(context);
           ScaffoldMessenger.of(context)
-              .showError('Google ile giriş tamamlanamadı.');
+              .showError(l10n.loginGoogleFailed);
         }
         return;
       }
@@ -268,14 +275,16 @@ class _LoginScreenState extends State<LoginScreen> {
       _navigateToHome();
     } on FirebaseAuthException catch (e) {
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context)
-            .showError(e.message ?? 'Google ile giriş yapılamadı');
+            .showError(e.message ?? l10n.loginGoogleFailed);
       }
     } catch (e) {
       log('Google giriş hatası: $e');
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context)
-            .showError('Google ile giriş yapılamadı: $e');
+            .showError(l10n.loginGoogleErrorDetail(e.toString()));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -297,14 +306,16 @@ class _LoginScreenState extends State<LoginScreen> {
       _navigateToHome();
     } on FirebaseAuthException catch (e) {
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context)
-            .showError(e.message ?? 'Apple ile giriş yapılamadı');
+            .showError(e.message ?? l10n.loginAppleFailed);
       }
     } catch (e) {
       log('Apple giriş hatası: $e');
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context)
-            .showError('Apple ile giriş yapılamadı: $e');
+            .showError(l10n.loginAppleErrorDetail(e.toString()));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -313,6 +324,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: AppColors.background,
       body: GestureDetector(
@@ -329,7 +341,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   Center(
                     child: Text(
-                      'VESTIYER',
+                      l10n.loginTitle,
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                             color: AppColors.textPrimary,
                             fontWeight: FontWeight.w400,
@@ -340,7 +352,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   SizedBox(height: context.dynamicHeight(0.018)),
                   Center(
                     child: Text(
-                      'Kıyafet dolabınızı yapay zeka ile yönetin.',
+                      l10n.loginSubtitle,
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: AppColors.textPrimary.withValues(alpha: 0.4),
@@ -359,7 +371,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            _isRegistering ? 'KAYIT OL' : 'GİRİŞ YAP',
+                            _isRegistering ? l10n.loginRegisterTitle : l10n.loginLoginTitle,
                             style: Theme.of(context)
                                 .textTheme
                                 .headlineSmall
@@ -372,8 +384,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           const SizedBox(height: 2),
                           Text(
                             _isRegistering
-                                ? 'Yeni hesap oluşturun.'
-                                : 'E-posta ile hızlıca başla.',
+                                ? l10n.loginRegisterSubtitle
+                                : l10n.loginLoginSubtitle,
                             style:
                                 Theme.of(context).textTheme.bodySmall?.copyWith(
                                       color: AppColors.textPrimary
@@ -385,34 +397,34 @@ class _LoginScreenState extends State<LoginScreen> {
                           if (_isRegistering) ...[
                             VestiyerTextField(
                               controller: _firstNameController,
-                              label: 'Ad',
+                              label: l10n.loginFirstName,
                               focusNode: _firstNameFocusNode,
                               textInputAction: TextInputAction.next,
                               textCapitalization: TextCapitalization.words,
                               onFieldSubmitted: (_) =>
                                   _lastNameFocusNode.requestFocus(),
                               validator: (v) => (v == null || v.isEmpty)
-                                  ? 'Lütfen adınızı girin'
+                                  ? l10n.loginFirstNameRequired
                                   : null,
                             ),
                             const SizedBox(height: 16),
                             VestiyerTextField(
                               controller: _lastNameController,
-                              label: 'Soyad',
+                              label: l10n.loginLastName,
                               focusNode: _lastNameFocusNode,
                               textInputAction: TextInputAction.next,
                               textCapitalization: TextCapitalization.words,
                               onFieldSubmitted: (_) =>
                                   _emailFocusNode.requestFocus(),
                               validator: (v) => (v == null || v.isEmpty)
-                                  ? 'Lütfen soyadınızı girin'
+                                  ? l10n.loginLastNameRequired
                                   : null,
                             ),
                             const SizedBox(height: 16),
                           ],
                           VestiyerTextField(
                             controller: _emailController,
-                            label: 'E-posta',
+                            label: l10n.loginEmail,
                             focusNode: _emailFocusNode,
                             keyboardType: TextInputType.emailAddress,
                             textInputAction: _isRegistering
@@ -422,30 +434,30 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ? (_) => _passwordFocusNode.requestFocus()
                                 : null,
                             validator: (v) => (v == null || v.isEmpty)
-                                ? 'Lütfen e-posta adresinizi girin'
+                                ? l10n.loginEmailRequired
                                 : null,
                           ),
                           const SizedBox(height: 16),
                           VestiyerTextField(
                             controller: _passwordController,
-                            label: 'Şifre',
+                            label: l10n.loginPassword,
                             focusNode: _passwordFocusNode,
                             obscureText: true,
                             textInputAction: TextInputAction.done,
                             onFieldSubmitted: (_) => _submitForm(),
                             validator: (v) {
                               if (v == null || v.isEmpty) {
-                                return 'Lütfen şifrenizi girin';
+                                return l10n.loginPasswordRequired;
                               }
                               if (_isRegistering && v.length < 6) {
-                                return 'Şifre en az 6 karakter olmalıdır';
+                                return l10n.loginPasswordTooShort;
                               }
                               return null;
                             },
                           ),
                           const SizedBox(height: 16),
                           VestiyerPrimaryButton(
-                            text: _isRegistering ? 'Kayıt Ol' : 'Giriş Yap',
+                            text: _isRegistering ? l10n.loginRegisterButton : l10n.loginLoginButton,
                             isLoading: _isLoading,
                             enabled: !_isLoading,
                             onTap: _isRegistering ? _signUp : _signIn,
@@ -460,8 +472,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     children: [
                       Text(
                         _isRegistering
-                            ? 'Zaten hesabınız var mı? '
-                            : 'Hesabınız yok mu? ',
+                            ? l10n.loginAlreadyHaveAccount
+                            : l10n.loginNoAccount,
                         style: TextStyle(
                           color: AppColors.textPrimary.withValues(alpha: 0.7),
                           fontSize: 14,
@@ -470,7 +482,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       GestureDetector(
                         onTap: _toggleRegister,
                         child: Text(
-                          _isRegistering ? 'GİRİŞ YAP' : 'KAYIT OL',
+                          _isRegistering ? l10n.loginSwitchToLogin : l10n.loginSwitchToRegister,
                           style: const TextStyle(
                             color: AppColors.primary,
                             fontSize: 14,
@@ -485,14 +497,14 @@ class _LoginScreenState extends State<LoginScreen> {
                   const VestiyerDivider(),
                   SizedBox(height: context.dynamicHeight(0.025)),
                   _buildSocialButton(
-                    label: 'Google ile devam et',
+                    label: l10n.loginGoogle,
                     onTap: _signInWithGoogle,
                     enabled: !_isLoading,
                     icon: Icons.g_mobiledata,
                   ),
                   const SizedBox(height: 16),
                   _buildSocialButton(
-                    label: 'Apple ile devam et',
+                    label: l10n.loginApple,
                     onTap: _signInWithApple,
                     enabled: !_isLoading,
                     icon: Icons.apple,
@@ -508,7 +520,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         );
                       },
                       child: Text(
-                        'Gizlilik Politikası',
+                        l10n.loginPrivacyPolicy,
                         style: TextStyle(
                           fontWeight: FontWeight.w400,
                           color: AppColors.textPrimary.withValues(alpha: 0.35),
@@ -531,7 +543,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         );
                       },
                       child: Text(
-                        'Kullanım Şartları',
+                        l10n.loginTermsOfService,
                         style: TextStyle(
                           fontWeight: FontWeight.w400,
                           color: AppColors.textPrimary.withValues(alpha: 0.35),

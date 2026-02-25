@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:vestiyer_nodejs/core/product/navigation/editorial_page_route.dart';
 import 'package:vestiyer_nodejs/core/product/theme/app_colors.dart';
@@ -79,11 +80,11 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!subscriptionProvider.canShowPaywallAgain) return;
     final shouldShow = subscriptionProvider.shouldShowPaywall();
     if (shouldShow && mounted) {
+      final l10n = AppLocalizations.of(context);
       await PaywallWidget.showPaywall(
         context,
         type: PaywallType.featureGated,
-        customMessage:
-            'Dolabını gerçekten optimize et. Kişisel Stil Planı ile sınırsız kombin ve sana özel stil asistanı.',
+        customMessage: l10n.homePaywallOptimize,
       );
     }
   }
@@ -98,11 +99,11 @@ class _HomeScreenState extends State<HomeScreen> {
   void _openUpload() {
     final subscriptionProvider = context.read<SubscriptionProvider>();
     if (!subscriptionProvider.canAddClothing()) {
+      final l10n = AppLocalizations.of(context);
       PaywallWidget.showPaywall(
         context,
         type: PaywallType.featureGated,
-        customMessage:
-            'Ücretsiz kıyafet ekleme hakkınız doldu. Kişisel Stil Planı ile dolabını sınırsız büyüt.',
+        customMessage: l10n.homePaywallLimit,
       );
       return;
     }
@@ -112,11 +113,11 @@ class _HomeScreenState extends State<HomeScreen> {
   void _openAssistantChat() async {
     final subscriptionProvider = context.read<SubscriptionProvider>();
     if (!subscriptionProvider.isPremium) {
+      final l10n = AppLocalizations.of(context);
       await PaywallWidget.showPaywall(
         context,
         type: PaywallType.featureGated,
-        customMessage:
-            'Kişisel Stil Asistanı ile moda sorularına yapay zeka yanıtları al. Premium ile hemen başla.',
+        customMessage: l10n.homePaywallAssistant,
       );
       return;
     }
@@ -130,11 +131,11 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _openShoppingSuggestions() async {
     final subscriptionProvider = context.read<SubscriptionProvider>();
     if (!subscriptionProvider.isPremium) {
+      final l10n = AppLocalizations.of(context);
       await PaywallWidget.showPaywall(
         context,
         type: PaywallType.featureGated,
-        customMessage:
-            'ALIŞVERİŞ ÖNERİLERİ VE EKSİK PARÇA ANALİZİ İÇİN PREMİUM\'A GEÇİN.',
+        customMessage: l10n.homePaywallShopping,
       );
       return;
     }
@@ -151,9 +152,10 @@ class _HomeScreenState extends State<HomeScreen> {
     final canShowDailyOutfitSuggestion = subscriptionProvider.isPremium &&
         _hasEnoughClothesForDailyOutfit(items);
 
+    final l10n = AppLocalizations.of(context);
     final subtitle = count == 0
-        ? 'Kıyafet dolabınızı yapay zeka ile yönetin'
-        : '$count kıyafet dolabında';
+        ? l10n.homeSubtitleEmpty
+        : l10n.homeSubtitleCount(count);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -203,13 +205,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildSectionLabel('KEŞFEDİN'),
+                      _buildSectionLabel(l10n.homeExplore),
                       const SizedBox(height: AppSpacing.lg),
                       CircleFeatureGrid(
                         items: [
                           CircleFeatureItem(
                             icon: HugeIcons.strokeRoundedMagicWand01,
-                            label: 'AI Stilist',
+                            label: l10n.homeFeatureAiStylist,
                             onTap: () {
                               if (widget.onSelectTab != null) {
                                 widget.onSelectTab!(2);
@@ -220,32 +222,32 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           CircleFeatureItem(
                             icon: HugeIcons.strokeRoundedAnalytics01,
-                            label: 'Gardırop Analizi',
+                            label: l10n.homeFeatureWardrobeAnalysis,
                             onTap: () => _push(const WardrobeAnalysisScreen()),
                           ),
                           CircleFeatureItem(
                             icon: HugeIcons.strokeRoundedClothes,
-                            label: 'Kombinler',
+                            label: l10n.homeFeatureCombinations,
                             onTap: () => _push(const OutfitSuggestionsScreen()),
                           ),
                           CircleFeatureItem(
                             icon: HugeIcons.strokeRoundedTask01,
-                            label: 'Stil Asistanı',
+                            label: l10n.homeFeatureStyleAssistant,
                             onTap: _openAssistantChat,
                           ),
                           CircleFeatureItem(
                             icon: HugeIcons.strokeRoundedImage01,
-                            label: 'Alışveriş Önerileri',
+                            label: l10n.homeFeatureShoppingSuggestions,
                             onTap: _openShoppingSuggestions,
                           ),
                           CircleFeatureItem(
                             icon: HugeIcons.strokeRoundedCamera01,
-                            label: 'Kıyafet Ekle',
+                            label: l10n.homeFeatureAddClothing,
                             onTap: _openUpload,
                           ),
                           CircleFeatureItem(
                             icon: HugeIcons.strokeRoundedDiamond,
-                            label: 'Premium',
+                            label: l10n.homeFeaturePremium,
                             isHighlight: true,
                             onTap: () => _push(const PremiumScreen()),
                           ),
@@ -277,13 +279,13 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                       HorizontalWardrobeStrip(
-                        title: 'SİZİN İÇİN SEÇTİKLERİMİZ',
+                        title: l10n.homePicksTitle,
                         items: items,
                         onItemTap: (item) {
                           _push(ClothingDetailScreen(item: item));
                         },
-                        emptyMessage: 'Henüz kıyafet yok',
-                        emptyActionLabel: 'Kıyafet ekle',
+                        emptyMessage: l10n.homeNoClothingYet,
+                        emptyActionLabel: l10n.homeAddClothing,
                         onEmptyAction: _openUpload,
                       ),
                     ],
@@ -324,6 +326,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildWardrobeCompletionCard(int itemCount, SubscriptionProvider sub) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     final percent = computeWardrobeCompletionPercent(itemCount);
     return GestureDetector(
       onTap: () {
@@ -376,7 +379,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'DOLABINIZ',
+                      l10n.homeWardrobeTitle,
                       style: theme.textTheme.labelMedium?.copyWith(
                         color: AppColors.textPrimary,
                         letterSpacing: 2.0,
@@ -385,8 +388,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 6),
                     Text(
                       percent >= 100
-                          ? 'Dolabınız tamamlanmış.'
-                          : '${(kExpectedWardrobeSize - itemCount).clamp(0, kExpectedWardrobeSize)} parça daha ekleyebilirsiniz.',
+                          ? l10n.homeWardrobeComplete
+                          : l10n.homeWardrobeRemaining((kExpectedWardrobeSize - itemCount).clamp(0, kExpectedWardrobeSize)),
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: AppColors.textSecondary,
                         fontWeight: FontWeight.w300,
@@ -410,6 +413,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildDailyOutfitSuggestionCard() {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -424,7 +428,7 @@ class _HomeScreenState extends State<HomeScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'GÜNLÜK KOMBİN',
+            l10n.homeDailyOutfitTitle,
             style: theme.textTheme.labelMedium?.copyWith(
               color: AppColors.textPrimary,
               letterSpacing: 2.0,
@@ -432,7 +436,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 12),
           Text(
-            'Bugün için hazır kombin önerilerini tek dokunuşla al.',
+            l10n.homeDailyOutfitDescription,
             style: theme.textTheme.bodyMedium?.copyWith(
               color: AppColors.textSecondary,
               height: 1.5,
@@ -459,9 +463,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
-              child: const Text(
-                'GÜNLÜK KOMBİN ÖNER',
-                style: TextStyle(
+              child: Text(
+                l10n.homeDailyOutfitButton,
+                style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w400,
                   letterSpacing: 1.4,
@@ -526,6 +530,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildModernTipCard(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -540,7 +545,7 @@ class _HomeScreenState extends State<HomeScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'İPUCU',
+            l10n.homeTipTitle,
             style: theme.textTheme.labelMedium?.copyWith(
               color: AppColors.textPrimary,
               letterSpacing: 2.0,
@@ -548,7 +553,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 14),
           Text(
-            'Tüm kıyafetlerinizi sisteme ekleyerek daha doğru kombin önerileri alabilirsiniz.',
+            l10n.homeTipContent,
             style: theme.textTheme.bodyMedium?.copyWith(
               color: AppColors.textSecondary,
               height: 1.6,
@@ -563,6 +568,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildIntroductionCard(BuildContext context) {
     if (_hasSeenIntro) return const SizedBox.shrink();
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     return Container(
       margin: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
@@ -586,7 +592,7 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 Expanded(
                   child: Text(
-                    'VESTIYER\'E\nHOŞ GELDİNİZ',
+                    l10n.homeWelcomeTitle,
                     style: AppTypography.display.copyWith(
                       fontSize: 22,
                       color: AppColors.textPrimary,
@@ -607,7 +613,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: AppSpacing.lg),
             Text(
-              'Yapay zeka destekli kişisel gardrop asistanınız. Başlamadan önce bilmeniz gerekenler:',
+              l10n.homeWelcomeDescription,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: AppColors.textSecondary,
                 height: 1.6,
@@ -616,21 +622,18 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: AppSpacing.lg),
             _buildIntroFeatureItem(
-              title: 'Ücretsiz 10 Kıyafet',
-              description:
-                  'Ücretsiz sürümde dolabınıza 10 kıyafet ekleyebilirsiniz.',
+              title: l10n.homeIntroFreeTitle,
+              description: l10n.homeIntroFreeDescription,
             ),
             const SizedBox(height: AppSpacing.md),
             _buildIntroFeatureItem(
-              title: 'AI Kombin Önerileri',
-              description:
-                  'Premium üyelikle yapay zeka destekli kombin önerileri alın.',
+              title: l10n.homeIntroAiTitle,
+              description: l10n.homeIntroAiDescription,
             ),
             const SizedBox(height: AppSpacing.md),
             _buildIntroFeatureItem(
-              title: 'Premium Özellikler',
-              description:
-                  'Premium üyelikle sınırsız kıyafet ve tüm özelliklere erişin.',
+              title: l10n.homeIntroPremiumTitle,
+              description: l10n.homeIntroPremiumDescription,
             ),
           ],
         ),

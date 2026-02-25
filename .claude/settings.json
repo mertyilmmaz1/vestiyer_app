@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(flutter pub get)",
+      "Bash(flutter run*)",
+      "Bash(flutter build*)",
+      "Bash(flutter analyze)",
+      "Bash(flutter test*)",
+      "Bash(firebase deploy --only functions*)",
+      "Bash(firebase emulators:start*)",
+      "Bash(npm install*)",
+      "Bash(git status)",
+      "Bash(git diff*)",
+      "Bash(git log*)"
+    ]
+  }
+}

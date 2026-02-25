@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:vestiyer_nodejs/core/product/theme/app_colors.dart';
 import 'package:vestiyer_nodejs/core/product/theme/app_spacing.dart';
@@ -10,18 +11,20 @@ class AssistantCard extends StatelessWidget {
     super.key,
     required this.onSend,
     this.showProBadge = false,
-    this.hintText = 'Kombin veya stil hakkında sor...',
+    this.hintText,
     this.controller,
   });
 
   final VoidCallback onSend;
   final bool showProBadge;
-  final String hintText;
+  final String? hintText;
   final TextEditingController? controller;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
+    final effectiveHint = hintText ?? l10n.assistantCardHint;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
       padding: const EdgeInsets.symmetric(
@@ -49,7 +52,7 @@ class AssistantCard extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                'STİL ASİSTANI',
+                l10n.assistantCardLabel,
                 style: theme.textTheme.labelMedium?.copyWith(
                   color: AppColors.textPrimary,
                   letterSpacing: 2.0,
@@ -67,7 +70,7 @@ class AssistantCard extends StatelessWidget {
                     color: AppColors.black,
                   ),
                   child: Text(
-                    'PRO',
+                    l10n.assistantCardPro,
                     style: theme.textTheme.labelSmall?.copyWith(
                       fontWeight: FontWeight.w400,
                       letterSpacing: 1.5,
@@ -81,7 +84,7 @@ class AssistantCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
           // Serif başlık
           Text(
-            'Bugün nasıl\nyardımcı olabilirim?',
+            l10n.assistantCardGreeting,
             style: AppTypography.display.copyWith(
               fontSize: 22,
               fontWeight: FontWeight.w400,
@@ -98,7 +101,7 @@ class AssistantCard extends StatelessWidget {
                 child: TextField(
                   controller: controller,
                   decoration: InputDecoration(
-                    hintText: hintText,
+                    hintText: effectiveHint,
                     filled: true,
                     fillColor: AppColors.softBackground,
                     border: const OutlineInputBorder(

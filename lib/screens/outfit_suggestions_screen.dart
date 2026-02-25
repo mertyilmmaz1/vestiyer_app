@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:vestiyer_nodejs/core/product/navigation/editorial_page_route.dart';
 import 'package:vestiyer_nodejs/core/product/theme/app_colors.dart';
@@ -31,15 +32,7 @@ class _OutfitSuggestionsScreenState extends State<OutfitSuggestionsScreen> {
   final List<List<Clothing>> _outfitItems = [];
   bool _isLoading = false;
 
-  final List<String> _loadingMessages = [
-    'STİL ANALİZİ YAPILIYOR...',
-    'EN İYİ KOMBİNLER SEÇİLİYOR...',
-    'RENK UYUMLARI KONTROL EDİLİYOR...',
-    'MEVSİM KOŞULLARI DEĞERLENDİRİLİYOR...',
-    'KUMAŞ UYUMLARI ANALİZ EDİLİYOR...',
-    'STİL ÖNERİLERİ HAZIRLANIYOR...',
-    'KOMBİNLERİNİZ HAZIRLANIYOR...',
-  ];
+  static const int _loadingMessagesCount = 7;
   int _currentMessageIndex = 0;
   Timer? _messageTimer;
 
@@ -61,7 +54,7 @@ class _OutfitSuggestionsScreenState extends State<OutfitSuggestionsScreen> {
       if (mounted) {
         setState(() {
           _currentMessageIndex =
-              (_currentMessageIndex + 1) % _loadingMessages.length;
+              (_currentMessageIndex + 1) % _loadingMessagesCount;
         });
       }
     });
@@ -82,7 +75,7 @@ class _OutfitSuggestionsScreenState extends State<OutfitSuggestionsScreen> {
       final wardrobeProvider = context.read<WardrobeProvider>();
 
       final userId = wardrobeProvider.currentUserId;
-      if (userId == null) throw Exception('Kullanıcı girişi yapılmamış');
+      if (userId == null) throw Exception(AppLocalizations.of(context)!.outfitHistoryNotSignedIn);
 
       final userCombinations = await firestore.getCombinations(userId);
 
@@ -97,7 +90,7 @@ class _OutfitSuggestionsScreenState extends State<OutfitSuggestionsScreen> {
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showError(
-          ErrorMessageHelper.getUserFriendlyMessage(e),
+          ErrorMessageHelper.getUserFriendlyMessage(context, e),
         );
       }
     } finally {
@@ -119,7 +112,7 @@ class _OutfitSuggestionsScreenState extends State<OutfitSuggestionsScreen> {
             colors: [],
             id: item.clothingId,
             userId: '',
-            title: 'Bulunamadı',
+            title: AppLocalizations.of(context)!.outfitSuggestionsNotFound,
             category: item.category ?? 'unknown',
             imageUrl: '',
             imagePath: '',
@@ -158,7 +151,7 @@ class _OutfitSuggestionsScreenState extends State<OutfitSuggestionsScreen> {
           child: child!,
         );
       },
-      helpText: 'KOMBİNİ NE ZAMAN GİYDİNİZ?',
+      helpText: AppLocalizations.of(context)!.outfitSuggestionsDatePicker,
     );
     if (picked == null || !context.mounted) return;
     selected = picked;
@@ -178,13 +171,13 @@ class _OutfitSuggestionsScreenState extends State<OutfitSuggestionsScreen> {
         'occasion': combination.occasion,
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSuccess('Giyim kaydı eklendi');
+        ScaffoldMessenger.of(context).showSuccess(AppLocalizations.of(context)!.outfitSuggestionsLogAdded);
         _loadSuggestions();
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showError(
-          ErrorMessageHelper.getUserFriendlyMessage(e),
+          ErrorMessageHelper.getUserFriendlyMessage(context, e),
         );
       }
     }
@@ -199,8 +192,8 @@ class _OutfitSuggestionsScreenState extends State<OutfitSuggestionsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             VestiyerPageHeader(
-              title: 'Kombin Önerileri',
-              subtitle: 'Kayıtlı kombinleriniz',
+              title: AppLocalizations.of(context)!.outfitSuggestionsTitle,
+              subtitle: AppLocalizations.of(context)!.outfitSuggestionsSubtitle,
               showBackButton: true,
               onBack: () => Navigator.maybePop(context),
               actions: [
@@ -212,12 +205,12 @@ class _OutfitSuggestionsScreenState extends State<OutfitSuggestionsScreen> {
                       EditorialPageRoute(page: const OutfitHistoryScreen()),
                     );
                   },
-                  tooltip: 'Giyim Geçmişi',
+                  tooltip: AppLocalizations.of(context)!.outfitSuggestionsHistoryTooltip,
                 ),
                 IconButton(
                   icon: Icon(Icons.refresh, color: AppColors.textPrimary),
                   onPressed: _loadSuggestions,
-                  tooltip: 'Yenile',
+                  tooltip: AppLocalizations.of(context)!.outfitSuggestionsRefreshTooltip,
                 ),
               ],
             ),
@@ -235,6 +228,16 @@ class _OutfitSuggestionsScreenState extends State<OutfitSuggestionsScreen> {
   }
 
   Widget _buildLoadingScreen() {
+    final l10n = AppLocalizations.of(context)!;
+    final messages = [
+      l10n.outfitSuggestionsLoading1,
+      l10n.outfitSuggestionsLoading2,
+      l10n.outfitSuggestionsLoading3,
+      l10n.outfitSuggestionsLoading4,
+      l10n.outfitSuggestionsLoading5,
+      l10n.outfitSuggestionsLoading6,
+      l10n.outfitSuggestionsLoading7,
+    ];
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -265,7 +268,7 @@ class _OutfitSuggestionsScreenState extends State<OutfitSuggestionsScreen> {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 40),
               child: Text(
-                _loadingMessages[_currentMessageIndex],
+                messages[_currentMessageIndex % messages.length],
                 key: ValueKey<int>(_currentMessageIndex),
                 style: const TextStyle(
                   fontSize: 12,
@@ -284,6 +287,7 @@ class _OutfitSuggestionsScreenState extends State<OutfitSuggestionsScreen> {
   }
 
   Widget _buildEmptyState() {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
@@ -296,9 +300,9 @@ class _OutfitSuggestionsScreenState extends State<OutfitSuggestionsScreen> {
               color: AppColors.textSecondary,
             ),
             const SizedBox(height: 24),
-            const Text(
-              'HENÜZ KOMBİN YOK',
-              style: TextStyle(
+            Text(
+              l10n.outfitSuggestionsEmptyTitle,
+              style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w300,
                 color: AppColors.textPrimary,
@@ -307,9 +311,9 @@ class _OutfitSuggestionsScreenState extends State<OutfitSuggestionsScreen> {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),
-            const Text(
-              'AI Stilist\'ten yeni kombinler oluşturarak başlayın.',
-              style: TextStyle(
+            Text(
+              l10n.outfitSuggestionsEmptyDescription,
+              style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w300,
                 color: AppColors.textSecondary,
@@ -331,9 +335,9 @@ class _OutfitSuggestionsScreenState extends State<OutfitSuggestionsScreen> {
                   vertical: 16,
                 ),
               ),
-              child: const Text(
-                'GERİ DÖN',
-                style: TextStyle(
+              child: Text(
+                l10n.outfitSuggestionsBack,
+                style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w400,
                   letterSpacing: 1.0,
@@ -418,7 +422,7 @@ class _OutfitSuggestionsScreenState extends State<OutfitSuggestionsScreen> {
                               color:
                                   AppColors.background.withValues(alpha: 0.8),
                               child: Text(
-                                ClothingFormatter.format(clothing.category)
+                                ClothingFormatter.format(context, clothing.category)
                                     .toUpperCase(),
                                 style: const TextStyle(
                                   fontSize: 10,
@@ -452,7 +456,7 @@ class _OutfitSuggestionsScreenState extends State<OutfitSuggestionsScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                ClothingFormatter.format(combination.name)
+                                ClothingFormatter.format(context, combination.name)
                                     .toUpperCase(),
                                 style: const TextStyle(
                                   fontSize: 18,
@@ -487,7 +491,7 @@ class _OutfitSuggestionsScreenState extends State<OutfitSuggestionsScreen> {
                                 Border.all(color: AppColors.border, width: 0.5),
                           ),
                           child: Text(
-                            ClothingFormatter.format(combination.occasion)
+                            ClothingFormatter.format(context, combination.occasion)
                                 .toUpperCase(),
                             style: const TextStyle(
                               fontSize: 10,
@@ -513,9 +517,9 @@ class _OutfitSuggestionsScreenState extends State<OutfitSuggestionsScreen> {
                               borderRadius: BorderRadius.zero),
                           padding: const EdgeInsets.symmetric(vertical: 16),
                         ),
-                        child: const Text(
-                          'BUGÜN GİYDİM',
-                          style: TextStyle(
+                        child: Text(
+                          AppLocalizations.of(context)!.outfitSuggestionsTodayWorn,
+                          style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w400,
                             letterSpacing: 2.0,

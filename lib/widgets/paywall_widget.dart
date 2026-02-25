@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:vestiyer_nodejs/core/product/navigation/editorial_page_route.dart';
 import 'package:vestiyer_nodejs/core/product/theme/app_colors.dart';
@@ -58,14 +59,9 @@ class PaywallWidget extends StatelessWidget {
             onUpgrade: () async {
               Navigator.pop(sheetContext);
               if (!context.mounted) return;
-              await navigator.push<void>(
-                EditorialPageRoute(
-                  page: const PremiumScreen(),
-                ),
-              );
-              if (context.mounted) {
-                await subscriptionProvider.refreshSubscriptionStatus();
-              }
+              // Kendi paywall ekranımıza yönlendir (RevenueCat hazır ekranı kullanmıyoruz).
+              await navigator.push<void>(EditorialPageRoute(page: const PremiumScreen()));
+              if (context.mounted) await subscriptionProvider.refreshSubscriptionStatus();
             },
             onDismiss: () => Navigator.pop(sheetContext),
             showDismissOption: barrierDismissible,
@@ -118,11 +114,11 @@ class _PaywallBottomSheetContent extends StatelessWidget {
             children: [
               _buildIcon(),
               const SizedBox(height: 20),
-              _buildTitle(),
+              _buildTitle(context),
               const SizedBox(height: 12),
-              _buildMessage(),
+              _buildMessage(context),
               const SizedBox(height: 24),
-              _buildPriceLine(),
+              _buildPriceLine(context),
               const SizedBox(height: 24),
               _buildFeatures(features),
               const SizedBox(height: 32),
@@ -131,7 +127,7 @@ class _PaywallBottomSheetContent extends StatelessWidget {
               _buildRestoreButton(context),
               if (showDismissOption) ...[
                 const SizedBox(height: 8),
-                _buildDismissButton(),
+                _buildDismissButton(context),
               ],
             ],
           ),
@@ -148,9 +144,12 @@ class _PaywallBottomSheetContent extends StatelessWidget {
     );
   }
 
-  Widget _buildTitle() {
+  Widget _buildTitle(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Text(
-      type == PaywallType.itemLimit ? 'DOLABINIZ DOLDU' : 'PREMIUM ÖZELLİK',
+      type == PaywallType.itemLimit
+          ? l10n.paywallItemLimitTitle
+          : l10n.paywallFeatureTitle,
       textAlign: TextAlign.center,
       style: const TextStyle(
         fontSize: 20,
@@ -161,10 +160,11 @@ class _PaywallBottomSheetContent extends StatelessWidget {
     );
   }
 
-  Widget _buildMessage() {
+  Widget _buildMessage(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final defaultMessage = type == PaywallType.itemLimit
-        ? 'Sınırsız kıyafet eklemek ve dolabınızı özgürce yönetmek için Premium\'a geçin.'
-        : 'Yapay zeka analizlerine ve özel stil asistanına erişmek için Premium\'a geçin.';
+        ? l10n.paywallItemLimitMessage
+        : l10n.paywallFeatureMessage;
     final text = customMessage.isNotEmpty ? customMessage : defaultMessage;
 
     return Padding(
@@ -182,16 +182,17 @@ class _PaywallBottomSheetContent extends StatelessWidget {
     );
   }
 
-  Widget _buildPriceLine() {
+  Widget _buildPriceLine(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
       decoration: BoxDecoration(
         color: AppColors.softBackground,
         border: Border.all(color: AppColors.border, width: 0.5),
       ),
-      child: const Text(
-        'AYLIK ₺59.99  ·  YILLIK ₺449.99',
-        style: TextStyle(
+      child: Text(
+        l10n.paywallPricing,
+        style: const TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.w500,
           color: AppColors.textPrimary,
@@ -250,9 +251,9 @@ class _PaywallBottomSheetContent extends StatelessWidget {
               borderRadius: BorderRadius.zero,
             ),
           ),
-          child: const Text(
-            'PREMIUM\'A GEÇ',
-            style: TextStyle(
+          child: Text(
+            AppLocalizations.of(context).paywallUpgrade,
+            style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
               letterSpacing: 2.0,
@@ -278,9 +279,9 @@ class _PaywallBottomSheetContent extends StatelessWidget {
           Navigator.pop(context);
         }
       },
-      child: const Text(
-        'Satın alımları geri yükle',
-        style: TextStyle(
+      child: Text(
+        AppLocalizations.of(context).paywallRestore,
+        style: const TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w300,
           decoration: TextDecoration.underline,
@@ -289,7 +290,8 @@ class _PaywallBottomSheetContent extends StatelessWidget {
     );
   }
 
-  Widget _buildDismissButton() {
+  Widget _buildDismissButton(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return TextButton(
       style: TextButton.styleFrom(
         foregroundColor: AppColors.textSecondary,
@@ -298,9 +300,9 @@ class _PaywallBottomSheetContent extends StatelessWidget {
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
       onPressed: onDismiss,
-      child: const Text(
-        'ŞİMDİ DEĞİL',
-        style: TextStyle(
+      child: Text(
+        l10n.paywallDismiss,
+        style: const TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w400,
           letterSpacing: 1.0,

@@ -53,43 +53,42 @@ class CloudFunctionsService {
   }
 
   /// Analyze clothing image at [imageUrl] and save result to Firestore.
-  /// Returns the created clothing document id or throws.
+  /// [locale] optional language code (e.g. 'tr', 'en') for localized API responses.
   Future<Map<String, dynamic>> analyzeClothing(String userId, String imageUrl,
-      {String? title,
-      bool skipServerSegmentation = false,
-      bool segmentationApplied = false}) async {
+      {String? title, String? locale}) async {
     final callable = _functions.httpsCallable('analyzeClothing');
     final result = await callable.call<Map<String, dynamic>>({
       'userId': userId,
       'imageUrl': imageUrl,
       if (title != null && title.isNotEmpty) 'title': title,
-      'skipServerSegmentation': skipServerSegmentation,
-      'segmentationApplied': segmentationApplied,
+      if (locale != null && locale.isNotEmpty) 'locale': locale,
     });
     return result.data;
   }
 
-  /// Generate outfit combinations. Optional [occasion] and [forceGenerate].
+  /// Generate outfit combinations. Optional [occasion], [forceGenerate], [locale].
   Future<Map<String, dynamic>> generateCombinations(
     String userId, {
     bool forceGenerate = false,
     String? occasion,
+    String? locale,
   }) async {
     final callable = _functions.httpsCallable('generateCombinations');
     final result = await callable.call<Map<String, dynamic>>({
       'userId': userId,
       'forceGenerate': forceGenerate,
       if (occasion != null && occasion.isNotEmpty) 'occasion': occasion,
+      if (locale != null && locale.isNotEmpty) 'locale': locale,
     });
     return result.data;
   }
 
-  /// Get style advice from AI stylist (chat).
-  /// Uses [wardrobeSummary] (compact JSON) instead of raw wardrobe list.
+  /// Get style advice from AI stylist (chat). Optional [locale] for response language.
   Future<Map<String, dynamic>> getStyleAdvice(
     String message, {
     List<Map<String, dynamic>>? conversationHistory,
     Map<String, dynamic>? wardrobeSummary,
+    String? locale,
   }) async {
     final callable = _functions.httpsCallable('getStyleAdvice');
     final result = await callable.call<Map<String, dynamic>>({
@@ -97,13 +96,15 @@ class CloudFunctionsService {
       if (conversationHistory != null)
         'conversationHistory': conversationHistory,
       if (wardrobeSummary != null) 'wardrobeSummary': wardrobeSummary,
+      if (locale != null && locale.isNotEmpty) 'locale': locale,
     });
     return result.data;
   }
 
-  /// Save a combination manually to Firestore.
+  /// Save a combination manually to Firestore. Optional [locale].
   Future<Map<String, dynamic>> saveCombination(
-      String userId, Combination combination) async {
+      String userId, Combination combination,
+      {String? locale}) async {
     final callable = _functions.httpsCallable('saveCombination');
     final result = await callable.call<Map<String, dynamic>>({
       'userId': userId,
@@ -114,17 +115,21 @@ class CloudFunctionsService {
         'season': combination.season,
         'items': combination.clothingItems.map((e) => e.clothingId).toList(),
       },
+      if (locale != null && locale.isNotEmpty) 'locale': locale,
     });
     return result.data;
   }
 
   /// Manage premium status (optional, for subscription flow).
+  /// [locale] optional; when provided, backend uses it for localized error messages.
   Future<Map<String, dynamic>> managePremiumStatus(
-      String userId, Map<String, dynamic> payload) async {
+      String userId, Map<String, dynamic> payload,
+      {String? locale}) async {
     final callable = _functions.httpsCallable('managePremiumStatus');
     final result = await callable.call<Map<String, dynamic>>({
       'userId': userId,
       ...payload,
+      if (locale != null && locale.isNotEmpty) 'locale': locale,
     });
     return result.data;
   }
@@ -137,16 +142,18 @@ class CloudFunctionsService {
     return result.data;
   }
 
-  /// Get shopping suggestions from AI based on wardrobe summary.
+  /// Get shopping suggestions from AI. Optional [locale].
   Future<Map<String, dynamic>> getShoppingSuggestions(
     String userId, {
     Map<String, dynamic>? wardrobeSummary,
+    String? locale,
   }) async {
     final callable = _functions.httpsCallable('getShoppingSuggestions');
     final result = await callable.call<Map<String, dynamic>>({
       'userId': userId,
       if (wardrobeSummary != null)
         'wardrobeSummary': _normalizeWardrobeSummaryForAi(wardrobeSummary),
+      if (locale != null && locale.isNotEmpty) 'locale': locale,
     });
     return Map<String, dynamic>.from(result.data);
   }

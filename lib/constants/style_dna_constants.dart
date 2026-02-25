@@ -1,3 +1,5 @@
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+
 /// Beklenen dolap boyutu - %100 tamamlanma için gerekli parça sayısı.
 const int kExpectedWardrobeSize = 20;
 
@@ -9,67 +11,139 @@ int computeWardrobeCompletionPercent(int itemCount) {
 }
 
 /// Sabitler: Stil DNA onboarding seçenekleri.
-/// combinationEngine ve aiService ile uyumlu değerler kullanılır.
+/// [value] normalized English key (backend/combinationEngine uyumlu).
+/// Görüntüleme için [getLabel] ile l10n kullanın.
 
-/// Stil DNA seçenekleri (max 3 seçim).
+/// Stil DNA seçenekleri (max 3 seçim). Value: normalize key.
 const List<StyleDnaOption> kStyleDnaOptions = [
-  StyleDnaOption('minimal', 'Minimal'),
-  StyleDnaOption('casual', 'Casual'),
-  StyleDnaOption('street', 'Street'),
-  StyleDnaOption('klasik', 'Klasik'),
-  StyleDnaOption('smart_casual', 'Smart Casual'),
-  StyleDnaOption('spor', 'Spor'),
-  StyleDnaOption('bohem', 'Bohem'),
-  StyleDnaOption('vintage', 'Vintage'),
+  StyleDnaOption('minimal'),
+  StyleDnaOption('casual'),
+  StyleDnaOption('street'),
+  StyleDnaOption('classic'),
+  StyleDnaOption('smart_casual'),
+  StyleDnaOption('sport'),
+  StyleDnaOption('bohem'),
+  StyleDnaOption('vintage'),
 ];
 
 /// Renk tercihi seçenekleri (çoklu seçim).
 const List<ColorBiasOption> kColorBiasOptions = [
-  ColorBiasOption('siyah', 'Siyah'),
-  ColorBiasOption('beyaz', 'Beyaz'),
-  ColorBiasOption('bej', 'Bej'),
-  ColorBiasOption('mavi', 'Mavi'),
-  ColorBiasOption('toprak_tonlari', 'Toprak tonları'),
-  ColorBiasOption('renkli', 'Renkli / Canlı'),
+  ColorBiasOption('black'),
+  ColorBiasOption('white'),
+  ColorBiasOption('beige'),
+  ColorBiasOption('blue'),
+  ColorBiasOption('earth_tones'),
+  ColorBiasOption('colorful'),
 ];
 
 /// Fit tercihi (tek seçim).
 const List<FitOption> kFitOptions = [
-  FitOption('oversize', 'Oversize'),
-  FitOption('slim', 'Slim'),
-  FitOption('regular', 'Regular'),
-  FitOption('rahat', 'Rahat'),
+  FitOption('oversize'),
+  FitOption('slim'),
+  FitOption('regular'),
+  FitOption('relaxed'),
 ];
 
 /// Yaşam tarzı (tek seçim).
 const List<LifestyleOption> kLifestyleOptions = [
-  LifestyleOption('office', 'Ofis çalışanı'),
-  LifestyleOption('university', 'Üniversite'),
-  LifestyleOption('freelancer', 'Freelancer'),
-  LifestyleOption('sports', 'Spor ağırlıklı'),
-  LifestyleOption('social', 'Sosyal / Etkinlik yoğun'),
+  LifestyleOption('office'),
+  LifestyleOption('university'),
+  LifestyleOption('freelancer'),
+  LifestyleOption('sports'),
+  LifestyleOption('social'),
 ];
 
 class StyleDnaOption {
-  const StyleDnaOption(this.value, this.label);
+  const StyleDnaOption(this.value);
   final String value;
-  final String label;
+
+  /// Localized label for UI. Use [value] for storage/API.
+  String getLabel(AppLocalizations l10n) {
+    switch (value) {
+      case 'minimal':
+        return l10n.styleDnaMinimal;
+      case 'casual':
+        return l10n.styleDnaCasual;
+      case 'street':
+        return l10n.styleDnaStreet;
+      case 'classic':
+        return l10n.styleDnaClassic;
+      case 'smart_casual':
+        return l10n.styleDnaSmartCasual;
+      case 'sport':
+        return l10n.styleDnaSport;
+      case 'bohem':
+        return l10n.styleDnaBohemian;
+      case 'vintage':
+        return l10n.styleDnaVintage;
+      default:
+        return value;
+    }
+  }
 }
 
 class ColorBiasOption {
-  const ColorBiasOption(this.value, this.label);
+  const ColorBiasOption(this.value);
   final String value;
-  final String label;
+
+  String getLabel(AppLocalizations l10n) {
+    switch (value) {
+      case 'black':
+        return l10n.colorBiasBlack;
+      case 'white':
+        return l10n.colorBiasWhite;
+      case 'beige':
+        return l10n.colorBiasBeige;
+      case 'blue':
+        return l10n.colorBiasBlue;
+      case 'earth_tones':
+        return l10n.colorBiasEarthTones;
+      case 'colorful':
+        return l10n.colorBiasColorful;
+      default:
+        return value;
+    }
+  }
 }
 
 class FitOption {
-  const FitOption(this.value, this.label);
+  const FitOption(this.value);
   final String value;
-  final String label;
+
+  String getLabel(AppLocalizations l10n) {
+    switch (value) {
+      case 'oversize':
+        return l10n.fitOversize;
+      case 'slim':
+        return l10n.fitSlim;
+      case 'regular':
+        return l10n.fitRegular;
+      case 'relaxed':
+        return l10n.fitRelaxed;
+      default:
+        return value;
+    }
+  }
 }
 
 class LifestyleOption {
-  const LifestyleOption(this.value, this.label);
+  const LifestyleOption(this.value);
   final String value;
-  final String label;
+
+  String getLabel(AppLocalizations l10n) {
+    switch (value) {
+      case 'office':
+        return l10n.lifestyleOffice;
+      case 'university':
+        return l10n.lifestyleUniversity;
+      case 'freelancer':
+        return l10n.lifestyleFreelancer;
+      case 'sports':
+        return l10n.lifestyleSports;
+      case 'social':
+        return l10n.lifestyleSocial;
+      default:
+        return value;
+    }
+  }
 }
