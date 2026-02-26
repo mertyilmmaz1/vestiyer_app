@@ -26,7 +26,9 @@ import 'clothing_detail_screen.dart';
 import 'wardrobe_screen.dart';
 
 class UploadScreen extends StatefulWidget {
-  const UploadScreen({super.key});
+  const UploadScreen({super.key, this.onViewWardrobe});
+
+  final VoidCallback? onViewWardrobe;
 
   @override
   State<UploadScreen> createState() => _UploadScreenState();
@@ -840,10 +842,15 @@ class _UploadScreenState extends State<UploadScreen>
                   child: VestiyerPrimaryButton(
                     text: l10n.uploadViewWardrobe,
                     onTap: () {
-                      Navigator.push(
-                        context,
-                        EditorialPageRoute(page: const WardrobeScreen()),
-                      );
+                      if (widget.onViewWardrobe != null) {
+                        Navigator.of(context).pop();
+                        widget.onViewWardrobe!();
+                      } else {
+                        Navigator.push(
+                          context,
+                          EditorialPageRoute(page: const WardrobeScreen()),
+                        );
+                      }
                     },
                   ),
                 ),

@@ -399,7 +399,11 @@ class _AuthenticatedHomeState extends State<_AuthenticatedHome> {
 
   void _openUpload() {
     Navigator.of(context).push(
-      EditorialPageRoute(page: const UploadScreen()),
+      EditorialPageRoute(
+        page: UploadScreen(
+          onViewWardrobe: () => _onTabTapped(1),
+        ),
+      ),
     );
   }
 
