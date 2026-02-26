@@ -398,7 +398,7 @@
   "@apiUsageExchangeError": { "placeholders": { "error": { "type": "String" } } },
 
   "splashTitle": "Vestiyer",
-  "splashTagline": "Kıyafet dolabınızı yapay zeka ile yönetin",
+  "splashTagline": "Vestiyer bu bir AI stilist uygulaması",
 
   "cameraGuideTitle": "DAHA İYİ ANALİZ İÇİN İPUÇLARI",
   "cameraGuideButton": "ANLADIM, BAŞLAYALIM",

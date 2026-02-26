@@ -377,7 +377,7 @@
   "apiUsageExchangeError": "Error fetching exchange rate: {error}",
 
   "splashTitle": "Vestiyer",
-  "splashTagline": "Manage your wardrobe with AI",
+  "splashTagline": "Vestiyer is an AI stylist app",
 
   "cameraGuideTitle": "TIPS FOR BETTER ANALYSIS",
   "cameraGuideButton": "GOT IT, LET'S START",
