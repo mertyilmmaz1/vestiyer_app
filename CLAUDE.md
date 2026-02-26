@@ -11,7 +11,6 @@ Flutter ile geliştirilmiş yapay zeka destekli kişisel gardrop asistanı. Kull
 - **AI**: GPT-4o (kıyafet analizi - vision), GPT-4o-mini (kombinler, sohbet)
 - **Abonelik**: RevenueCat (iOS/Android), stub (web)
 - **Cache**: Hive (read-through, CachedFirestoreService)
-- **Mock Mod**: `kUseMockBackend` flag'i ile gerçek servisler atlanır
 
 ## Dizin Yapısı
 
@@ -22,7 +21,6 @@ lib/
   providers/      # WardrobeProvider, SubscriptionProvider
   screens/        # Tüm ekranlar
   services/       # Firebase Auth, Firestore, Storage, CloudFunctions, cache, RevenueCat
-    mock/         # MockFirebaseAuthService, MockFirestoreService, MockCloudFunctionsService
   widgets/        # Tekrar kullanılabilir UI bileşenleri
   utils/          # Yardımcı fonksiyonlar
 functions/        # Firebase Cloud Functions (Node.js/OpenAI)
@@ -32,9 +30,9 @@ functions/        # Firebase Cloud Functions (Node.js/OpenAI)
 ## Mimari Kurallar
 
 ### Servis Katmanı
-- Tüm Firestore erişimi **FirestoreServiceBase** üzerinden: canlıda `CachedFirestoreService(FirestoreService(), HiveCacheService)`, mock'ta `MockFirestoreService`
+- Tüm Firestore erişimi **FirestoreServiceBase** üzerinden: `CachedFirestoreService(FirestoreService(), HiveCacheService)`
 - Ekranlar ve provider'lar asla `FirestoreService`'e doğrudan bağlanmaz
-- Yeni Firestore operasyonu eklenince `FirestoreServiceBase` → `CachedFirestoreService` → `MockFirestoreService` zinciri güncellenir
+- Yeni Firestore operasyonu eklenince `FirestoreServiceBase` → `CachedFirestoreService` zinciri güncellenir
 
 ### Cache (Hive Read-Through)
 - **Okuma**: Önce Hive cache'e bak; miss'te delegate çağır, sonucu cache'e yaz
@@ -56,14 +54,9 @@ Başlatma sırası (`ApplicationInitialize`):
 3. `Firebase.initializeApp()`
 4. `SystemChrome` ayarları
 5. `configureRevenueCat()` — stub/web'de no-op
-6. `Hive.initFlutter()` + `HiveCacheService.init()` — mock modda atlanır
+6. `Hive.initFlutter()` + `HiveCacheService.init()`
 
 RevenueCat conditional import: `revenuecat_init_stub.dart` if web, `revenuecat_init_io.dart` if dart.library.io
-
-### Mock Mod
-`kUseMockBackend = true` iken:
-- Firebase / RevenueCat / Hive init atlanır
-- Mock servisler kullanılır: `MockFirebaseAuthService`, `MockFirestoreService`, `MockCloudFunctionsService`, `MockFirebaseStorageService`
 
 ## Firestore Koleksiyonları
 
@@ -131,6 +124,5 @@ firebase deploy --only functions:analyzeClothing
 ## Slash Komutları (Proje)
 
 - `/project:deploy` — Firebase deploy rehberi
-- `/project:mock` — Mock mod açma/kapama talimatları
 - `/project:new-screen` — Yeni ekran oluşturma şablonu
 - `/project:new-function` — Yeni Cloud Function ekleme şablonu
