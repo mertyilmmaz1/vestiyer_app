@@ -68,75 +68,98 @@ function buildShoppingSuggestionsSchema(locale) {
   };
 }
 
-function buildStep1Schema(locale) {
-  const d = getPrompts(locale).STEP1_SCHEMA_DESCRIPTIONS;
+function buildClothingAnalysisSchema(locale) {
+  const prompts = getPrompts(locale);
+  const d = prompts.ANALYSIS_SCHEMA_DESCRIPTIONS || {};
+  const step1 = prompts.STEP1_SCHEMA_DESCRIPTIONS || {};
+  const step2 = prompts.STEP2_SCHEMA_DESCRIPTIONS || {};
+  const resolveDescription = {
+    mainGroup: d.mainGroup || step1.mainGroup || ((groups) => `Main group: ${groups.join(', ')}`),
+    category: d.category || step1.category || 'Category',
+    material: d.material || step1.material || ((materials) => `Material: ${materials.join(', ')}`),
+    pattern: d.pattern || step1.pattern || 'Pattern',
+    fit: d.fit || step1.fit || 'Fit',
+    colors: d.colors || step1.colors || 'Dominant colors',
+    mainColorHex: d.mainColorHex || step1.mainColorHex || 'Main HEX color',
+    style: d.style || step2.style || 'Style list',
+    season: d.season || step2.season || 'Season list',
+    details: d.details || step2.details || 'Details',
+    confidence: d.confidence || step1.confidence || 'Confidence score'
+  };
   return {
     type: 'object',
     properties: {
       mainGroup: {
         type: 'string',
         enum: MAIN_GROUPS,
-        description: d.mainGroup(MAIN_GROUPS)
+        description: resolveDescription.mainGroup(MAIN_GROUPS)
       },
       category: {
         type: 'string',
-        description: d.category
+        description: resolveDescription.category
       },
       material: {
         type: 'string',
         enum: MATERIALS,
-        description: d.material(MATERIALS)
+        description: resolveDescription.material(MATERIALS)
       },
       pattern: {
         type: 'string',
         enum: PATTERN_VALUES,
-        description: d.pattern
+        description: resolveDescription.pattern
       },
       fit: {
         type: 'string',
         enum: FIT_VALUES,
-        description: d.fit
+        description: resolveDescription.fit
       },
       colors: {
         type: 'array',
         items: { type: 'string' },
-        description: d.colors
+        minItems: 1,
+        maxItems: 3,
+        description: resolveDescription.colors
       },
       mainColorHex: {
         type: 'string',
-        description: d.mainColorHex
+        description: resolveDescription.mainColorHex
       },
-      confidence: {
-        type: 'number',
-        description: d.confidence
-      }
-    },
-    required: ['mainGroup', 'category', 'material', 'pattern', 'fit', 'colors', 'mainColorHex', 'confidence'],
-    additionalProperties: false
-  };
-}
-
-function buildStep2Schema(locale) {
-  const d = getPrompts(locale).STEP2_SCHEMA_DESCRIPTIONS;
-  return {
-    type: 'object',
-    properties: {
       style: {
         type: 'array',
         items: { type: 'string' },
-        description: d.style
+        minItems: 1,
+        maxItems: 5,
+        description: resolveDescription.style
       },
       season: {
         type: 'array',
         items: { type: 'string' },
-        description: d.season
+        minItems: 1,
+        maxItems: 4,
+        description: resolveDescription.season
       },
       details: {
         type: 'string',
-        description: d.details
+        description: resolveDescription.details
+      },
+      confidence: {
+        type: 'number',
+        description: resolveDescription.confidence
       }
     },
-    required: ['style', 'season', 'details'],
+    required: [
+      'mainGroup',
+      'category',
+      'material',
+      'pattern',
+      'fit',
+      'colors',
+      'mainColorHex',
+      'style',
+      'season',
+      'details',
+      'confidence'
+    ],
     additionalProperties: false
   };
 }
@@ -152,17 +175,71 @@ function mapUsageToOccasion(usage) {
   return 'casual';
 }
 
+function normalizeStringArray(value, fallback) {
+  if (Array.isArray(value)) {
+    const normalized = value
+      .map((x) => (typeof x === 'string' ? x.trim() : ''))
+      .filter(Boolean);
+    if (normalized.length > 0) return normalized;
+  }
+  if (typeof value === 'string' && value.trim()) {
+    return [value.trim()];
+  }
+  return fallback;
+}
+
+function normalizeHexColor(value) {
+  if (typeof value !== 'string') return null;
+  const v = value.trim();
+  if (!v) return null;
+  const fullHex = /^#[0-9A-Fa-f]{6}$/;
+  const shortHex = /^#[0-9A-Fa-f]{3}$/;
+  if (fullHex.test(v)) return v.toUpperCase();
+  if (!shortHex.test(v)) return null;
+  const r = v[1];
+  const g = v[2];
+  const b = v[3];
+  return `#${r}${r}${g}${g}${b}${b}`.toUpperCase();
+}
+
+function buildColorDominance(colors, mainHex) {
+  if (!Array.isArray(colors) || colors.length === 0) return [];
+  const cleaned = colors
+    .map((c) => (typeof c === 'string' ? c.trim() : ''))
+    .filter(Boolean)
+    .slice(0, 3);
+  if (cleaned.length === 0) return [];
+
+  if (cleaned.length === 1) {
+    return [{ name: cleaned[0], dominance: 1, hex: mainHex || null }];
+  }
+
+  if (cleaned.length === 2) {
+    return [
+      { name: cleaned[0], dominance: 0.75, hex: mainHex || null },
+      { name: cleaned[1], dominance: 0.25, hex: null }
+    ];
+  }
+
+  return [
+    { name: cleaned[0], dominance: 0.6, hex: mainHex || null },
+    { name: cleaned[1], dominance: 0.25, hex: null },
+    { name: cleaned[2], dominance: 0.15, hex: null }
+  ];
+}
+
 async function analyzeClothingFromUrl(openai, imageUrl, backendColors = null, locale = 'tr') {
   const prompts = getPrompts(locale);
   const F = prompts.FORMAT_STRINGS;
-  // Step 1: Visual Analysis & Categorization
-  const response1 = await openai.chat.completions.create({
+  const analyzePrompt = prompts.ANALYZE_CLOTHING_PROMPT || prompts.STEP1_PROMPT;
+
+  const response = await openai.chat.completions.create({
     model: 'gpt-4o',
     messages: [
       {
         role: 'user',
         content: [
-          { type: 'text', text: prompts.STEP1_PROMPT },
+          { type: 'text', text: analyzePrompt },
           { type: 'image_url', image_url: { url: imageUrl } }
         ]
       }
@@ -170,91 +247,69 @@ async function analyzeClothingFromUrl(openai, imageUrl, backendColors = null, lo
     response_format: {
       type: 'json_schema',
       json_schema: {
-        name: 'clothing_step1',
+        name: 'clothing_analysis',
         strict: true,
-        schema: buildStep1Schema(locale)
+        schema: buildClothingAnalysisSchema(locale)
       }
     },
-    max_tokens: 300
+    max_tokens: 700
   });
 
-  const step1Content = response1.choices[0].message.content;
-  let step1;
+  const content = response.choices[0].message.content;
+  let analysis;
   try {
-    step1 = JSON.parse(step1Content);
+    analysis = JSON.parse(content);
   } catch (e) {
-    throw new Error(t(locale, 'errors.analysisStep1Parse'));
-  }
-
-  // Step 2: Styling & Description
-  const response2 = await openai.chat.completions.create({
-    model: 'gpt-4o',
-    messages: [
-      {
-        role: 'user',
-        content: prompts.step2Prompt(step1)
-      }
-    ],
-    response_format: {
-      type: 'json_schema',
-      json_schema: {
-        name: 'clothing_step2',
-        strict: true,
-        schema: buildStep2Schema(locale)
-      }
-    },
-    max_tokens: 400
-  });
-
-  const step2Content = response2.choices[0].message.content;
-  let step2;
-  try {
-    step2 = JSON.parse(step2Content);
-  } catch (e) {
-    step2 = { style: ['casual'], season: ['all_seasons'], details: '' };
+    analysis = {
+      mainGroup: 'ust_giyim',
+      category: 'tişört',
+      material: 'pamuk',
+      pattern: 'duz',
+      fit: 'regular',
+      colors: [F.unknownColor],
+      mainColorHex: '#808080',
+      style: ['casual'],
+      season: ['tum_yil'],
+      details: '',
+      confidence: 0.35
+    };
   }
 
   // Normalization
-  const mainGroup = normalizeMainGroup(step1.mainGroup);
-  const category = normalizeCategory(mainGroup, step1.category);
-  const material = normalizeMaterial(step1.material);
-  const pattern = normalizePattern(step1.pattern);
-  const fit = normalizeFit(step1.fit);
-  const confidence = Math.max(0, Math.min(1, Number(step1.confidence) || 0.8));
+  const mainGroup = normalizeMainGroup(analysis.mainGroup);
+  const category = normalizeCategory(mainGroup, analysis.category);
+  const material = normalizeMaterial(analysis.material);
+  const pattern = normalizePattern(analysis.pattern);
+  const fit = normalizeFit(analysis.fit);
+  const confidence = Math.max(0, Math.min(1, Number(analysis.confidence) || 0.8));
 
-  // Color selection: Prefer AI detected colors, fallback to backend (k-means) if explicit match needed,
-  // but AI is generally better at naming.
+  // Color selection: AI is primary. Backend k-means is emergency fallback only.
   let colors = [];
   let colorsWithDominance = [];
+  const mainColorHex = normalizeHexColor(analysis.mainColorHex);
 
-  if (step1.colors && step1.colors.length > 0) {
-    colors = step1.colors;
-    // Mock dominance for AI colors since GPT doesn't return percentages easily in this schema
-    colorsWithDominance = colors.map((c, i) => ({
-      name: c,
-      dominance: i === 0 ? 0.7 : 0.15, // Dummy values
-      hex: i === 0 ? (step1.mainColorHex || null) : null
-    }));
+  colors = normalizeStringArray(analysis.colors, []);
+  if (colors.length > 0) {
+    colorsWithDominance = buildColorDominance(colors, mainColorHex);
   } else if (backendColors && backendColors.length > 0) {
-    // Fallback to k-means
     colorsWithDominance = backendColors;
     colors = backendColors.map(c => c.name);
   } else {
     colors = [F.unknownColor];
-    colorsWithDominance = [{ name: F.unknown, dominance: 1 }];
+    colorsWithDominance = [{ name: F.unknownColor, dominance: 1, hex: null }];
   }
 
   const colorStr = colors.join(', ');
 
-  const style = Array.isArray(step2.style) ? step2.style : ['casual'];
-  const season = Array.isArray(step2.season) ? step2.season : ['tum_yil'];
-  const details = step2.details || '';
+  const style = normalizeStringArray(analysis.style, ['casual']);
+  const season = normalizeStringArray(analysis.season, ['tum_yil']);
+  const details = typeof analysis.details === 'string' ? analysis.details.trim() : '';
 
   const firestoreCategory = mapMainGroupToFirestore(mainGroup);
 
   return {
     success: true,
-    rawAnalysis: JSON.stringify({ step1, step2 }),
+    rawAnalysis: JSON.stringify({ analysis }),
     parsedAnalysis: { mainGroup, category, color: colorStr, material, style, season, details },
     formattedAnalysis: {
       ana_grup: mainGroup,
@@ -280,11 +335,11 @@ async function analyzeClothingFromUrl(openai, imageUrl, backendColors = null, lo
       pattern,
       fit,
       confidence,
-      rawAnalysis: JSON.stringify({ step1, step2 })
+      rawAnalysis: JSON.stringify({ analysis })
     },
     usage: {
-      prompt_tokens: (response1.usage?.prompt_tokens || 0) + (response2.usage?.prompt_tokens || 0),
-      completion_tokens: (response1.usage?.completion_tokens || 0) + (response2.usage?.completion_tokens || 0)
+      prompt_tokens: response.usage?.prompt_tokens || 0,
+      completion_tokens: response.usage?.completion_tokens || 0
     }
   };
 }
