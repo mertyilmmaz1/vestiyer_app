@@ -1,41 +1,12 @@
 # Mock Mod
 
-`kUseMockBackend` flag'i ile Firebase/RevenueCat/Hive'ı bypass et.
-
-## Mock Modu Aç
-
-`lib/core/product/init/application_initialize.dart` dosyasında:
-```dart
-const kUseMockBackend = true;
-```
-
-Mock modda:
-- Firebase init atlanır
-- RevenueCat init atlanır
-- Hive init atlanır
-- Şu mock servisler kullanılır:
-  - `MockFirebaseAuthService`
-  - `MockFirestoreService`
-  - `MockCloudFunctionsService`
-  - `MockFirebaseStorageService`
-
-## Mock Modu Kapat (Production/Real Backend)
+`lib/core/product/init/application_initialize.dart`:
 
 ```dart
-const kUseMockBackend = false;
+const kUseMockBackend = true;  // aç
+const kUseMockBackend = false; // kapat
 ```
 
-## Mock Kullanıcı Oturumu
+Mock kullanıcı oturumu: `mockSignedInNotifier = true`
 
-Mock modda oturum açmak için `mockSignedInNotifier` değerini `true` yapın.
-
-## Mock Veri
-
-Mock veri için `lib/utils/mock_data_helper.dart` dosyasını düzenleyin.
-
-## Ne Zaman Mock Kullanılır?
-
-- Firebase bağlantısı olmadan UI geliştirmesi
-- Birim testleri
-- CI/CD pipeline'da
-- Hızlı prototipleme
+Mock veri: `lib/utils/mock_data_helper.dart`
